@@ -1,0 +1,29 @@
+{
+  "name": "@maronn-auth-blog/api",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@maronn-auth-blog/shared": "workspace:*",
+    "@hono/zod-validator": "^0.2.1",
+    "hono": "^4.0.0",
+    "zod": "^3.22.4",
+    "@octokit/auth-app": "^6.0.3",
+    "@octokit/rest": "^20.0.2",
+    "zenn-markdown-html": "^0.1.148",
+    "jose": "^5.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1",
+    "wrangler": "^3.24.0"
+  }
+}
