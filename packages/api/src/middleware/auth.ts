@@ -18,19 +18,14 @@ declare module 'hono' {
 
 export async function encryptSessionId(sessionId: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
-  const secretKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret.slice(0, 32)),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
+  // Ensure secret is at least 32 bytes for HS256
+  const secretKey = encoder.encode(secret.padEnd(32, '0').slice(0, 32));
 
   const jwt = await new SignJWT({ sessionId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('90d')
-    .sign(new Uint8Array(await crypto.subtle.exportKey('raw', secretKey)));
+    .sign(secretKey);
 
   return jwt;
 }
@@ -38,18 +33,10 @@ export async function encryptSessionId(sessionId: string, secret: string): Promi
 export async function decryptSessionId(token: string, secret: string): Promise<string | null> {
   try {
     const encoder = new TextEncoder();
-    const secretKey = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret.slice(0, 32)),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
+    // Use the same secret key derivation as encryption
+    const secretKey = encoder.encode(secret.padEnd(32, '0').slice(0, 32));
 
-    const { payload } = await jwtVerify(
-      token,
-      new Uint8Array(await crypto.subtle.exportKey('raw', secretKey))
-    );
+    const { payload } = await jwtVerify(token, secretKey);
 
     return payload.sessionId as string;
   } catch {
