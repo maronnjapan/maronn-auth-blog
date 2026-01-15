@@ -5,6 +5,10 @@ export interface Props {
 }
 
 const { title, description = 'GitHub Blog Platform' } = Astro.props;
+
+const API_URL = 'http://localhost:8787';
+
+const loginUrl = `${API_URL}/auth/login`
 ---
 
 <!DOCTYPE html>
@@ -24,7 +28,7 @@ const { title, description = 'GitHub Blog Platform' } = Astro.props;
           <div class="nav-links">
             <a href="/">フィード</a>
             <a href="/dashboard">ダッシュボード</a>
-            <a href="/api/auth/login" class="btn-primary">ログイン</a>
+            <a href={loginUrl} class="btn-primary">ログイン</a>
           </div>
         </nav>
       </div>

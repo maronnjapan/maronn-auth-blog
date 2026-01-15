@@ -7,6 +7,6 @@ import cloudflare from '@astrojs/cloudflare';
 // Add `export const prerender = true;` to specific pages for SSG if needed
 export default defineConfig({
   integrations: [react()],
-  output: 'hybrid',
+  output: 'server',
   adapter: cloudflare(),
 });

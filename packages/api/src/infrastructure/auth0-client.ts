@@ -43,7 +43,7 @@ export class Auth0Client {
    * Create authorization URL with PKCE
    */
   createAuthorizationURL(state: string, codeVerifier: string): URL {
-    const scopes = ['openid', 'profile', 'email'];
+    const scopes = ['openid', 'profile', 'email', 'offline_access'];
     return this.auth0.createAuthorizationURL(state, codeVerifier, scopes);
   }
 
