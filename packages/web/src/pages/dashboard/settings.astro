@@ -3,8 +3,53 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import SettingsForm from '../../islands/SettingsForm';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch user and repository data on server-side
+let user = null;
+let repository = null;
+let error = null;
+
+try {
+  const [userRes, repoRes] = await Promise.all([
+    fetch(`${API_URL}/auth/me`, { credentials: 'include' }),
+    fetch(`${API_URL}/users/me/repository`, { credentials: 'include' }),
+  ]);
+
+  if (userRes.status === 401 || repoRes.status === 401) {
+    return Astro.redirect(`${API_URL}/auth/login`);
+  }
+
+  if (userRes.ok) {
+    user = await userRes.json();
+  }
+
+  if (repoRes.ok) {
+    const data = await repoRes.json();
+    repository = data;
+  }
+} catch (err) {
+  error = 'データの取得に失敗しました';
+  console.error('Failed to fetch settings data:', err);
+}
+
+if (!user) {
+  return Astro.redirect(`${API_URL}/auth/login`);
+}
 ---
 
 <DashboardLayout title="設定">
-  <SettingsForm apiUrl={API_URL} client:load />
+  {error ? (
+    <div class="error"><p>{error}</p></div>
+  ) : (
+    <SettingsForm user={user} repository={repository} apiUrl={API_URL} client:load />
+  )}
 </DashboardLayout>
+
+<style>
+  .error {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    color: #f44336;
+  }
+</style>

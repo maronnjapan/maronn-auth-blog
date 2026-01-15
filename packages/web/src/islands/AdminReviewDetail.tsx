@@ -1,42 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Article } from '@maronn-auth-blog/shared';
 
 interface AdminReviewDetailProps {
+  article: Article;
+  html: string;
   apiUrl: string;
-  articleId: string;
 }
 
-export default function AdminReviewDetail({ apiUrl, articleId }: AdminReviewDetailProps) {
-  const [article, setArticle] = useState<Article | null>(null);
-  const [html, setHtml] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+export default function AdminReviewDetail({ article, html, apiUrl }: AdminReviewDetailProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-
-  useEffect(() => {
-    const fetchArticle = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/admin/reviews/${articleId}`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('記事の取得に失敗しました');
-        }
-
-        const data = await response.json();
-        setArticle(data.article);
-        setHtml(data.html || '');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '不明なエラー');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticle();
-  }, [apiUrl, articleId]);
 
   const handleApprove = async () => {
     if (!confirm('この記事を承認しますか？')) {
@@ -45,7 +18,7 @@ export default function AdminReviewDetail({ apiUrl, articleId }: AdminReviewDeta
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/approve`, {
+      const response = await fetch(`${apiUrl}/admin/reviews/${article.id}/approve`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -75,7 +48,7 @@ export default function AdminReviewDetail({ apiUrl, articleId }: AdminReviewDeta
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/reject`, {
+      const response = await fetch(`${apiUrl}/admin/reviews/${article.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -94,14 +67,6 @@ export default function AdminReviewDetail({ apiUrl, articleId }: AdminReviewDeta
       setSubmitting(false);
     }
   };
-
-  if (loading) {
-    return <div className="loading"><p>読み込み中...</p></div>;
-  }
-
-  if (error || !article) {
-    return <div className="error"><p>エラー: {error || '記事が見つかりません'}</p></div>;
-  }
 
   return (
     <div className="review-detail">

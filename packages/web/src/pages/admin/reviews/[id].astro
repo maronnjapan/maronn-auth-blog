@@ -4,8 +4,51 @@ import AdminReviewDetail from '../../../islands/AdminReviewDetail';
 
 const { id } = Astro.params;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch article for review on server-side
+let article = null;
+let html = '';
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/admin/reviews/${id}`, {
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    return Astro.redirect(`${API_URL}/auth/login`);
+  } else if (response.status === 403) {
+    error = '管理者権限が必要です';
+  } else if (response.ok) {
+    const data = await response.json();
+    article = data.article;
+    html = data.html || '';
+  } else {
+    error = '記事の取得に失敗しました';
+  }
+} catch (err) {
+  error = '記事の取得に失敗しました';
+  console.error('Failed to fetch article for review:', err);
+}
+
+if (!article && !error) {
+  error = '記事が見つかりません';
+}
 ---
 
 <DashboardLayout title="記事審査">
-  <AdminReviewDetail apiUrl={API_URL} articleId={id} client:load />
+  {error ? (
+    <div class="error"><p>{error}</p></div>
+  ) : (
+    <AdminReviewDetail article={article} html={html} apiUrl={API_URL} client:load />
+  )}
 </DashboardLayout>
+
+<style>
+  .error {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    color: #f44336;
+  }
+</style>

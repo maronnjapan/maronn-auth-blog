@@ -1,63 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface SettingsFormProps {
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    iconUrl?: string;
+    bio?: string;
+  };
+  repository: {
+    id: string;
+    githubRepoFullName: string;
+  } | null;
   apiUrl: string;
 }
 
-interface User {
-  id: string;
-  username: string;
-  displayName: string;
-  iconUrl?: string;
-  bio?: string;
-}
-
-interface Repository {
-  id: string;
-  githubRepoFullName: string;
-}
-
-export default function SettingsForm({ apiUrl }: SettingsFormProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [repository, setRepository] = useState<Repository | null>(null);
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
-  const [repoFullName, setRepoFullName] = useState('');
-  const [loading, setLoading] = useState(true);
+export default function SettingsForm({ user, repository: initialRepository, apiUrl }: SettingsFormProps) {
+  const [displayName, setDisplayName] = useState(user.displayName || '');
+  const [bio, setBio] = useState(user.bio || '');
+  const [repoFullName, setRepoFullName] = useState(initialRepository?.githubRepoFullName || '');
+  const [repository, setRepository] = useState(initialRepository);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [userRes, repoRes] = await Promise.all([
-          fetch(`${apiUrl}/auth/me`, { credentials: 'include' }),
-          fetch(`${apiUrl}/users/me/repository`, { credentials: 'include' }),
-        ]);
-
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUser(userData);
-          setDisplayName(userData.displayName || '');
-          setBio(userData.bio || '');
-        }
-
-        if (repoRes.ok) {
-          const repoData = await repoRes.json();
-          if (repoData) {
-            setRepository(repoData);
-            setRepoFullName(repoData.githubRepoFullName || '');
-          }
-        }
-      } catch (err) {
-        setMessage({ type: 'error', text: 'データの取得に失敗しました' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [apiUrl]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,10 +109,6 @@ export default function SettingsForm({ apiUrl }: SettingsFormProps) {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return <div className="loading"><p>読み込み中...</p></div>;
-  }
 
   return (
     <div className="settings-container">

@@ -1,49 +1,10 @@
-import { useEffect, useState } from 'react';
 import type { Article } from '@maronn-auth-blog/shared';
 
 interface AdminReviewListProps {
-  apiUrl: string;
+  articles: Article[];
 }
 
-export default function AdminReviewList({ apiUrl }: AdminReviewListProps) {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/admin/reviews`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            throw new Error('管理者権限が必要です');
-          }
-          throw new Error('記事の取得に失敗しました');
-        }
-
-        const data = await response.json();
-        setArticles(data.articles || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '不明なエラー');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticles();
-  }, [apiUrl]);
-
-  if (loading) {
-    return <div className="loading"><p>読み込み中...</p></div>;
-  }
-
-  if (error) {
-    return <div className="error"><p>エラー: {error}</p></div>;
-  }
-
+export default function AdminReviewList({ articles }: AdminReviewListProps) {
   if (articles.length === 0) {
     return (
       <div className="empty">

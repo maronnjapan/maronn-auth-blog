@@ -3,8 +3,45 @@ import DashboardLayout from '../../../layouts/DashboardLayout.astro';
 import AdminReviewList from '../../../islands/AdminReviewList';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch pending review articles on server-side
+let articles = [];
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/admin/reviews`, {
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    return Astro.redirect(`${API_URL}/auth/login`);
+  } else if (response.status === 403) {
+    error = '管理者権限が必要です';
+  } else if (response.ok) {
+    const data = await response.json();
+    articles = data.articles || [];
+  } else {
+    error = '審査待ち記事の取得に失敗しました';
+  }
+} catch (err) {
+  error = '審査待ち記事の取得に失敗しました';
+  console.error('Failed to fetch review articles:', err);
+}
 ---
 
 <DashboardLayout title="審査一覧（管理者）">
-  <AdminReviewList apiUrl={API_URL} client:load />
+  {error ? (
+    <div class="error"><p>{error}</p></div>
+  ) : (
+    <AdminReviewList articles={articles} client:load />
+  )}
 </DashboardLayout>
+
+<style>
+  .error {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    color: #f44336;
+  }
+</style>
