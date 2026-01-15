@@ -1,4 +1,4 @@
-import { Auth0 } from 'arctic';
+import { Auth0, generateState, generateCodeVerifier } from 'arctic';
 
 export interface Auth0TokenResponse {
   access_token: string;
@@ -28,13 +28,33 @@ export class Auth0Client {
     this.auth0 = new Auth0(domain, clientId, clientSecret, redirectUri);
   }
 
-  createAuthorizationURL(state: string): URL {
-    const scopes = ['openid', 'profile', 'email'];
-    return this.auth0.createAuthorizationURL(state, scopes);
+  /**
+   * Generate state and code verifier for OAuth flow
+   * These values must be stored in HttpOnly cookies
+   */
+  generateOAuthParams(): { state: string; codeVerifier: string } {
+    return {
+      state: generateState(),
+      codeVerifier: generateCodeVerifier(),
+    };
   }
 
-  async validateAuthorizationCode(code: string): Promise<Auth0TokenResponse> {
-    const tokens = await this.auth0.validateAuthorizationCode(code);
+  /**
+   * Create authorization URL with PKCE
+   */
+  createAuthorizationURL(state: string, codeVerifier: string): URL {
+    const scopes = ['openid', 'profile', 'email'];
+    return this.auth0.createAuthorizationURL(state, codeVerifier, scopes);
+  }
+
+  /**
+   * Validate authorization code with PKCE code verifier
+   */
+  async validateAuthorizationCode(
+    code: string,
+    codeVerifier: string
+  ): Promise<Auth0TokenResponse> {
+    const tokens = await this.auth0.validateAuthorizationCode(code, codeVerifier);
 
     return {
       access_token: tokens.accessToken(),
@@ -76,4 +96,5 @@ export class Auth0Client {
     return response.json();
   }
 }
+
 

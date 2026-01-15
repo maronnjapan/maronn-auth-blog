@@ -146,14 +146,18 @@ PUBLIC_APP_URL=http://localhost:4321
 ```
 1. ユーザーが「ログイン」ボタンをクリック
 2. /api/auth/login へリダイレクト
-3. Auth0 認可画面へリダイレクト
-4. ユーザーが GitHub 連携を許可
-5. 認可コード付きで /api/auth/callback へリダイレクト
-6. サーバーが認可コードを Auth0 トークンエンドポイントに送信
-7. アクセストークン・ID トークンを取得
-8. セッションを作成し、KV に保存
-9. セッション ID を暗号化して Cookie に設定
-10. フロントエンドにリダイレクト
+3. サーバーが State と Code Verifier (PKCE) を生成
+4. State と Code Verifier を HttpOnly Cookie に保存（10分間有効）
+5. Auth0 認可画面へリダイレクト（Code Challenge を含む）
+6. ユーザーが GitHub 連携を許可
+7. 認可コード付きで /api/auth/callback へリダイレクト
+8. サーバーが Cookie から State と Code Verifier を取得
+9. State を検証（CSRF 対策）、Cookie を削除
+10. サーバーが認可コードと Code Verifier を Auth0 に送信（PKCE 検証）
+11. アクセストークン・ID トークンを取得
+12. セッションを作成し、KV に保存
+13. セッション ID を暗号化して Cookie に設定
+14. フロントエンドにリダイレクト
 ```
 
 ### セッション管理
@@ -161,6 +165,21 @@ PUBLIC_APP_URL=http://localhost:4321
 - セッション ID は暗号化して HttpOnly Cookie に保存
 - セッションデータ（トークン、ユーザー情報）は KV に保存
 - トークンはクライアントに露出しない
+
+### State と Code Verifier の保存
+
+**重要**: State と Code Verifier は **HttpOnly Cookie** に保存する。KV に保存してはいけない。
+
+**理由**:
+- Cookie はブラウザセッションに紐付き、他のユーザーがアクセスできない
+- KV に保存すると、攻撃者が他人の State を使って認証フローを乗っ取れる
+- CSRF 攻撃を防ぐには、State がそのブラウザセッション固有である必要がある
+
+**セキュリティ**:
+- `httpOnly: true` - JavaScript からアクセス不可
+- `secure: true` - HTTPS のみ（本番環境）
+- `sameSite: 'Lax'` - CSRF 保護
+- `maxAge: 600` - 10分で自動削除
 
 ### Arctic ライブラリの使用
 
@@ -175,7 +194,8 @@ Auth0 との OAuth 2.0 通信には **arctic** ライブラリを使用する。
 **使用例**:
 
 ```typescript
-import { Auth0 } from 'arctic';
+import { Auth0, generateState, generateCodeVerifier } from 'arctic';
+import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
 
 // クライアント初期化
 const auth0 = new Auth0(
@@ -185,19 +205,56 @@ const auth0 = new Auth0(
   redirectURI
 );
 
-// 認可 URL 生成
-const url = auth0.createAuthorizationURL(state, ['openid', 'profile', 'email']);
+// ===== ログインフロー =====
 
-// トークン交換
-const tokens = await auth0.validateAuthorizationCode(code);
+// 1. State と Code Verifier を生成
+const state = generateState();
+const codeVerifier = generateCodeVerifier();
+
+// 2. Cookie に保存（10分間有効、ブラウザセッションに紐付け）
+setCookie(c, 'oauth_state', state, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax',
+  maxAge: 600,
+});
+setCookie(c, 'oauth_code_verifier', codeVerifier, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax',
+  maxAge: 600,
+});
+
+// 3. 認可 URL 生成（PKCE を含む）
+const url = auth0.createAuthorizationURL(state, codeVerifier, ['openid', 'profile', 'email']);
+
+// ===== コールバックフロー =====
+
+// 1. Cookie から取得
+const savedState = getCookie(c, 'oauth_state');
+const savedCodeVerifier = getCookie(c, 'oauth_code_verifier');
+
+// 2. State 検証（CSRF 対策）
+if (state !== savedState) {
+  throw new Error('State mismatch - possible CSRF attack');
+}
+
+// 3. Cookie 削除（ワンタイムトークンとして扱う）
+deleteCookie(c, 'oauth_state');
+deleteCookie(c, 'oauth_code_verifier');
+
+// 4. トークン交換（PKCE 検証）
+const tokens = await auth0.validateAuthorizationCode(code, savedCodeVerifier);
 const accessToken = tokens.accessToken();
 const idToken = tokens.idToken();
 
-// トークンリフレッシュ
+// ===== トークンリフレッシュ =====
 const newTokens = await auth0.refreshAccessToken(refreshToken);
 ```
 
-**重要**: Auth0 との通信は必ず arctic を経由し、自前で HTTP リクエストを構築しない。
+**重要**:
+- Auth0 との通信は必ず arctic を経由し、自前で HTTP リクエストを構築しない
+- State と Code Verifier は必ず HttpOnly Cookie に保存する（KV 禁止）
 
 ## GitHub App 連携
 

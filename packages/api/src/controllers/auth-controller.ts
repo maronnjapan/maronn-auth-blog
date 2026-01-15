@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { setCookie, deleteCookie } from 'hono/cookie';
+import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import type { Env } from '../types/env';
 import { Auth0Client } from '../infrastructure/auth0-client';
 import { KVClient } from '../infrastructure/storage/kv-client';
@@ -19,11 +19,28 @@ app.get('/login', (c) => {
     c.env.AUTH0_CALLBACK_URL
   );
 
-  const state = crypto.randomUUID();
+  // Generate state and code verifier for PKCE
+  const { state, codeVerifier } = auth0.generateOAuthParams();
 
-  // TODO: Store state in KV for validation
+  // Store in HttpOnly cookies (10 minutes expiry)
+  // These are bound to the browser session and prevent CSRF attacks
+  setCookie(c, 'oauth_state', state, {
+    httpOnly: true,
+    secure: c.env.ENVIRONMENT === 'production',
+    sameSite: 'Lax',
+    maxAge: 600, // 10 minutes
+    path: '/',
+  });
 
-  const authorizeUrl = auth0.createAuthorizationURL(state);
+  setCookie(c, 'oauth_code_verifier', codeVerifier, {
+    httpOnly: true,
+    secure: c.env.ENVIRONMENT === 'production',
+    sameSite: 'Lax',
+    maxAge: 600, // 10 minutes
+    path: '/',
+  });
+
+  const authorizeUrl = auth0.createAuthorizationURL(state, codeVerifier);
   return c.redirect(authorizeUrl.toString());
 });
 
@@ -36,7 +53,22 @@ app.get('/callback', async (c) => {
     throw new UnauthorizedError('Missing code or state');
   }
 
-  // TODO: Validate state
+  // Retrieve state and code verifier from cookies
+  const savedState = getCookie(c, 'oauth_state');
+  const codeVerifier = getCookie(c, 'oauth_code_verifier');
+
+  if (!savedState || !codeVerifier) {
+    throw new UnauthorizedError('Missing OAuth session data');
+  }
+
+  // Validate state to prevent CSRF attacks
+  if (state !== savedState) {
+    throw new UnauthorizedError('State mismatch - possible CSRF attack');
+  }
+
+  // Delete OAuth cookies after validation
+  deleteCookie(c, 'oauth_state');
+  deleteCookie(c, 'oauth_code_verifier');
 
   const auth0 = new Auth0Client(
     c.env.AUTH0_DOMAIN,
@@ -45,8 +77,8 @@ app.get('/callback', async (c) => {
     c.env.AUTH0_CALLBACK_URL
   );
 
-  // Exchange code for tokens using arctic library
-  const tokens = await auth0.validateAuthorizationCode(code);
+  // Exchange code for tokens using arctic library with PKCE
+  const tokens = await auth0.validateAuthorizationCode(code, codeVerifier);
 
   // Get user info from Auth0
   const userInfo = await auth0.getUserInfo(tokens.access_token);
