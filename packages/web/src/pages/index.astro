@@ -3,12 +3,35 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ArticleList from '../islands/ArticleList';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch articles on server-side
+let articles = [];
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/articles`);
+  if (response.ok) {
+    const data = await response.json();
+    articles = data.articles || [];
+  } else {
+    error = '記事の取得に失敗しました';
+  }
+} catch (err) {
+  error = '記事の取得に失敗しました';
+  console.error('Failed to fetch articles:', err);
+}
 ---
 
 <BaseLayout title="フィード - GitHub Blog">
   <div class="container">
     <h1>最新の記事</h1>
-    <ArticleList apiUrl={API_URL} client:load />
+    {error ? (
+      <div class="error">
+        <p>{error}</p>
+      </div>
+    ) : (
+      <ArticleList articles={articles} client:load />
+    )}
   </div>
 </BaseLayout>
 
@@ -23,5 +46,13 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
     font-size: 2rem;
     margin-bottom: 2rem;
     color: #333;
+  }
+
+  .error {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 8px;
+    color: #f44336;
   }
 </style>

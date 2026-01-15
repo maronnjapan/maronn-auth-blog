@@ -7,14 +7,24 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
 // Fetch user data
 let user = null;
+let articles = [];
 let error = null;
 
 try {
-  const response = await fetch(`${API_URL}/users/${username}`);
-  if (response.ok) {
-    user = await response.json();
+  const userResponse = await fetch(`${API_URL}/users/${username}`);
+  if (userResponse.ok) {
+    user = await userResponse.json();
   } else {
     error = 'ユーザーが見つかりません';
+  }
+
+  // Fetch user's articles
+  if (user) {
+    const articlesResponse = await fetch(`${API_URL}/users/${username}/articles`);
+    if (articlesResponse.ok) {
+      const data = await articlesResponse.json();
+      articles = data.articles || [];
+    }
   }
 } catch (err) {
   error = 'ユーザー情報の取得に失敗しました';
@@ -38,7 +48,7 @@ if (error || !user) {
 
     <section class="articles-section">
       <h2>記事一覧</h2>
-      <UserArticleList apiUrl={API_URL} username={username} client:load />
+      <UserArticleList articles={articles} client:load />
     </section>
   </div>
 </BaseLayout>

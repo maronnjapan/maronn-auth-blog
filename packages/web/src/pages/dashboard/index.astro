@@ -3,8 +3,42 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import DashboardOverview from '../../islands/DashboardOverview';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch articles for statistics
+let articles = [];
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/dashboard/articles`, {
+    credentials: 'include',
+  });
+  if (response.ok) {
+    const data = await response.json();
+    articles = data.articles || [];
+  } else if (response.status === 401) {
+    return Astro.redirect(`${API_URL}/auth/login`);
+  } else {
+    error = '記事の取得に失敗しました';
+  }
+} catch (err) {
+  error = '記事の取得に失敗しました';
+  console.error('Failed to fetch articles:', err);
+}
 ---
 
 <DashboardLayout title="ダッシュボード">
-  <DashboardOverview apiUrl={API_URL} client:load />
+  {error ? (
+    <div class="error"><p>{error}</p></div>
+  ) : (
+    <DashboardOverview articles={articles} client:load />
+  )}
 </DashboardLayout>
+
+<style>
+  .error {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    color: #f44336;
+  }
+</style>

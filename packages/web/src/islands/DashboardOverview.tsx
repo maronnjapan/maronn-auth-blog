@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import type { Article } from '@maronn-auth-blog/shared';
 
 interface DashboardOverviewProps {
-  apiUrl: string;
+  articles: Article[];
 }
 
 interface Stats {
@@ -11,56 +11,15 @@ interface Stats {
   rejectedArticles: number;
 }
 
-export default function DashboardOverview({ apiUrl }: DashboardOverviewProps) {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/dashboard/articles`, {
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('統計情報の取得に失敗しました');
-        }
-
-        const data = await response.json();
-        const articles = data.articles || [];
-
-        const stats: Stats = {
-          totalArticles: articles.length,
-          publishedArticles: articles.filter((a: any) => a.status === 'published').length,
-          pendingArticles: articles.filter((a: any) =>
-            a.status === 'pending_new' || a.status === 'pending_update'
-          ).length,
-          rejectedArticles: articles.filter((a: any) => a.status === 'rejected').length,
-        };
-
-        setStats(stats);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '不明なエラー');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [apiUrl]);
-
-  if (loading) {
-    return <div className="loading"><p>読み込み中...</p></div>;
-  }
-
-  if (error) {
-    return <div className="error"><p>エラー: {error}</p></div>;
-  }
-
-  if (!stats) {
-    return null;
-  }
+export default function DashboardOverview({ articles }: DashboardOverviewProps) {
+  const stats: Stats = {
+    totalArticles: articles.length,
+    publishedArticles: articles.filter((a) => a.status === 'published').length,
+    pendingArticles: articles.filter((a) =>
+      a.status === 'pending_new' || a.status === 'pending_update'
+    ).length,
+    rejectedArticles: articles.filter((a) => a.status === 'rejected').length,
+  };
 
   return (
     <div className="dashboard-overview">

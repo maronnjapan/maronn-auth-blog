@@ -1067,6 +1067,84 @@ export function validateEnv(env: unknown): Env {
 }
 ```
 
+### React 規約
+
+#### useEffect の禁止
+
+**CRITICAL: `useEffect` の使用は一切禁止する。**
+
+理由:
+- データフェッチは Astro のサーバーサイドで行うべき
+- クライアントサイドでのデータフェッチはパフォーマンスとユーザー体験を悪化させる
+- ウォーターフォールリクエストを避ける
+- SEO とアクセシビリティの向上
+
+#### データフェッチの正しいパターン
+
+```typescript
+// ❌ Bad: useEffect でデータフェッチ
+export default function ArticleList() {
+  const [articles, setArticles] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/articles')
+      .then(res => res.json())
+      .then(data => setArticles(data));
+  }, []);
+
+  return <div>{/* ... */}</div>;
+}
+```
+
+```astro
+---
+// ✅ Good: Astro でサーバーサイドフェッチ
+const API_URL = import.meta.env.PUBLIC_API_URL;
+const response = await fetch(`${API_URL}/articles`);
+const data = await response.json();
+---
+
+<ArticleList articles={data.articles} client:load />
+```
+
+```typescript
+// ✅ Good: Props でデータを受け取る
+interface ArticleListProps {
+  articles: Article[];
+}
+
+export default function ArticleList({ articles }: ArticleListProps) {
+  return (
+    <div>
+      {articles.map(article => (
+        <ArticleCard key={article.id} article={article} />
+      ))}
+    </div>
+  );
+}
+```
+
+#### クライアントサイドでの状態管理
+
+ユーザーインタラクションによる状態変更のみ `useState` を使用する。
+
+```typescript
+// ✅ Good: ユーザーアクションによる状態管理
+export default function SettingsForm({ initialData }: Props) {
+  const [displayName, setDisplayName] = useState(initialData.displayName);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch('/api/users/me', {
+      method: 'PUT',
+      body: JSON.stringify({ displayName }),
+    });
+  };
+
+  return <form onSubmit={handleSubmit}>{/* ... */}</form>;
+}
+```
+
 ---
 
 ## Git 規約
