@@ -10,9 +10,16 @@ let repository = null;
 let error = null;
 
 try {
+  const cookieHeader = Astro.request.headers.get('Cookie') || '';
   const [userRes, repoRes] = await Promise.all([
-    fetch(`${API_URL}/auth/me`, { credentials: 'include' }),
-    fetch(`${API_URL}/users/me/repository`, { credentials: 'include' }),
+    fetch(`${API_URL}/auth/me`, {
+      credentials: 'include',
+      headers: { Cookie: cookieHeader },
+    }),
+    fetch(`${API_URL}/users/me/repository`, {
+      credentials: 'include',
+      headers: { Cookie: cookieHeader },
+    }),
   ]);
 
   if (userRes.status === 401 || repoRes.status === 401) {

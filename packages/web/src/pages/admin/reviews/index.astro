@@ -11,6 +11,9 @@ let error = null;
 try {
   const response = await fetch(`${API_URL}/admin/reviews`, {
     credentials: 'include',
+    headers: {
+      Cookie: Astro.request.headers.get('Cookie') || '',
+    },
   });
 
   if (response.status === 401) {

@@ -1,14 +1,30 @@
 ---
+import Header from '../islands/Header';
+
 export interface Props {
   title: string;
   description?: string;
 }
 
 const { title, description = 'GitHub Blog Platform' } = Astro.props;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
-const API_URL = 'http://localhost:8787';
+// Check authentication status on server-side
+let user = null;
+try {
+  const response = await fetch(`${API_URL}/auth/me`, {
+    credentials: 'include',
+    headers: {
+      Cookie: Astro.request.headers.get('Cookie') || '',
+    },
+  });
 
-const loginUrl = `${API_URL}/auth/login`
+  if (response.ok) {
+    user = await response.json();
+  }
+} catch (err) {
+  // User is not logged in
+}
 ---
 
 <!DOCTYPE html>
@@ -21,18 +37,7 @@ const loginUrl = `${API_URL}/auth/login`
     <link rel="stylesheet" href="/styles/global.css" />
   </head>
   <body>
-    <header class="header">
-      <div class="container">
-        <nav class="nav">
-          <a href="/" class="logo">GitHub Blog</a>
-          <div class="nav-links">
-            <a href="/">フィード</a>
-            <a href="/dashboard">ダッシュボード</a>
-            <a href={loginUrl} class="btn-primary">ログイン</a>
-          </div>
-        </nav>
-      </div>
-    </header>
+    <Header user={user} apiUrl={API_URL} client:load />
 
     <main class="main">
       <slot />
