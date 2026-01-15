@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --port 8788 --inspector-port 9230",
     "build": "tsc && wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit"
