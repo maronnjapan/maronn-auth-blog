@@ -61,3 +61,4 @@ app.notFound((c) => {
 });
 
 export default app;
+export type AppType = typeof app;

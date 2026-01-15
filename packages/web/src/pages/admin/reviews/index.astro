@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import AdminReviewList from '../../../islands/AdminReviewList';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+---
+
+<DashboardLayout title="審査一覧（管理者）">
+  <AdminReviewList apiUrl={API_URL} client:load />
+</DashboardLayout>

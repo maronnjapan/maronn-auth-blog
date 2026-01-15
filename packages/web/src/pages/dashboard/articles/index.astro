@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import DashboardArticleList from '../../../islands/DashboardArticleList';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+---
+
+<DashboardLayout title="記事一覧">
+  <DashboardArticleList apiUrl={API_URL} client:load />
+</DashboardLayout>

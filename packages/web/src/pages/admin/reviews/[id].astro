@@ -1,0 +1,11 @@
+---
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import AdminReviewDetail from '../../../islands/AdminReviewDetail';
+
+const { id } = Astro.params;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+---
+
+<DashboardLayout title="記事審査">
+  <AdminReviewDetail apiUrl={API_URL} articleId={id} client:load />
+</DashboardLayout>

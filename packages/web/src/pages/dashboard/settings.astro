@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import SettingsForm from '../../islands/SettingsForm';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+---
+
+<DashboardLayout title="設定">
+  <SettingsForm apiUrl={API_URL} client:load />
+</DashboardLayout>

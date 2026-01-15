@@ -1,0 +1,87 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import UserArticleList from '../../islands/UserArticleList';
+
+const { username } = Astro.params;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch user data
+let user = null;
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/users/${username}`);
+  if (response.ok) {
+    user = await response.json();
+  } else {
+    error = 'ユーザーが見つかりません';
+  }
+} catch (err) {
+  error = 'ユーザー情報の取得に失敗しました';
+}
+
+if (error || !user) {
+  return Astro.redirect('/404');
+}
+---
+
+<BaseLayout title={`${user.displayName} (@${user.username}) - GitHub Blog`}>
+  <div class="container">
+    <div class="user-profile">
+      {user.iconUrl && (
+        <img src={user.iconUrl} alt={user.displayName} class="avatar" />
+      )}
+      <h1>{user.displayName}</h1>
+      <p class="username">@{user.username}</p>
+      {user.bio && <p class="bio">{user.bio}</p>}
+    </div>
+
+    <section class="articles-section">
+      <h2>記事一覧</h2>
+      <UserArticleList apiUrl={API_URL} username={username} client:load />
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .user-profile {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+  }
+
+  .user-profile h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .username {
+    color: #666;
+    margin-bottom: 1rem;
+  }
+
+  .bio {
+    color: #333;
+    line-height: 1.6;
+  }
+
+  .articles-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+</style>
