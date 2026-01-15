@@ -15,16 +15,16 @@ app.get('/login', (c) => {
   const auth0 = new Auth0Client(
     c.env.AUTH0_DOMAIN,
     c.env.AUTH0_CLIENT_ID,
-    c.env.AUTH0_CLIENT_SECRET
+    c.env.AUTH0_CLIENT_SECRET,
+    c.env.AUTH0_CALLBACK_URL
   );
 
   const state = crypto.randomUUID();
-  const redirectUri = c.env.AUTH0_CALLBACK_URL;
 
   // TODO: Store state in KV for validation
 
-  const authorizeUrl = auth0.getAuthorizeUrl(redirectUri, state);
-  return c.redirect(authorizeUrl);
+  const authorizeUrl = auth0.createAuthorizationURL(state);
+  return c.redirect(authorizeUrl.toString());
 });
 
 // GET /auth/callback - Auth0 callback
@@ -41,11 +41,12 @@ app.get('/callback', async (c) => {
   const auth0 = new Auth0Client(
     c.env.AUTH0_DOMAIN,
     c.env.AUTH0_CLIENT_ID,
-    c.env.AUTH0_CLIENT_SECRET
+    c.env.AUTH0_CLIENT_SECRET,
+    c.env.AUTH0_CALLBACK_URL
   );
 
-  // Exchange code for tokens
-  const tokens = await auth0.exchangeCodeForToken(code, c.env.AUTH0_CALLBACK_URL);
+  // Exchange code for tokens using arctic library
+  const tokens = await auth0.validateAuthorizationCode(code);
 
   // Get user info from Auth0
   const userInfo = await auth0.getUserInfo(tokens.access_token);

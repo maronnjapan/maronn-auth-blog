@@ -1,3 +1,5 @@
+import { Auth0 } from 'arctic';
+
 export interface Auth0TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -15,71 +17,48 @@ export interface Auth0UserInfo {
 }
 
 export class Auth0Client {
+  private auth0: Auth0;
+
   constructor(
     private domain: string,
     private clientId: string,
-    private clientSecret: string
-  ) {}
-
-  getAuthorizeUrl(redirectUri: string, state: string): string {
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.clientId,
-      redirect_uri: redirectUri,
-      scope: 'openid profile email',
-      state,
-      connection: 'github',
-    });
-
-    return `https://${this.domain}/authorize?${params.toString()}`;
+    private clientSecret: string,
+    private redirectUri: string
+  ) {
+    this.auth0 = new Auth0(domain, clientId, clientSecret, redirectUri);
   }
 
-  async exchangeCodeForToken(
-    code: string,
-    redirectUri: string
-  ): Promise<Auth0TokenResponse> {
-    const response = await fetch(`https://${this.domain}/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to exchange code for token: ${error}`);
-    }
-
-    return response.json();
+  createAuthorizationURL(state: string): URL {
+    const scopes = ['openid', 'profile', 'email'];
+    return this.auth0.createAuthorizationURL(state, scopes);
   }
 
-  async refreshToken(refreshToken: string): Promise<Auth0TokenResponse> {
-    const response = await fetch(`https://${this.domain}/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'refresh_token',
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        refresh_token: refreshToken,
-      }),
-    });
+  async validateAuthorizationCode(code: string): Promise<Auth0TokenResponse> {
+    const tokens = await this.auth0.validateAuthorizationCode(code);
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to refresh token: ${error}`);
-    }
+    return {
+      access_token: tokens.accessToken(),
+      refresh_token: tokens.refreshToken(),
+      id_token: tokens.idToken(),
+      token_type: 'Bearer',
+      expires_in: tokens.accessTokenExpiresAt()
+        ? Math.floor((tokens.accessTokenExpiresAt()!.getTime() - Date.now()) / 1000)
+        : 3600,
+    };
+  }
 
-    return response.json();
+  async refreshAccessToken(refreshToken: string): Promise<Auth0TokenResponse> {
+    const tokens = await this.auth0.refreshAccessToken(refreshToken);
+
+    return {
+      access_token: tokens.accessToken(),
+      refresh_token: tokens.refreshToken(),
+      id_token: tokens.idToken(),
+      token_type: 'Bearer',
+      expires_in: tokens.accessTokenExpiresAt()
+        ? Math.floor((tokens.accessTokenExpiresAt()!.getTime() - Date.now()) / 1000)
+        : 3600,
+    };
   }
 
   async getUserInfo(accessToken: string): Promise<Auth0UserInfo> {
@@ -97,3 +76,4 @@ export class Auth0Client {
     return response.json();
   }
 }
+

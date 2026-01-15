@@ -9,7 +9,7 @@ GitHub リポジトリを CMS として利用するブログプラットフォ�
 | フロントエンド | Astro + React (Islands) |
 | API | Hono on Cloudflare Workers |
 | 型安全 API クライアント | Hono RPC (`hc`) |
-| 認証 | Auth0（GitHub ソーシャルログイン） |
+| 認証 | Auth0（GitHub ソーシャルログイン）+ arctic（OAuth ライブラリ） |
 | DB | Cloudflare D1 |
 | キャッシュ（HTML） | Cloudflare KV |
 | 画像ストレージ | Cloudflare R2 |
@@ -161,6 +161,43 @@ PUBLIC_APP_URL=http://localhost:4321
 - セッション ID は暗号化して HttpOnly Cookie に保存
 - セッションデータ（トークン、ユーザー情報）は KV に保存
 - トークンはクライアントに露出しない
+
+### Arctic ライブラリの使用
+
+Auth0 との OAuth 2.0 通信には **arctic** ライブラリを使用する。
+
+**理由**:
+- Cloudflare Workers 環境に最適化された OAuth ライブラリ
+- セキュアな実装（PKCE、state 検証など標準準拠）
+- Auth0 を含む主要な OAuth プロバイダーをサポート
+- 自前実装によるセキュリティリスクを回避
+
+**使用例**:
+
+```typescript
+import { Auth0 } from 'arctic';
+
+// クライアント初期化
+const auth0 = new Auth0(
+  domain,
+  clientId,
+  clientSecret,
+  redirectURI
+);
+
+// 認可 URL 生成
+const url = auth0.createAuthorizationURL(state, ['openid', 'profile', 'email']);
+
+// トークン交換
+const tokens = await auth0.validateAuthorizationCode(code);
+const accessToken = tokens.accessToken();
+const idToken = tokens.idToken();
+
+// トークンリフレッシュ
+const newTokens = await auth0.refreshAccessToken(refreshToken);
+```
+
+**重要**: Auth0 との通信は必ず arctic を経由し、自前で HTTP リクエストを構築しない。
 
 ## GitHub App 連携
 
@@ -744,7 +781,7 @@ packages/api/src/
     │   ├── user-repository.ts     # D1 アクセス
     │   └── article-repository.ts
     ├── github-client.ts           # GitHub API クライアント
-    ├── auth0-client.ts            # Auth0 クライアント
+    ├── auth0-client.ts            # Auth0 クライアント（arctic ライブラリ使用）
     └── storage/
         ├── kv-client.ts           # KV アクセス
         └── r2-client.ts           # R2 アクセス
@@ -1310,6 +1347,7 @@ console.error(`[ApproveArticle] Failed to approve article: ${articleId}`, error)
 - GitHub App の Private Key は環境変数で管理
 - Webhook は署名検証を必ず行う
 - セッション Cookie は HttpOnly, Secure, SameSite=Lax
+- **Auth0 認証は arctic ライブラリを使用し、自前実装禁止**
 
 ## パフォーマンス
 
