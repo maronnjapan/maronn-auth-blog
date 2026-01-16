@@ -1,0 +1,11 @@
+name = "maronn-auth-blog-web"
+main = "dist/_worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Assets directory for static files
+[site]
+bucket = "dist"
+
+[env.production]
+name = "maronn-auth-blog-web-production"
