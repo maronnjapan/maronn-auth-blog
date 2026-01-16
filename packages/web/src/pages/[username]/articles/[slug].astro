@@ -1,0 +1,203 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const { username, slug } = Astro.params;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+// Fetch article data
+let article = null;
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/articles/${username}/${slug}`);
+  if (response.ok) {
+    article = await response.json();
+  } else {
+    error = '記事が見つかりません';
+  }
+} catch (err) {
+  error = '記事の取得に失敗しました';
+}
+
+if (error || !article) {
+  return Astro.redirect('/404');
+}
+
+const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<BaseLayout title={`${article.title} - ${username}`}>
+  <div class="container">
+    <article class="article">
+      <header class="article-header">
+        <h1>{article.title}</h1>
+        <div class="article-meta">
+          <a href={`/${username}`} class="author">@{username}</a>
+          <time datetime={article.publishedAt}>{publishedDate}</time>
+          {article.category && (
+            <span class="category">{article.category}</span>
+          )}
+        </div>
+        {article.tags && article.tags.length > 0 && (
+          <div class="tags">
+            {article.tags.map((tag: string) => (
+              <span class="tag">#{tag}</span>
+            ))}
+          </div>
+        )}
+      </header>
+
+      <div class="article-content" set:html={article.html} />
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .article {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+  }
+
+  .article-header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .article-header h1 {
+    font-size: 2.5rem;
+    line-height: 1.3;
+    margin-bottom: 1rem;
+  }
+
+  .article-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .author {
+    color: #0066cc;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .author:hover {
+    text-decoration: underline;
+  }
+
+  .category {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    background: #f5f5f5;
+    color: #666;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+
+  .article-content {
+    line-height: 1.8;
+    color: #333;
+  }
+
+  :global(.article-content h2) {
+    font-size: 1.8rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.5rem;
+  }
+
+  :global(.article-content h3) {
+    font-size: 1.4rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  :global(.article-content p) {
+    margin-bottom: 1rem;
+  }
+
+  :global(.article-content code) {
+    background: #f5f5f5;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: 'Courier New', monospace;
+  }
+
+  :global(.article-content pre) {
+    background: #282c34;
+    color: #abb2bf;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+
+  :global(.article-content pre code) {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  :global(.article-content img) {
+    max-width: 100%;
+    height: auto;
+    margin: 1.5rem 0;
+    border-radius: 4px;
+  }
+
+  :global(.article-content ul, .article-content ol) {
+    margin-left: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  :global(.article-content li) {
+    margin-bottom: 0.5rem;
+  }
+
+  :global(.article-content blockquote) {
+    border-left: 4px solid #e0e0e0;
+    padding-left: 1rem;
+    color: #666;
+    margin: 1rem 0;
+    font-style: italic;
+  }
+
+  :global(.article-content a) {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  :global(.article-content a:hover) {
+    text-decoration: underline;
+  }
+</style>

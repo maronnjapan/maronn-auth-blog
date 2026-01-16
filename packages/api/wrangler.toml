@@ -1,0 +1,29 @@
+name = "maronn-auth-blog-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+API_URL = "http://localhost:8787"
+WEB_URL = "http://localhost:4321"
+EMBED_ORIGIN = "http://localhost:8788"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "maronn-auth-blog-db"
+database_id = "xxx"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "xxx"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "maronn-auth-blog-images"
+
+[env.production]
+name = "maronn-auth-blog-api-production"
+
+[env.production.vars]
+ENVIRONMENT = "production"

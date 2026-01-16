@@ -1,0 +1,138 @@
+---
+export interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <a href="/" class="logo">GitHub Blog</a>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="/dashboard" class:list={['nav-item', { active: currentPath === '/dashboard' }]}>
+            ダッシュボード
+          </a>
+          <a href="/dashboard/articles" class:list={['nav-item', { active: currentPath === '/dashboard/articles' }]}>
+            記事一覧
+          </a>
+          <a href="/dashboard/settings" class:list={['nav-item', { active: currentPath === '/dashboard/settings' }]}>
+            設定
+          </a>
+          <a href="/admin/reviews" class="nav-item admin">
+            審査（管理者）
+          </a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="content-header">
+          <h1>{title}</h1>
+        </header>
+        <div class="content-body">
+          <slot />
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    background: #f5f5f5;
+  }
+
+  .dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 250px;
+    background: #1a1a1a;
+    color: white;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #333;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 1rem 0;
+  }
+
+  .nav-item {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    color: #ccc;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .nav-item:hover {
+    background: #2a2a2a;
+    color: white;
+  }
+
+  .nav-item.active {
+    background: #0066cc;
+    color: white;
+  }
+
+  .nav-item.admin {
+    margin-top: auto;
+    border-top: 1px solid #333;
+  }
+
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content-header {
+    background: white;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .content-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .content-body {
+    flex: 1;
+    padding: 2rem;
+  }
+</style>

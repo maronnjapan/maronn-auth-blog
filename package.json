@@ -1,0 +1,19 @@
+{
+  "name": "maronn-auth-blog",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./packages/*\" dev",
+    "build": "pnpm --filter \"./packages/*\" build",
+    "test": "pnpm --filter \"./packages/*\" test",
+    "typecheck": "pnpm --filter \"./packages/*\" typecheck",
+    "lint": "pnpm --filter \"./packages/*\" lint",
+    "deploy": "pnpm --filter \"./packages/*\" deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  }
+}

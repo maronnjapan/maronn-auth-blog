@@ -1,0 +1,7 @@
+name = "maronn-auth-blog-embed"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "maronn-auth-blog-embed-production"

@@ -9,7 +9,7 @@ GitHub リポジトリを CMS として利用するブログプラットフォ�
 | フロントエンド | Astro + React (Islands) |
 | API | Hono on Cloudflare Workers |
 | 型安全 API クライアント | Hono RPC (`hc`) |
-| 認証 | Auth0（GitHub ソーシャルログイン） |
+| 認証 | Auth0（GitHub ソーシャルログイン）+ arctic（OAuth ライブラリ） |
 | DB | Cloudflare D1 |
 | キャッシュ（HTML） | Cloudflare KV |
 | 画像ストレージ | Cloudflare R2 |
@@ -146,14 +146,18 @@ PUBLIC_APP_URL=http://localhost:4321
 ```
 1. ユーザーが「ログイン」ボタンをクリック
 2. /api/auth/login へリダイレクト
-3. Auth0 認可画面へリダイレクト
-4. ユーザーが GitHub 連携を許可
-5. 認可コード付きで /api/auth/callback へリダイレクト
-6. サーバーが認可コードを Auth0 トークンエンドポイントに送信
-7. アクセストークン・ID トークンを取得
-8. セッションを作成し、KV に保存
-9. セッション ID を暗号化して Cookie に設定
-10. フロントエンドにリダイレクト
+3. サーバーが State と Code Verifier (PKCE) を生成
+4. State と Code Verifier を HttpOnly Cookie に保存（10分間有効）
+5. Auth0 認可画面へリダイレクト（Code Challenge を含む）
+6. ユーザーが GitHub 連携を許可
+7. 認可コード付きで /api/auth/callback へリダイレクト
+8. サーバーが Cookie から State と Code Verifier を取得
+9. State を検証（CSRF 対策）、Cookie を削除
+10. サーバーが認可コードと Code Verifier を Auth0 に送信（PKCE 検証）
+11. アクセストークン・ID トークンを取得
+12. セッションを作成し、KV に保存
+13. セッション ID を暗号化して Cookie に設定
+14. フロントエンドにリダイレクト
 ```
 
 ### セッション管理
@@ -161,6 +165,96 @@ PUBLIC_APP_URL=http://localhost:4321
 - セッション ID は暗号化して HttpOnly Cookie に保存
 - セッションデータ（トークン、ユーザー情報）は KV に保存
 - トークンはクライアントに露出しない
+
+### State と Code Verifier の保存
+
+**重要**: State と Code Verifier は **HttpOnly Cookie** に保存する。KV に保存してはいけない。
+
+**理由**:
+- Cookie はブラウザセッションに紐付き、他のユーザーがアクセスできない
+- KV に保存すると、攻撃者が他人の State を使って認証フローを乗っ取れる
+- CSRF 攻撃を防ぐには、State がそのブラウザセッション固有である必要がある
+
+**セキュリティ**:
+- `httpOnly: true` - JavaScript からアクセス不可
+- `secure: true` - HTTPS のみ（本番環境）
+- `sameSite: 'Lax'` - CSRF 保護
+- `maxAge: 600` - 10分で自動削除
+
+### Arctic ライブラリの使用
+
+Auth0 との OAuth 2.0 通信には **arctic** ライブラリを使用する。
+
+**理由**:
+- Cloudflare Workers 環境に最適化された OAuth ライブラリ
+- セキュアな実装（PKCE、state 検証など標準準拠）
+- Auth0 を含む主要な OAuth プロバイダーをサポート
+- 自前実装によるセキュリティリスクを回避
+
+**使用例**:
+
+```typescript
+import { Auth0, generateState, generateCodeVerifier } from 'arctic';
+import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
+
+// クライアント初期化
+const auth0 = new Auth0(
+  domain,
+  clientId,
+  clientSecret,
+  redirectURI
+);
+
+// ===== ログインフロー =====
+
+// 1. State と Code Verifier を生成
+const state = generateState();
+const codeVerifier = generateCodeVerifier();
+
+// 2. Cookie に保存（10分間有効、ブラウザセッションに紐付け）
+setCookie(c, 'oauth_state', state, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax',
+  maxAge: 600,
+});
+setCookie(c, 'oauth_code_verifier', codeVerifier, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax',
+  maxAge: 600,
+});
+
+// 3. 認可 URL 生成（PKCE を含む）
+const url = auth0.createAuthorizationURL(state, codeVerifier, ['openid', 'profile', 'email']);
+
+// ===== コールバックフロー =====
+
+// 1. Cookie から取得
+const savedState = getCookie(c, 'oauth_state');
+const savedCodeVerifier = getCookie(c, 'oauth_code_verifier');
+
+// 2. State 検証（CSRF 対策）
+if (state !== savedState) {
+  throw new Error('State mismatch - possible CSRF attack');
+}
+
+// 3. Cookie 削除（ワンタイムトークンとして扱う）
+deleteCookie(c, 'oauth_state');
+deleteCookie(c, 'oauth_code_verifier');
+
+// 4. トークン交換（PKCE 検証）
+const tokens = await auth0.validateAuthorizationCode(code, savedCodeVerifier);
+const accessToken = tokens.accessToken();
+const idToken = tokens.idToken();
+
+// ===== トークンリフレッシュ =====
+const newTokens = await auth0.refreshAccessToken(refreshToken);
+```
+
+**重要**:
+- Auth0 との通信は必ず arctic を経由し、自前で HTTP リクエストを構築しない
+- State と Code Verifier は必ず HttpOnly Cookie に保存する（KV 禁止）
 
 ## GitHub App 連携
 
@@ -744,7 +838,7 @@ packages/api/src/
     │   ├── user-repository.ts     # D1 アクセス
     │   └── article-repository.ts
     ├── github-client.ts           # GitHub API クライアント
-    ├── auth0-client.ts            # Auth0 クライアント
+    ├── auth0-client.ts            # Auth0 クライアント（arctic ライブラリ使用）
     └── storage/
         ├── kv-client.ts           # KV アクセス
         └── r2-client.ts           # R2 アクセス
@@ -1067,6 +1161,140 @@ export function validateEnv(env: unknown): Env {
 }
 ```
 
+### React 規約
+
+#### useEffect の禁止
+
+**CRITICAL: `useEffect` の使用は一切禁止する。**
+
+理由:
+- データフェッチは Astro のサーバーサイドで行うべき
+- クライアントサイドでのデータフェッチはパフォーマンスとユーザー体験を悪化させる
+- ウォーターフォールリクエストを避ける
+- SEO とアクセシビリティの向上
+
+#### データフェッチの正しいパターン
+
+```typescript
+// ❌ Bad: useEffect でデータフェッチ
+export default function ArticleList() {
+  const [articles, setArticles] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/articles')
+      .then(res => res.json())
+      .then(data => setArticles(data));
+  }, []);
+
+  return <div>{/* ... */}</div>;
+}
+```
+
+```astro
+---
+// ✅ Good: Astro でサーバーサイドフェッチ
+const API_URL = import.meta.env.PUBLIC_API_URL;
+const response = await fetch(`${API_URL}/articles`);
+const data = await response.json();
+---
+
+<ArticleList articles={data.articles} client:load />
+```
+
+```typescript
+// ✅ Good: Props でデータを受け取る
+interface ArticleListProps {
+  articles: Article[];
+}
+
+export default function ArticleList({ articles }: ArticleListProps) {
+  return (
+    <div>
+      {articles.map(article => (
+        <ArticleCard key={article.id} article={article} />
+      ))}
+    </div>
+  );
+}
+```
+
+#### クライアントサイドでの状態管理
+
+ユーザーインタラクションによる状態変更のみ `useState` を使用する。
+
+```typescript
+// ✅ Good: ユーザーアクションによる状態管理
+export default function SettingsForm({ initialData }: Props) {
+  const [displayName, setDisplayName] = useState(initialData.displayName);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch('/api/users/me', {
+      method: 'PUT',
+      body: JSON.stringify({ displayName }),
+    });
+  };
+
+  return <form onSubmit={handleSubmit}>{/* ... */}</form>;
+}
+```
+
+### Astro レンダリング戦略 (SSG/SSR/Hybrid)
+
+本プロジェクトは Astro の **hybrid モード**を使用する。
+
+#### レンダリングモード
+
+```typescript
+// astro.config.mjs
+export default defineConfig({
+  output: 'hybrid', // SSG と SSR を併用可能
+  adapter: cloudflare(),
+});
+```
+
+#### ページごとのレンダリング選択
+
+| ページタイプ | レンダリング方法 | 理由 |
+|--------------|------------------|------|
+| 公開記事一覧（フィード） | SSR | 最新記事を常に表示するため |
+| ユーザーページ | SSR | 記事数や内容が動的に変化するため |
+| 記事詳細 | SSR | 記事内容の更新を即座に反映するため |
+| ダッシュボード | SSR（デフォルト） | 認証が必要、ユーザー固有の動的データ |
+| 管理者ページ | SSR（デフォルト） | 認証・認可が必要、リアルタイムデータ |
+
+#### SSR の利点（本プロジェクトでの選択理由）
+
+- **常に最新のコンテンツ**: 記事の承認・更新が即座に反映される
+- **認証との統合**: Cookie ベースのセッション認証と自然に統合
+- **エッジレンダリング**: Cloudflare Pages のエッジで高速レンダリング
+- **ビルド不要**: コンテンツ更新時に再ビルド・デプロイが不要
+
+#### SSG を使用する場合（将来的な拡張）
+
+完全に静的なページ（利用規約、プライバシーポリシー等）がある場合：
+
+```astro
+---
+// src/pages/terms.astro
+export const prerender = true; // このページのみ SSG
+---
+
+<h1>利用規約</h1>
+<p>静的コンテンツ...</p>
+```
+
+#### パフォーマンス最適化
+
+SSR でも十分高速な理由：
+
+1. **サーバーサイドデータフェッチ**: useEffect による クライアントサイドフェッチを排除
+2. **エッジレンダリング**: Cloudflare のグローバルエッジネットワークで実行
+3. **HTMLキャッシュ**: KV に記事 HTML をキャッシュ（GitHub API を毎回叩かない）
+4. **画像配信**: R2 から直接配信（GitHub API 不使用）
+
+SSG を使わなくても、上記の最適化により初回表示は十分高速。
+
 ---
 
 ## Git 規約
@@ -1176,6 +1404,7 @@ console.error(`[ApproveArticle] Failed to approve article: ${articleId}`, error)
 - GitHub App の Private Key は環境変数で管理
 - Webhook は署名検証を必ず行う
 - セッション Cookie は HttpOnly, Secure, SameSite=Lax
+- **Auth0 認証は arctic ライブラリを使用し、自前実装禁止**
 
 ## パフォーマンス
 
