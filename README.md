@@ -126,7 +126,7 @@ Auth0 Dashboard で以下を追加：
 6. **ビルドとデプロイ**
    - API（Cloudflare Workers）
    - Embed（Cloudflare Workers）
-   - Web（Cloudflare Pages with SSR）
+   - Web（Cloudflare Workers）
 
 ### デプロイ後の設定
 
@@ -135,8 +135,8 @@ Auth0 Dashboard で以下を追加：
 1. **Auth0 Application Settings**
    - [Auth0 Dashboard](https://manage.auth0.com/) にアクセス
    - Allowed Callback URLs: `https://<project>-api-production.workers.dev/auth/callback`
-   - Allowed Logout URLs: `https://<project>.pages.dev`
-   - Allowed Web Origins: `https://<project>.pages.dev`
+   - Allowed Logout URLs: `https://<project>-web-production.workers.dev`
+   - Allowed Web Origins: `https://<project>-web-production.workers.dev`
 
 2. **GitHub App Webhook URL**
    - [GitHub Apps Settings](https://github.com/settings/apps) にアクセス

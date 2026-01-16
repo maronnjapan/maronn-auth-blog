@@ -248,23 +248,21 @@ cd packages/api
 echo "$EMBED_URL" | wrangler secret put EMBED_ORIGIN --env production
 cd ../..
 
-# Deploy Web (Cloudflare Pages with Workers SSR)
-print_info "Deploying Web to Cloudflare Pages..."
+# Deploy Web (Cloudflare Workers)
+print_info "Deploying Web to Cloudflare Workers..."
 cd packages/web
 
 # Create .env for build
 cat > .env << EOF
 PUBLIC_API_URL=$API_URL
-PUBLIC_APP_URL=https://${PROJECT_NAME}.pages.dev
+PUBLIC_APP_URL=https://${PROJECT_NAME}-web-production.workers.dev
 EOF
 
-# Deploy to Cloudflare Pages
-print_info "Running wrangler pages deploy..."
-DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${PROJECT_NAME} --branch=main 2>&1)
-WEB_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^ ]*\.pages\.dev' | head -1)
+# Deploy to Cloudflare Workers
+WEB_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
 if [ -z "$WEB_URL" ]; then
   # Fallback: construct URL from project name
-  WEB_URL="https://${PROJECT_NAME}.pages.dev"
+  WEB_URL="https://${PROJECT_NAME}-web-production.workers.dev"
 fi
 cd ../..
 print_success "Web deployed: $WEB_URL"
