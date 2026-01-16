@@ -124,27 +124,16 @@ else
     print_success "D1 database created: $D1_DATABASE_ID"
 fi
 
-# Create KV Namespaces
-print_info "Creating KV namespaces..."
+# Create KV Namespace
+print_info "Creating KV namespace..."
 
-# Sessions KV
-KV_SESSIONS_OUTPUT=$(wrangler kv:namespace create "${PROJECT_NAME}-sessions" 2>&1 || true)
-if echo "$KV_SESSIONS_OUTPUT" | grep -q "already exists"; then
-    print_warning "Sessions KV namespace already exists"
-    KV_SESSIONS_ID=$(wrangler kv:namespace list | grep "${PROJECT_NAME}-sessions" | jq -r '.[] | select(.title | contains("sessions")) | .id' | head -1)
+KV_OUTPUT=$(wrangler kv:namespace create "${PROJECT_NAME}-kv" 2>&1 || true)
+if echo "$KV_OUTPUT" | grep -q "already exists"; then
+    print_warning "KV namespace already exists"
+    KV_ID=$(wrangler kv:namespace list | grep "${PROJECT_NAME}-kv" | jq -r '.[] | select(.title | contains("kv")) | .id' | head -1)
 else
-    KV_SESSIONS_ID=$(echo "$KV_SESSIONS_OUTPUT" | grep "id =" | awk -F'"' '{print $2}')
-    print_success "Sessions KV namespace created: $KV_SESSIONS_ID"
-fi
-
-# Cache KV
-KV_CACHE_OUTPUT=$(wrangler kv:namespace create "${PROJECT_NAME}-cache" 2>&1 || true)
-if echo "$KV_CACHE_OUTPUT" | grep -q "already exists"; then
-    print_warning "Cache KV namespace already exists"
-    KV_CACHE_ID=$(wrangler kv:namespace list | grep "${PROJECT_NAME}-cache" | jq -r '.[] | select(.title | contains("cache")) | .id' | head -1)
-else
-    KV_CACHE_ID=$(echo "$KV_CACHE_OUTPUT" | grep "id =" | awk -F'"' '{print $2}')
-    print_success "Cache KV namespace created: $KV_CACHE_ID"
+    KV_ID=$(echo "$KV_OUTPUT" | grep "id =" | awk -F'"' '{print $2}')
+    print_success "KV namespace created: $KV_ID"
 fi
 
 # Create R2 Bucket
@@ -168,65 +157,54 @@ wrangler d1 execute ${PROJECT_NAME}-db --file=scripts/schema.sql --remote
 print_success "Database schema applied"
 
 # ============================================
-# Step 5: Update wrangler.toml files
+# Step 5: Update wrangler.toml with Resource IDs
 # ============================================
-print_header "Step 5: Updating Configuration Files"
+print_header "Step 5: Updating wrangler.toml with Resource IDs"
 
-# Update API wrangler.toml
-print_info "Updating packages/api/wrangler.toml..."
-cat > packages/api/wrangler.toml << EOF
-name = "${PROJECT_NAME}-api"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
+# Update API wrangler.toml with actual resource IDs
+print_info "Updating packages/api/wrangler.toml with resource IDs..."
 
-[[d1_databases]]
+# Add production environment bindings to wrangler.toml
+cat >> packages/api/wrangler.toml << EOF
+
+# Production environment bindings (added by deploy.sh)
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "${PROJECT_NAME}-db"
 database_id = "${D1_DATABASE_ID}"
 
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "${KV_SESSIONS_ID}"
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "${KV_ID}"
 
-[[kv_namespaces]]
-binding = "CACHE"
-id = "${KV_CACHE_ID}"
-
-[[r2_buckets]]
-binding = "IMAGES"
+[[env.production.r2_buckets]]
+binding = "R2"
 bucket_name = "${PROJECT_NAME}-images"
 
-[vars]
-EMBED_ORIGIN = "https://${PROJECT_NAME}-embed.workers.dev"
+[env.production.vars]
+ENVIRONMENT = "production"
 EOF
-print_success "API configuration updated"
 
-# Update Embed wrangler.toml
-print_info "Updating packages/embed/wrangler.toml..."
-cat > packages/embed/wrangler.toml << EOF
-name = "${PROJECT_NAME}-embed"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-EOF
-print_success "Embed configuration updated"
+print_success "API wrangler.toml updated"
+print_success "Embed wrangler.toml already configured"
 
 # ============================================
-# Step 6: Set Secrets
+# Step 6: Set Secrets for Production
 # ============================================
-print_header "Step 6: Setting Secrets"
+print_header "Step 6: Setting Secrets for Production Environment"
 
-print_info "Setting API secrets..."
+print_info "Setting API secrets for production..."
 cd packages/api
 
-echo "$AUTH0_DOMAIN" | wrangler secret put AUTH0_DOMAIN
-echo "$AUTH0_CLIENT_ID" | wrangler secret put AUTH0_CLIENT_ID
-echo "$AUTH0_CLIENT_SECRET" | wrangler secret put AUTH0_CLIENT_SECRET
-echo "$GITHUB_APP_ID" | wrangler secret put GITHUB_APP_ID
-echo "$GITHUB_APP_PRIVATE_KEY" | wrangler secret put GITHUB_APP_PRIVATE_KEY
-echo "$SESSION_SECRET" | wrangler secret put SESSION_SECRET
+echo "$AUTH0_DOMAIN" | wrangler secret put AUTH0_DOMAIN --env production
+echo "$AUTH0_CLIENT_ID" | wrangler secret put AUTH0_CLIENT_ID --env production
+echo "$AUTH0_CLIENT_SECRET" | wrangler secret put AUTH0_CLIENT_SECRET --env production
+echo "$GITHUB_APP_ID" | wrangler secret put GITHUB_APP_ID --env production
+echo "$GITHUB_APP_PRIVATE_KEY" | wrangler secret put GITHUB_APP_PRIVATE_KEY --env production
+echo "$SESSION_SECRET" | wrangler secret put SESSION_SECRET --env production
 
 cd ../..
-print_success "Secrets configured"
+print_success "Secrets configured for production"
 
 # ============================================
 # Step 7: Build
@@ -238,32 +216,40 @@ pnpm build
 print_success "Build completed"
 
 # ============================================
-# Step 8: Deploy
+# Step 8: Deploy to Cloudflare
 # ============================================
-print_header "Step 8: Deploying Applications"
+print_header "Step 8: Deploying to Cloudflare"
 
-# Deploy API
-print_info "Deploying API..."
+# Deploy API (Workers)
+print_info "Deploying API to Cloudflare Workers..."
 cd packages/api
-API_URL=$(wrangler deploy --json | jq -r '.url')
+API_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
+if [ -z "$API_URL" ]; then
+  # Fallback: construct URL from project name
+  API_URL="https://${PROJECT_NAME}-api-production.workers.dev"
+fi
 cd ../..
 print_success "API deployed: $API_URL"
 
-# Deploy Embed
-print_info "Deploying Embed..."
+# Deploy Embed (Workers)
+print_info "Deploying Embed to Cloudflare Workers..."
 cd packages/embed
-EMBED_URL=$(wrangler deploy --json | jq -r '.url')
+EMBED_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
+if [ -z "$EMBED_URL" ]; then
+  # Fallback: construct URL from project name
+  EMBED_URL="https://${PROJECT_NAME}-embed-production.workers.dev"
+fi
 cd ../..
 print_success "Embed deployed: $EMBED_URL"
 
 # Update API with correct EMBED_ORIGIN
 print_info "Updating API with embed URL..."
 cd packages/api
-wrangler secret put EMBED_ORIGIN <<< "$EMBED_URL"
+echo "$EMBED_URL" | wrangler secret put EMBED_ORIGIN --env production
 cd ../..
 
-# Deploy Web (Cloudflare Pages)
-print_info "Deploying Web..."
+# Deploy Web (Cloudflare Pages with Workers SSR)
+print_info "Deploying Web to Cloudflare Pages..."
 cd packages/web
 
 # Create .env for build
@@ -273,44 +259,53 @@ PUBLIC_APP_URL=https://${PROJECT_NAME}.pages.dev
 EOF
 
 # Deploy to Cloudflare Pages
-WEB_URL=$(wrangler pages deploy dist --project-name=${PROJECT_NAME} --branch=main | grep -o 'https://[^ ]*' | head -1)
+print_info "Running wrangler pages deploy..."
+DEPLOY_OUTPUT=$(wrangler pages deploy dist --project-name=${PROJECT_NAME} --branch=main 2>&1)
+WEB_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^ ]*\.pages\.dev' | head -1)
+if [ -z "$WEB_URL" ]; then
+  # Fallback: construct URL from project name
+  WEB_URL="https://${PROJECT_NAME}.pages.dev"
+fi
 cd ../..
 print_success "Web deployed: $WEB_URL"
 
 # ============================================
-# Step 9: Update Auth0 Callback URLs
+# Step 9: Final Configuration
 # ============================================
-print_header "Step 9: Post-Deployment Configuration"
+print_header "Step 9: Final Configuration"
 
-print_info "Deployment completed! Please update the following:"
-echo ""
-echo "1. Auth0 Callback URLs:"
-echo "   - Add to Allowed Callback URLs: ${API_URL}/auth/callback"
-echo "   - Add to Allowed Logout URLs: ${WEB_URL}"
-echo "   - Add to Allowed Web Origins: ${WEB_URL}"
-echo ""
-echo "2. Update the AUTH0_CALLBACK_URL secret:"
+# Set AUTH0_CALLBACK_URL secret
 AUTH0_CALLBACK_URL="${API_URL}/auth/callback"
+print_info "Setting AUTH0_CALLBACK_URL secret..."
 cd packages/api
-echo "$AUTH0_CALLBACK_URL" | wrangler secret put AUTH0_CALLBACK_URL
+echo "$AUTH0_CALLBACK_URL" | wrangler secret put AUTH0_CALLBACK_URL --env production
 cd ../..
-print_success "AUTH0_CALLBACK_URL secret updated"
+print_success "AUTH0_CALLBACK_URL configured"
 
 # ============================================
 # Deployment Summary
 # ============================================
 print_header "Deployment Complete!"
 
-echo "Your application has been deployed successfully!"
+echo "Your application has been deployed to Cloudflare successfully!"
 echo ""
-echo "Application URLs:"
-echo "  Web:   $WEB_URL"
-echo "  API:   $API_URL"
-echo "  Embed: $EMBED_URL"
+echo "📍 Application URLs:"
+echo "   Web:   ${WEB_URL}"
+echo "   API:   ${API_URL}"
+echo "   Embed: ${EMBED_URL}"
 echo ""
-echo "Next steps:"
-echo "1. Update Auth0 application settings with the callback URLs above"
-echo "2. Configure your GitHub App webhook URL: ${API_URL}/webhook/github"
-echo "3. Test the authentication flow"
+echo "⚙️  Next Steps:"
+echo ""
+echo "1. Update Auth0 Application Settings:"
+echo "   → https://manage.auth0.com/"
+echo "   - Allowed Callback URLs: ${API_URL}/auth/callback"
+echo "   - Allowed Logout URLs: ${WEB_URL}"
+echo "   - Allowed Web Origins: ${WEB_URL}"
+echo ""
+echo "2. Update GitHub App Webhook:"
+echo "   → https://github.com/settings/apps"
+echo "   - Webhook URL: ${API_URL}/webhook/github"
+echo ""
+echo "3. Test the authentication flow at: ${WEB_URL}"
 echo ""
 print_success "All done! 🎉"

@@ -111,38 +111,38 @@ Auth0 Dashboard で以下を追加：
 
 2. **Cloudflare リソースの作成**
    - D1 データベース
-   - KV ネームスペース（セッション用・キャッシュ用）
+   - KV ネームスペース（セッション・キャッシュ用）
    - R2 バケット（画像保存用）
 
 3. **データベースの初期化**
    - スキーマの適用
 
-4. **設定ファイルの更新**
-   - `wrangler.toml` にリソース ID を設定
+4. **wrangler.toml の更新**
+   - Production 環境用のリソース ID を追加
 
 5. **シークレットの設定**
-   - 環境変数を Cloudflare Workers に設定
+   - Production 環境用の環境変数を設定
 
 6. **ビルドとデプロイ**
-   - API（Workers）
-   - Embed（Workers）
-   - Web（Pages）
+   - API（Cloudflare Workers）
+   - Embed（Cloudflare Workers）
+   - Web（Cloudflare Pages with SSR）
 
 ### デプロイ後の設定
 
 デプロイ完了後、以下を手動で設定してください：
 
-1. **Auth0 コールバック URL の更新**
-   ```
-   Allowed Callback URLs: https://<project>-api.workers.dev/auth/callback
-   Allowed Logout URLs: https://<project>.pages.dev
-   Allowed Web Origins: https://<project>.pages.dev
-   ```
+1. **Auth0 Application Settings**
+   - [Auth0 Dashboard](https://manage.auth0.com/) にアクセス
+   - Allowed Callback URLs: `https://<project>-api-production.workers.dev/auth/callback`
+   - Allowed Logout URLs: `https://<project>.pages.dev`
+   - Allowed Web Origins: `https://<project>.pages.dev`
 
-2. **GitHub App Webhook URL の設定**
-   ```
-   Webhook URL: https://<project>-api.workers.dev/webhook/github
-   ```
+2. **GitHub App Webhook URL**
+   - [GitHub Apps Settings](https://github.com/settings/apps) にアクセス
+   - Webhook URL: `https://<project>-api-production.workers.dev/webhook/github`
+
+スクリプト実行後に表示される実際のURLを使用してください。
 
 ## プロジェクト構造
 
