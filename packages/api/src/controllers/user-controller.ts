@@ -1,11 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 import type { Env } from '../types/env';
 import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../infrastructure/repositories/repository-repository';
 import { requireAuth } from '../middleware/auth';
-import { NotFoundError, ForbiddenError, UnauthorizedError } from '@maronn-auth-blog/shared';
+import { NotFoundError, UnauthorizedError } from '@maronn-auth-blog/shared';
 import { userInputSchema, repositoryInputSchema } from '@maronn-auth-blog/shared';
 
 const app = new Hono<{ Bindings: Env }>();

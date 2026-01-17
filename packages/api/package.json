@@ -9,8 +9,9 @@
   },
   "scripts": {
     "dev": "wrangler dev --port 8787 --inspector-port 9229",
-    "build": "tsc && wrangler deploy --dry-run",
+    "build": "tsc --noEmit && wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy --env production",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

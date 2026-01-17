@@ -21,6 +21,9 @@ export interface Env {
   WEB_URL: string;
   EMBED_ORIGIN: string;
 
+  // Cookie domain for cross-subdomain sharing (e.g., '.maronn-room.com')
+  COOKIE_DOMAIN?: string;
+
   // Cloudflare Bindings
   DB: D1Database;
   KV: KVNamespace;

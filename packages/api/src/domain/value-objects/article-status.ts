@@ -15,7 +15,7 @@ export class ArticleStatus {
     return new ArticleStatus('published');
   }
 
-  static rejected(reason?: string): ArticleStatus {
+  static rejected(_reason?: string): ArticleStatus {
     return new ArticleStatus('rejected');
   }
 

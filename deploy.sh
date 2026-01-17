@@ -90,8 +90,30 @@ print_success "Session secret generated"
 print_info "Cloudflare Configuration:"
 read -p "Project name (used for resource naming): " PROJECT_NAME
 
-# URLs (will be updated after deployment)
-print_info "URLs will be configured after deployment"
+# Custom Domain Configuration (Required)
+print_info "Custom Domain Configuration:"
+read -p "Root domain (e.g., maronn-room.com): " ROOT_DOMAIN
+
+if [ -z "$ROOT_DOMAIN" ]; then
+    print_error "Root domain is required"
+    exit 1
+fi
+
+COOKIE_DOMAIN=".${ROOT_DOMAIN}"
+API_DOMAIN="api.${ROOT_DOMAIN}"
+WEB_DOMAIN="${ROOT_DOMAIN}"
+EMBED_DOMAIN="embed.${ROOT_DOMAIN}"
+print_success "Custom domain configured: ${ROOT_DOMAIN}"
+print_info "  Web:   https://${WEB_DOMAIN}"
+print_info "  API:   https://${API_DOMAIN}"
+print_info "  Embed: https://${EMBED_DOMAIN}"
+
+# Get Cloudflare Zone ID for custom domain
+print_info "Fetching Cloudflare Zone ID for ${ROOT_DOMAIN}..."
+ZONE_ID=$(wrangler whoami --json 2>/dev/null | jq -r '.accounts[0].id' 2>/dev/null || echo "")
+if [ -z "$ZONE_ID" ]; then
+    print_warning "Could not auto-detect Zone ID. You may need to configure custom domains manually."
+fi
 
 print_success "Environment variables collected"
 
@@ -118,31 +140,66 @@ print_info "Creating D1 database..."
 D1_OUTPUT=$(wrangler d1 create ${PROJECT_NAME}-db 2>&1 || true)
 if echo "$D1_OUTPUT" | grep -q "already exists"; then
     print_warning "D1 database already exists"
-    D1_DATABASE_ID=$(wrangler d1 list | grep "${PROJECT_NAME}-db" | awk '{print $2}')
+    # Get D1 database ID from list command with JSON output
+    D1_DATABASE_ID=$(wrangler d1 list --json 2>/dev/null | jq -r --arg name "${PROJECT_NAME}-db" '.[] | select(.name == $name) | .uuid' | head -1)
 else
-    D1_DATABASE_ID=$(echo "$D1_OUTPUT" | grep "database_id" | awk -F'"' '{print $4}')
+    # Parse database_id from create output
+    D1_DATABASE_ID=$(echo "$D1_OUTPUT" | grep -o '"database_id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"database_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    if [ -z "$D1_DATABASE_ID" ]; then
+        # Alternative parsing for different output format
+        D1_DATABASE_ID=$(echo "$D1_OUTPUT" | grep "database_id" | awk -F'=' '{print $2}' | tr -d ' "')
+    fi
     print_success "D1 database created: $D1_DATABASE_ID"
 fi
 
+if [ -z "$D1_DATABASE_ID" ]; then
+    print_error "Failed to get D1 database ID"
+    exit 1
+fi
+print_info "D1 Database ID: $D1_DATABASE_ID"
+
 # Create KV Namespace
 print_info "Creating KV namespace..."
+KV_NAMESPACE_TITLE="${PROJECT_NAME}-kv"
 
-KV_OUTPUT=$(wrangler kv:namespace create "${PROJECT_NAME}-kv" 2>&1 || true)
-if echo "$KV_OUTPUT" | grep -q "already exists"; then
+# Check if KV namespace already exists
+EXISTING_KV_ID=$(wrangler kv namespace list 2>/dev/null | jq -r --arg title "$KV_NAMESPACE_TITLE" '.[] | select(.title == $title) | .id' | head -1)
+
+if [ -n "$EXISTING_KV_ID" ]; then
     print_warning "KV namespace already exists"
-    KV_ID=$(wrangler kv:namespace list | grep "${PROJECT_NAME}-kv" | jq -r '.[] | select(.title | contains("kv")) | .id' | head -1)
+    KV_ID="$EXISTING_KV_ID"
 else
-    KV_ID=$(echo "$KV_OUTPUT" | grep "id =" | awk -F'"' '{print $2}')
+    KV_OUTPUT=$(wrangler kv namespace create "$KV_NAMESPACE_TITLE" 2>&1)
+    # Parse id from output like: id = "abc123..."
+    KV_ID=$(echo "$KV_OUTPUT" | grep -o 'id = "[^"]*"' | sed 's/id = "\([^"]*\)"/\1/')
+    if [ -z "$KV_ID" ]; then
+        # Alternative: try JSON-like parsing
+        KV_ID=$(echo "$KV_OUTPUT" | grep -o '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
     print_success "KV namespace created: $KV_ID"
 fi
 
+if [ -z "$KV_ID" ]; then
+    print_error "Failed to get KV namespace ID"
+    exit 1
+fi
+print_info "KV Namespace ID: $KV_ID"
+
 # Create R2 Bucket
 print_info "Creating R2 bucket..."
-R2_OUTPUT=$(wrangler r2 bucket create ${PROJECT_NAME}-images 2>&1 || true)
+R2_BUCKET_NAME="${PROJECT_NAME}-images"
+R2_OUTPUT=$(wrangler r2 bucket create "$R2_BUCKET_NAME" 2>&1 || true)
 if echo "$R2_OUTPUT" | grep -q "already exists"; then
     print_warning "R2 bucket already exists"
+elif echo "$R2_OUTPUT" | grep -q "Please enable R2"; then
+    print_error "R2 is not enabled in your Cloudflare account"
+    echo "Please enable R2 through the Cloudflare Dashboard:"
+    echo "  https://dash.cloudflare.com/ -> R2 Object Storage -> Create bucket"
+    echo ""
+    echo "After enabling R2, run this script again."
+    exit 1
 else
-    print_success "R2 bucket created: ${PROJECT_NAME}-images"
+    print_success "R2 bucket created: $R2_BUCKET_NAME"
 fi
 
 print_success "Cloudflare resources created"
@@ -164,10 +221,39 @@ print_header "Step 5: Updating wrangler.toml with Resource IDs"
 # Update API wrangler.toml with actual resource IDs
 print_info "Updating packages/api/wrangler.toml with resource IDs..."
 
+# Remove existing production environment bindings if present
+# Find the line where production bindings start and remove everything after
+WRANGLER_TOML="packages/api/wrangler.toml"
+
+# Create a clean wrangler.toml with only base configuration
+# First, extract only the base configuration (before any env.production settings)
+if grep -q "env.production" "$WRANGLER_TOML"; then
+    print_info "Removing existing production bindings..."
+    # Find the first line containing env.production and keep only lines before it
+    FIRST_PROD_LINE=$(grep -n "env.production" "$WRANGLER_TOML" | head -1 | cut -d: -f1)
+    if [ -n "$FIRST_PROD_LINE" ]; then
+        # Also remove comment line before it if it's the deploy.sh comment
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if sed -n "${PREV_LINE}p" "$WRANGLER_TOML" | grep -q "Production environment bindings"; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        # Check for empty line before that
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if [ "$PREV_LINE" -gt 0 ] && [ -z "$(sed -n "${PREV_LINE}p" "$WRANGLER_TOML" | tr -d '[:space:]')" ]; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        head -n $((FIRST_PROD_LINE - 1)) "$WRANGLER_TOML" > "${WRANGLER_TOML}.tmp"
+        mv "${WRANGLER_TOML}.tmp" "$WRANGLER_TOML"
+    fi
+fi
+
 # Add production environment bindings to wrangler.toml
-cat >> packages/api/wrangler.toml << EOF
+cat >> "$WRANGLER_TOML" << EOF
 
 # Production environment bindings (added by deploy.sh)
+[env.production]
+name = "${PROJECT_NAME}-api-production"
+
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "${PROJECT_NAME}-db"
@@ -179,14 +265,89 @@ id = "${KV_ID}"
 
 [[env.production.r2_buckets]]
 binding = "R2"
-bucket_name = "${PROJECT_NAME}-images"
+bucket_name = "${R2_BUCKET_NAME}"
 
 [env.production.vars]
 ENVIRONMENT = "production"
+
+[[env.production.routes]]
+pattern = "${API_DOMAIN}"
+custom_domain = true
 EOF
 
 print_success "API wrangler.toml updated"
-print_success "Embed wrangler.toml already configured"
+
+# Update Embed wrangler.toml with custom domain
+print_info "Updating packages/embed/wrangler.toml with custom domain..."
+EMBED_WRANGLER_TOML="packages/embed/wrangler.toml"
+
+# Remove existing production environment if present
+if grep -q "env.production" "$EMBED_WRANGLER_TOML"; then
+    print_info "Removing existing production config from embed wrangler.toml..."
+    FIRST_PROD_LINE=$(grep -n "env.production" "$EMBED_WRANGLER_TOML" | head -1 | cut -d: -f1)
+    if [ -n "$FIRST_PROD_LINE" ]; then
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if sed -n "${PREV_LINE}p" "$EMBED_WRANGLER_TOML" | grep -q "Production"; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if [ "$PREV_LINE" -gt 0 ] && [ -z "$(sed -n "${PREV_LINE}p" "$EMBED_WRANGLER_TOML" | tr -d '[:space:]')" ]; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        head -n $((FIRST_PROD_LINE - 1)) "$EMBED_WRANGLER_TOML" > "${EMBED_WRANGLER_TOML}.tmp"
+        mv "${EMBED_WRANGLER_TOML}.tmp" "$EMBED_WRANGLER_TOML"
+    fi
+fi
+
+# Add production environment with custom domain to embed wrangler.toml
+cat >> "$EMBED_WRANGLER_TOML" << EOF
+
+# Production environment (added by deploy.sh)
+[env.production]
+name = "${PROJECT_NAME}-embed-production"
+
+[[env.production.routes]]
+pattern = "${EMBED_DOMAIN}"
+custom_domain = true
+EOF
+
+print_success "Embed wrangler.toml updated"
+
+# Update Web wrangler.toml with custom domain
+print_info "Updating packages/web/wrangler.toml with custom domain..."
+WEB_WRANGLER_TOML="packages/web/wrangler.toml"
+
+# Remove existing production environment if present
+if grep -q "env.production" "$WEB_WRANGLER_TOML"; then
+    print_info "Removing existing production config from web wrangler.toml..."
+    FIRST_PROD_LINE=$(grep -n "env.production" "$WEB_WRANGLER_TOML" | head -1 | cut -d: -f1)
+    if [ -n "$FIRST_PROD_LINE" ]; then
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if sed -n "${PREV_LINE}p" "$WEB_WRANGLER_TOML" | grep -q "Production"; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        PREV_LINE=$((FIRST_PROD_LINE - 1))
+        if [ "$PREV_LINE" -gt 0 ] && [ -z "$(sed -n "${PREV_LINE}p" "$WEB_WRANGLER_TOML" | tr -d '[:space:]')" ]; then
+            FIRST_PROD_LINE=$PREV_LINE
+        fi
+        head -n $((FIRST_PROD_LINE - 1)) "$WEB_WRANGLER_TOML" > "${WEB_WRANGLER_TOML}.tmp"
+        mv "${WEB_WRANGLER_TOML}.tmp" "$WEB_WRANGLER_TOML"
+    fi
+fi
+
+# Add production environment with custom domain to web wrangler.toml
+cat >> "$WEB_WRANGLER_TOML" << EOF
+
+# Production environment (added by deploy.sh)
+[env.production]
+name = "${PROJECT_NAME}-web-production"
+
+[[env.production.routes]]
+pattern = "${WEB_DOMAIN}"
+custom_domain = true
+EOF
+
+print_success "Web wrangler.toml updated"
 
 # ============================================
 # Step 6: Set Secrets for Production
@@ -202,6 +363,11 @@ echo "$AUTH0_CLIENT_SECRET" | wrangler secret put AUTH0_CLIENT_SECRET --env prod
 echo "$GITHUB_APP_ID" | wrangler secret put GITHUB_APP_ID --env production
 echo "$GITHUB_APP_PRIVATE_KEY" | wrangler secret put GITHUB_APP_PRIVATE_KEY --env production
 echo "$SESSION_SECRET" | wrangler secret put SESSION_SECRET --env production
+
+# Set COOKIE_DOMAIN if custom domain is configured
+if [ -n "$COOKIE_DOMAIN" ]; then
+    echo "$COOKIE_DOMAIN" | wrangler secret put COOKIE_DOMAIN --env production
+fi
 
 cd ../..
 print_success "Secrets configured for production"
@@ -220,25 +386,22 @@ print_success "Build completed"
 # ============================================
 print_header "Step 8: Deploying to Cloudflare"
 
+# Set URLs with custom domain
+API_URL="https://${API_DOMAIN}"
+WEB_URL="https://${WEB_DOMAIN}"
+EMBED_URL="https://${EMBED_DOMAIN}"
+
 # Deploy API (Workers)
 print_info "Deploying API to Cloudflare Workers..."
 cd packages/api
-API_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
-if [ -z "$API_URL" ]; then
-  # Fallback: construct URL from project name
-  API_URL="https://${PROJECT_NAME}-api-production.workers.dev"
-fi
+wrangler deploy --env production
 cd ../..
 print_success "API deployed: $API_URL"
 
 # Deploy Embed (Workers)
 print_info "Deploying Embed to Cloudflare Workers..."
 cd packages/embed
-EMBED_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
-if [ -z "$EMBED_URL" ]; then
-  # Fallback: construct URL from project name
-  EMBED_URL="https://${PROJECT_NAME}-embed-production.workers.dev"
-fi
+wrangler deploy --env production
 cd ../..
 print_success "Embed deployed: $EMBED_URL"
 
@@ -255,15 +418,11 @@ cd packages/web
 # Create .env for build
 cat > .env << EOF
 PUBLIC_API_URL=$API_URL
-PUBLIC_APP_URL=https://${PROJECT_NAME}-web-production.workers.dev
+PUBLIC_APP_URL=$WEB_URL
 EOF
 
 # Deploy to Cloudflare Workers
-WEB_URL=$(wrangler deploy --env production 2>&1 | grep -o 'https://[^ ]*' | head -1)
-if [ -z "$WEB_URL" ]; then
-  # Fallback: construct URL from project name
-  WEB_URL="https://${PROJECT_NAME}-web-production.workers.dev"
-fi
+wrangler deploy --env production
 cd ../..
 print_success "Web deployed: $WEB_URL"
 
@@ -272,13 +431,21 @@ print_success "Web deployed: $WEB_URL"
 # ============================================
 print_header "Step 9: Final Configuration"
 
-# Set AUTH0_CALLBACK_URL secret
+# Set AUTH0_CALLBACK_URL secret (uses API domain directly with custom domain)
 AUTH0_CALLBACK_URL="${API_URL}/auth/callback"
 print_info "Setting AUTH0_CALLBACK_URL secret..."
 cd packages/api
 echo "$AUTH0_CALLBACK_URL" | wrangler secret put AUTH0_CALLBACK_URL --env production
 cd ../..
 print_success "AUTH0_CALLBACK_URL configured"
+
+# Set WEB_URL and API_URL secrets for API
+print_info "Setting WEB_URL and API_URL secrets..."
+cd packages/api
+echo "$WEB_URL" | wrangler secret put WEB_URL --env production
+echo "$API_URL" | wrangler secret put API_URL --env production
+cd ../..
+print_success "URL secrets configured"
 
 # ============================================
 # Deployment Summary
@@ -294,16 +461,28 @@ echo "   Embed: ${EMBED_URL}"
 echo ""
 echo "⚙️  Next Steps:"
 echo ""
-echo "1. Update Auth0 Application Settings:"
+echo "1. Verify Custom Domain DNS (if not already configured):"
+echo "   → https://dash.cloudflare.com/ -> Workers & Pages -> Your Worker -> Settings -> Domains & Routes"
+echo "   - The custom domains should be automatically configured"
+echo "   - Ensure your domain (${ROOT_DOMAIN}) is managed by Cloudflare DNS"
+echo "   - Required DNS records (auto-created by wrangler):"
+echo "     * ${WEB_DOMAIN} -> CNAME to your worker"
+echo "     * ${API_DOMAIN} -> CNAME to your worker"
+echo "     * ${EMBED_DOMAIN} -> CNAME to your worker"
+echo ""
+echo "2. Update Auth0 Application Settings:"
 echo "   → https://manage.auth0.com/"
 echo "   - Allowed Callback URLs: ${API_URL}/auth/callback"
 echo "   - Allowed Logout URLs: ${WEB_URL}"
 echo "   - Allowed Web Origins: ${WEB_URL}"
 echo ""
-echo "2. Update GitHub App Webhook:"
+echo "3. Update GitHub App Settings:"
 echo "   → https://github.com/settings/apps"
 echo "   - Webhook URL: ${API_URL}/webhook/github"
+echo "   - Homepage URL: ${WEB_URL}"
 echo ""
-echo "3. Test the authentication flow at: ${WEB_URL}"
+echo "4. Test the application:"
+echo "   - Visit: ${WEB_URL}"
+echo "   - Test authentication flow"
 echo ""
-print_success "All done! 🎉"
+print_success "All done!"

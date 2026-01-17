@@ -1,11 +1,22 @@
-name = "maronn-auth-blog-web"
+name = "maronn-auth-blog-web-production"
 main = "dist/_worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Assets directory for static files
-[site]
-bucket = "dist"
+# Enable logging
+[observability]
+enabled = true
+
+# Static assets directory
+[assets]
+directory = "dist"
 
 [env.production]
 name = "maronn-auth-blog-web-production"
+routes = [
+  { pattern = "web.maronn-room.com", custom_domain = true }
+]
+
+[env.production.vars]
+PUBLIC_API_URL = "https://api.maronn-room.com"
+PUBLIC_APP_URL = "https://web.maronn-room.com"

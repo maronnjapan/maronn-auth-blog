@@ -39,7 +39,7 @@ app.onError((err, c) => {
   console.error('Error:', err);
 
   if (err instanceof AppError) {
-    return c.json(err.toJSON(), err.statusCode);
+    return c.json(err.toJSON(), err.statusCode as 400 | 401 | 403 | 404 | 500);
   }
 
   return c.json({

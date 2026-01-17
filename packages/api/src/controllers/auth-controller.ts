@@ -22,22 +22,26 @@ app.get('/login', (c) => {
   // Generate state and code verifier for PKCE
   const { state, codeVerifier } = auth0.generateOAuthParams();
 
+  // Cookie options for cross-subdomain sharing
+  const cookieOptions = {
+    httpOnly: true,
+    secure: c.env.ENVIRONMENT === 'production',
+    sameSite: 'Lax' as const,
+    path: '/',
+    // Set domain for cross-subdomain cookie sharing (e.g., '.maronn-room.com')
+    ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {}),
+  };
+
   // Store in HttpOnly cookies (10 minutes expiry)
   // These are bound to the browser session and prevent CSRF attacks
   setCookie(c, 'oauth_state', state, {
-    httpOnly: true,
-    secure: c.env.ENVIRONMENT === 'production',
-    sameSite: 'Lax',
+    ...cookieOptions,
     maxAge: 600, // 10 minutes
-    path: '/',
   });
 
   setCookie(c, 'oauth_code_verifier', codeVerifier, {
-    httpOnly: true,
-    secure: c.env.ENVIRONMENT === 'production',
-    sameSite: 'Lax',
+    ...cookieOptions,
     maxAge: 600, // 10 minutes
-    path: '/',
   });
 
   const authorizeUrl = auth0.createAuthorizationURL(state, codeVerifier);
@@ -67,8 +71,9 @@ app.get('/callback', async (c) => {
   }
 
   // Delete OAuth cookies after validation
-  deleteCookie(c, 'oauth_state');
-  deleteCookie(c, 'oauth_code_verifier');
+  const deleteOptions = c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN, path: '/' } : { path: '/' };
+  deleteCookie(c, 'oauth_state', deleteOptions);
+  deleteCookie(c, 'oauth_code_verifier', deleteOptions);
 
   const auth0 = new Auth0Client(
     c.env.AUTH0_DOMAIN,
@@ -127,6 +132,8 @@ app.get('/callback', async (c) => {
     sameSite: 'Lax',
     maxAge: 90 * 24 * 60 * 60, // 90 days
     path: '/',
+    // Set domain for cross-subdomain cookie sharing
+    ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {}),
   });
 
   // Redirect to frontend
@@ -144,8 +151,9 @@ app.post('/logout', requireAuth(), async (c) => {
   const kvClient = new KVClient(c.env.KV);
   await kvClient.deleteSession(auth.sessionId);
 
-  // Delete cookie
-  deleteCookie(c, 'session');
+  // Delete cookie with domain if set
+  const deleteOptions = c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN, path: '/' } : { path: '/' };
+  deleteCookie(c, 'session', deleteOptions);
 
   return c.json({ success: true });
 });

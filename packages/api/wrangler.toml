@@ -1,29 +1,45 @@
-name = "maronn-auth-blog-api"
+name = "maronn-auth-blog-api-production"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-ENVIRONMENT = "development"
-API_URL = "http://localhost:8787"
-WEB_URL = "http://localhost:4321"
-EMBED_ORIGIN = "http://localhost:8788"
+# Enable logging
+[observability]
+enabled = true
 
+# Default bindings (for local development with wrangler dev --remote)
 [[d1_databases]]
 binding = "DB"
 database_name = "maronn-auth-blog-db"
-database_id = "xxx"
+database_id = "9144a3ee-d42b-43b4-a872-8e4bf088ddda"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "xxx"
+id = "0e8b5a0452cf4da28925f65d5f344779"
 
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "maronn-auth-blog-images"
 
+# Production environment bindings (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-api-production"
+routes = [
+  { pattern = "api.maronn-room.com", custom_domain = true }
+]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "maronn-auth-blog-db"
+database_id = "9144a3ee-d42b-43b4-a872-8e4bf088ddda"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "0e8b5a0452cf4da28925f65d5f344779"
+
+[[env.production.r2_buckets]]
+binding = "R2"
+bucket_name = "maronn-auth-blog-images"
 
 [env.production.vars]
 ENVIRONMENT = "production"

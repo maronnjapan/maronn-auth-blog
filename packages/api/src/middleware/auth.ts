@@ -3,7 +3,7 @@ import { getCookie } from 'hono/cookie';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Env } from '../types/env';
 import { KVClient } from '../infrastructure/storage/kv-client';
-import { UnauthorizedError, ForbiddenError } from '@maronn-auth-blog/shared';
+import { UnauthorizedError } from '@maronn-auth-blog/shared';
 
 export interface AuthContext {
   userId: string;
@@ -92,8 +92,7 @@ export function requireAdmin() {
       throw new UnauthorizedError();
     }
 
-    // Check if user is admin
-    const userRepo = c.get('userRepo');
+    // TODO: Check if user is admin
     // This will be implemented in the user registration section
 
     await next();

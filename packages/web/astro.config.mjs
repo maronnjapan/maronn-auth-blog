@@ -9,6 +9,8 @@ export default defineConfig({
   integrations: [react()],
   output: 'server',
   adapter: cloudflare({
-    mode: 'directory', // For Workers deployment with assets
+    platformProxy: {
+      enabled: true,
+    },
   }),
 });

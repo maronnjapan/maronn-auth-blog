@@ -18,13 +18,15 @@ export interface Auth0UserInfo {
 
 export class Auth0Client {
   private auth0: Auth0;
+  private domain: string;
 
   constructor(
-    private domain: string,
-    private clientId: string,
-    private clientSecret: string,
-    private redirectUri: string
+    domain: string,
+    clientId: string,
+    clientSecret: string,
+    redirectUri: string
   ) {
+    this.domain = domain;
     this.auth0 = new Auth0(domain, clientId, clientSecret, redirectUri);
   }
 

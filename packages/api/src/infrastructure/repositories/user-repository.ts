@@ -1,5 +1,4 @@
 import { User, type UserProps } from '../../domain/entities/user';
-import { UserNotFoundError } from '../../domain/errors/domain-errors';
 import type { UserRole } from '@maronn-auth-blog/shared';
 
 interface UserRow {
