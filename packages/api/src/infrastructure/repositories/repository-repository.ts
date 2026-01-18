@@ -38,4 +38,13 @@ export class RepositoryRepository {
       .bind(userId)
       .run();
   }
+
+  async findByGitHubRepoFullName(fullName: string): Promise<RepositoryRow | null> {
+    const result = await this.db
+      .prepare('SELECT * FROM repositories WHERE github_repo_full_name = ?')
+      .bind(fullName)
+      .first<RepositoryRow>();
+
+    return result;
+  }
 }

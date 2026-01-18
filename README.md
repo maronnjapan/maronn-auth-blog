@@ -217,11 +217,21 @@ EMBED_ORIGIN=http://localhost:8788
 ```env
 PUBLIC_API_URL=http://localhost:8787
 PUBLIC_APP_URL=http://localhost:4321
+PUBLIC_GITHUB_APP_INSTALL_URL=https://github.com/apps/integrate-auth-blog-app/installations/new
 ```
 
 ### 本番環境
 
 本番環境の環境変数は `deploy.sh` スクリプトが自動的に設定します。
+
+## 🔗 GitHub App インストールフロー
+
+1. `packages/web/.env` の `PUBLIC_GITHUB_APP_INSTALL_URL` を `https://github.com/apps/integrate-auth-blog-app/installations/new`（アプリの install ページ）に設定します。別の環境へデプロイする際は、GitHub App の公開 URL を `https://github.com/apps/<app-slug>` 形式で確認し、末尾に `/installations/new` を付ければインストール URL になります。
+2. GitHub App 設定画面の **Post installation redirect URL** を `PUBLIC_APP_URL/dashboard/settings` に設定します。
+3. ログイン済みユーザーがダッシュボードの「設定」ページにアクセスし、「GitHub App をインストール」ボタンから GitHub に遷移します。
+4. インストール完了後、GitHub から `dashboard/settings?installation_id=<id>` へリダイレクトされ、API が自動的に `installation_id` を保存します。
+5. 同じ設定ページの「リポジトリ連携」セクションにインストール済みリポジトリ一覧が表示されるので、対象を選び「リポジトリを保存」を押します（一覧に無い場合は `username/repo` を手入力できます）。
+6. リポジトリを登録すると Installation Token を使って Markdown と画像へアクセスでき、記事の申請フローが有効になります。
 
 ### アーキテクチャ
 

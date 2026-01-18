@@ -3,14 +3,52 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import SettingsForm from '../../islands/SettingsForm';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const GITHUB_APP_INSTALL_URL = import.meta.env.PUBLIC_GITHUB_APP_INSTALL_URL || '';
 
 // Fetch user and repository data on server-side
 let user = null;
 let repository = null;
 let error = null;
+let initialMessage: { type: 'success' | 'error'; text: string } | null = null;
+let availableRepositories: {
+  id: number;
+  name: string;
+  fullName: string;
+  owner: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  htmlUrl: string;
+  pushedAt: string | null;
+}[] = [];
+const cookieHeader = Astro.request.headers.get('Cookie') || '';
+
+const loadAvailableRepositories = async () => {
+  if (!user?.githubInstallationId) {
+    availableRepositories = [];
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/users/me/github-repositories`, {
+      credentials: 'include',
+      headers: { Cookie: cookieHeader },
+    });
+
+    if (!response.ok) {
+      availableRepositories = [];
+      return;
+    }
+
+    const data = await response.json();
+    availableRepositories = Array.isArray(data?.repositories) ? data.repositories : [];
+  } catch (err) {
+    console.error('Failed to fetch GitHub repositories:', err);
+    availableRepositories = [];
+  }
+};
 
 try {
-  const cookieHeader = Astro.request.headers.get('Cookie') || '';
   const [userRes, repoRes] = await Promise.all([
     fetch(`${API_URL}/auth/me`, {
       credentials: 'include',
@@ -42,13 +80,56 @@ try {
 if (!user) {
   return Astro.redirect(`${API_URL}/auth/login`);
 }
+
+await loadAvailableRepositories();
+
+const installationId = Astro.url.searchParams.get('installation_id');
+const setupAction = Astro.url.searchParams.get('setup_action');
+
+if (installationId && setupAction !== 'uninstall') {
+  try {
+    const response = await fetch(`${API_URL}/users/me/github-installation`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieHeader,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ installationId }),
+    });
+
+    if (response.ok) {
+      initialMessage = { type: 'success', text: 'GitHub App を連携しました' };
+      user = {
+        ...user,
+        githubInstallationId: installationId,
+      };
+      await loadAvailableRepositories();
+    } else {
+      const data = await response.json().catch(() => null);
+      const apiMessage = data?.error?.message || 'GitHub App の連携に失敗しました';
+      initialMessage = { type: 'error', text: apiMessage };
+    }
+  } catch (err) {
+    console.error('Failed to save GitHub installation:', err);
+    initialMessage = { type: 'error', text: 'GitHub App の連携に失敗しました' };
+  }
+}
 ---
 
 <DashboardLayout title="設定">
   {error ? (
     <div class="error"><p>{error}</p></div>
   ) : (
-    <SettingsForm user={user} repository={repository} apiUrl={API_URL} client:load />
+    <SettingsForm
+      user={user}
+      repository={repository}
+      apiUrl={API_URL}
+      githubAppInstallUrl={GITHUB_APP_INSTALL_URL}
+      initialMessage={initialMessage}
+      availableRepositories={availableRepositories}
+      client:load
+    />
   )}
 </DashboardLayout>
 

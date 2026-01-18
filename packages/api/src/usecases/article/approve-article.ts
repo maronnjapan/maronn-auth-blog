@@ -1,18 +1,21 @@
 import { ArticleRepository } from '../../infrastructure/repositories/article-repository';
 import { UserRepository } from '../../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../../infrastructure/repositories/repository-repository';
+import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
 import { parseArticle, convertImagePaths } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
+import { CreateNotificationUsecase } from '../notification/create-notification';
 
 export class ApproveArticleUsecase {
   constructor(
     private articleRepo: ArticleRepository,
     private userRepo: UserRepository,
     private repoRepo: RepositoryRepository,
+    private notificationRepo: NotificationRepository,
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
@@ -114,6 +117,18 @@ export class ApproveArticleUsecase {
     if (parsed.frontmatter.tags) {
       await this.articleRepo.saveTags(article.id, parsed.frontmatter.tags);
     }
+
+    // Update FTS index
+    await this.articleRepo.syncFtsIndex(article.id, article.title);
+
+    // Create notification for the user
+    const createNotification = new CreateNotificationUsecase(this.notificationRepo);
+    await createNotification.execute({
+      userId: article.userId,
+      type: 'article_approved',
+      articleId: article.id,
+      message: `Your article "${article.title}" has been approved and published.`,
+    });
 
     console.info(`[ApproveArticle] Article approved: ${articleId}`);
   }

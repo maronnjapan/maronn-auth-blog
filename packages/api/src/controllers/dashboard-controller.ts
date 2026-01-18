@@ -1,8 +1,13 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 import type { Env } from '../types/env';
 import { ArticleRepository } from '../infrastructure/repositories/article-repository';
+import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
 import { requireAuth } from '../middleware/auth';
-import { UnauthorizedError } from '@maronn-auth-blog/shared';
+import { UnauthorizedError, paginationQuerySchema } from '@maronn-auth-blog/shared';
+import { GetNotificationsUsecase } from '../usecases/notification/get-notifications';
+import { MarkNotificationReadUsecase, MarkAllNotificationsReadUsecase } from '../usecases/notification/mark-notification-read';
+import { GetUnreadCountUsecase } from '../usecases/notification/get-unread-count';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -30,15 +35,80 @@ app.get('/articles', requireAuth(), async (c) => {
   return c.json({ articles: articlesWithTags });
 });
 
-// GET /dashboard/notifications - Get notifications (placeholder)
-app.get('/notifications', requireAuth(), async (c) => {
+// GET /dashboard/notifications - Get notifications (paginated)
+app.get(
+  '/notifications',
+  requireAuth(),
+  zValidator('query', paginationQuerySchema),
+  async (c) => {
+    const auth = c.get('auth');
+    if (!auth) {
+      throw new UnauthorizedError();
+    }
+
+    const { page, limit } = c.req.valid('query');
+    const notificationRepo = new NotificationRepository(c.env.DB);
+    const usecase = new GetNotificationsUsecase(notificationRepo);
+
+    const result = await usecase.execute({
+      userId: auth.userId,
+      page,
+      limit,
+    });
+
+    return c.json({
+      notifications: result.items.map((n) => n.toJSON()),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.hasMore,
+    });
+  }
+);
+
+// GET /dashboard/notifications/unread-count - Get unread notification count
+app.get('/notifications/unread-count', requireAuth(), async (c) => {
   const auth = c.get('auth');
   if (!auth) {
     throw new UnauthorizedError();
   }
 
-  // TODO: Implement notifications
-  return c.json({ notifications: [] });
+  const notificationRepo = new NotificationRepository(c.env.DB);
+  const usecase = new GetUnreadCountUsecase(notificationRepo);
+  const count = await usecase.execute(auth.userId);
+
+  return c.json({ count });
+});
+
+// POST /dashboard/notifications/:id/read - Mark notification as read
+app.post('/notifications/:id/read', requireAuth(), async (c) => {
+  const auth = c.get('auth');
+  if (!auth) {
+    throw new UnauthorizedError();
+  }
+
+  const notificationId = c.req.param('id');
+  const notificationRepo = new NotificationRepository(c.env.DB);
+  const usecase = new MarkNotificationReadUsecase(notificationRepo);
+
+  await usecase.execute(notificationId, auth.userId);
+
+  return c.json({ success: true });
+});
+
+// POST /dashboard/notifications/read-all - Mark all notifications as read
+app.post('/notifications/read-all', requireAuth(), async (c) => {
+  const auth = c.get('auth');
+  if (!auth) {
+    throw new UnauthorizedError();
+  }
+
+  const notificationRepo = new NotificationRepository(c.env.DB);
+  const usecase = new MarkAllNotificationsReadUsecase(notificationRepo);
+
+  await usecase.execute(auth.userId);
+
+  return c.json({ success: true });
 });
 
 export default app;

@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleList from '../../islands/ArticleList';
+import SearchBar from '../../islands/SearchBar';
+import Pagination from '../../islands/Pagination';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+const query = Astro.url.searchParams.get('q') || '';
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 20;
+
+let articles = [];
+let total = 0;
+let error = null;
+
+if (query) {
+  try {
+    const response = await fetch(`${API_URL}/articles/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`);
+    if (response.ok) {
+      const data = await response.json();
+      articles = data.articles || [];
+      total = data.total || 0;
+    } else {
+      error = '検索に失敗しました';
+    }
+  } catch (err) {
+    error = '検索に失敗しました';
+    console.error('Failed to search articles:', err);
+  }
+}
+
+const totalPages = Math.ceil(total / limit);
+const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
+---
+
+<BaseLayout title={query ? `"${query}" の検索結果 - GitHub Blog` : '記事検索 - GitHub Blog'}>
+  <div class="container">
+    <h1>記事検索</h1>
+
+    <div class="search-section">
+      <SearchBar initialQuery={query} client:load />
+    </div>
+
+    {query && (
+      <div class="results-info">
+        <p>「{query}」の検索結果: {total}件</p>
+      </div>
+    )}
+
+    {error ? (
+      <div class="error">
+        <p>{error}</p>
+      </div>
+    ) : query ? (
+      <>
+        <ArticleList articles={articles} client:load />
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            baseUrl={currentUrl}
+            client:load
+          />
+        )}
+      </>
+    ) : (
+      <div class="empty">
+        <p>検索キーワードを入力してください</p>
+      </div>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+
+  .search-section {
+    margin-bottom: 2rem;
+  }
+
+  .results-info {
+    margin-bottom: 1.5rem;
+    color: #666;
+  }
+
+  .error {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 8px;
+    color: #f44336;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 8px;
+    color: #999;
+  }
+</style>

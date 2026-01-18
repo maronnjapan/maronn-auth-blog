@@ -7,8 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
+# Production environment (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-embed-production"
-routes = [
-  { pattern = "embed.maronn-room.com", custom_domain = true }
-]
+
+[[env.production.routes]]
+pattern = "embed.maronn-room.com"
+custom_domain = true

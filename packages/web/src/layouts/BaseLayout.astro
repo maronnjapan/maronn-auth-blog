@@ -8,19 +8,28 @@ export interface Props {
 
 const { title, description = 'GitHub Blog Platform' } = Astro.props;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const cookie = Astro.request.headers.get('Cookie') || '';
 
-// Check authentication status on server-side
+// Check authentication status and fetch unread count on server-side
 let user = null;
+let unreadCount = 0;
 try {
   const response = await fetch(`${API_URL}/auth/me`, {
     credentials: 'include',
-    headers: {
-      Cookie: Astro.request.headers.get('Cookie') || '',
-    },
+    headers: { Cookie: cookie },
   });
 
   if (response.ok) {
     user = await response.json();
+
+    // Fetch unread notification count if logged in
+    const countResponse = await fetch(`${API_URL}/dashboard/notifications/unread-count`, {
+      headers: { Cookie: cookie },
+    });
+    if (countResponse.ok) {
+      const data = await countResponse.json();
+      unreadCount = data.count || 0;
+    }
   }
 } catch (err) {
   // User is not logged in
@@ -38,7 +47,7 @@ try {
     <link rel="stylesheet" href="/styles/global.css" />
   </head>
   <body>
-    <Header user={user} apiUrl={API_URL} client:load />
+    <Header user={user} apiUrl={API_URL} unreadCount={unreadCount} client:load />
 
     <main class="main">
       <slot />

@@ -1,9 +1,14 @@
 import { ArticleRepository } from '../../infrastructure/repositories/article-repository';
+import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
 import { ArticleNotFoundError } from '../../domain/errors/domain-errors';
 import { ValidationError } from '@maronn-auth-blog/shared';
+import { CreateNotificationUsecase } from '../notification/create-notification';
 
 export class RejectArticleUsecase {
-  constructor(private articleRepo: ArticleRepository) {}
+  constructor(
+    private articleRepo: ArticleRepository,
+    private notificationRepo: NotificationRepository
+  ) {}
 
   async execute(articleId: string, reason: string): Promise<void> {
     console.info(`[RejectArticle] Starting rejection for article: ${articleId}`);
@@ -21,6 +26,15 @@ export class RejectArticleUsecase {
     // Reject article
     article.reject(reason);
     await this.articleRepo.save(article);
+
+    // Create notification for the user
+    const createNotification = new CreateNotificationUsecase(this.notificationRepo);
+    await createNotification.execute({
+      userId: article.userId,
+      type: 'article_rejected',
+      articleId: article.id,
+      message: `Your article "${article.title}" has been rejected. Reason: ${reason}`,
+    });
 
     console.info(`[RejectArticle] Article rejected: ${articleId}`);
   }

@@ -1,51 +1,193 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ArticleList from '../islands/ArticleList';
+import SearchBar from '../islands/SearchBar';
+import CategoryFilter from '../islands/CategoryFilter';
+import TagCloud from '../islands/TagCloud';
+import Pagination from '../islands/Pagination';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
-// Fetch articles on server-side
+// Get query parameters
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const category = Astro.url.searchParams.get('category') || '';
+const tag = Astro.url.searchParams.get('tag') || '';
+const limit = 20;
+
+// Fetch articles, categories, and tags on server-side
 let articles = [];
+let total = 0;
+let categories = [];
+let tags = [];
 let error = null;
 
 try {
-  const response = await fetch(`${API_URL}/articles`);
-  if (response.ok) {
-    const data = await response.json();
+  // Build URL with filters
+  let articlesUrl = `${API_URL}/articles?page=${page}&limit=${limit}`;
+  if (category) articlesUrl += `&category=${encodeURIComponent(category)}`;
+  if (tag) articlesUrl += `&tag=${encodeURIComponent(tag)}`;
+
+  // Fetch all data in parallel
+  const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
+    fetch(articlesUrl),
+    fetch(`${API_URL}/articles/categories`),
+    fetch(`${API_URL}/articles/tags?limit=30`),
+  ]);
+
+  if (articlesRes.ok) {
+    const data = await articlesRes.json();
     articles = data.articles || [];
+    total = data.total || 0;
   } else {
     error = '記事の取得に失敗しました';
+  }
+
+  if (categoriesRes.ok) {
+    const data = await categoriesRes.json();
+    categories = data.categories || [];
+  }
+
+  if (tagsRes.ok) {
+    const data = await tagsRes.json();
+    tags = data.tags || [];
   }
 } catch (err) {
   error = '記事の取得に失敗しました';
   console.error('Failed to fetch articles:', err);
 }
+
+const totalPages = Math.ceil(total / limit);
+let baseUrl = '/';
+if (category) baseUrl = `/?category=${encodeURIComponent(category)}`;
+else if (tag) baseUrl = `/?tag=${encodeURIComponent(tag)}`;
+
+// Title based on filter
+let pageTitle = '最新の記事';
+if (category) pageTitle = `カテゴリ: ${category}`;
+else if (tag) pageTitle = `タグ: ${tag}`;
 ---
 
-<BaseLayout title="フィード - GitHub Blog">
+<BaseLayout title={`${pageTitle} - GitHub Blog`}>
   <div class="container">
-    <h1>最新の記事</h1>
-    {error ? (
-      <div class="error">
-        <p>{error}</p>
+    <div class="header-section">
+      <h1>{pageTitle}</h1>
+      <div class="search-wrapper">
+        <SearchBar client:load />
       </div>
-    ) : (
-      <ArticleList articles={articles} client:load />
-    )}
+    </div>
+
+    <div class="layout">
+      <main class="main-content">
+        {error ? (
+          <div class="error">
+            <p>{error}</p>
+          </div>
+        ) : (
+          <>
+            {(category || tag) && (
+              <div class="filter-notice">
+                <p>
+                  {category ? `カテゴリ「${category}」` : `タグ「${tag}」`}でフィルタリング中
+                  <a href="/" class="clear-filter">クリア</a>
+                </p>
+              </div>
+            )}
+            <ArticleList articles={articles} client:load />
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                baseUrl={baseUrl}
+                client:load
+              />
+            )}
+          </>
+        )}
+      </main>
+
+      <aside class="sidebar">
+        <CategoryFilter
+          categories={categories}
+          selectedCategory={category}
+          client:load
+        />
+        <TagCloud
+          tags={tags}
+          selectedTag={tag}
+          client:load
+        />
+      </aside>
+    </div>
   </div>
 </BaseLayout>
 
 <style>
   .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 1rem;
   }
 
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
   h1 {
     font-size: 2rem;
-    margin-bottom: 2rem;
     color: #333;
+    margin: 0;
+  }
+
+  .search-wrapper {
+    flex-shrink: 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 2rem;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      order: -1;
+    }
+  }
+
+  .main-content {
+    min-width: 0;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .filter-notice {
+    background: #e6f0ff;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .filter-notice p {
+    margin: 0;
+    color: #0066cc;
+  }
+
+  .clear-filter {
+    margin-left: 0.5rem;
+    color: #666;
   }
 
   .error {

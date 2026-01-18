@@ -9,6 +9,9 @@ export interface UserProps {
   githubUserId: string;
   githubInstallationId?: string;
   role: UserRole;
+  githubUrl?: string;
+  twitterUrl?: string;
+  websiteUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +51,18 @@ export class User {
     return this.props.role;
   }
 
+  get githubUrl(): string | undefined {
+    return this.props.githubUrl;
+  }
+
+  get twitterUrl(): string | undefined {
+    return this.props.twitterUrl;
+  }
+
+  get websiteUrl(): string | undefined {
+    return this.props.websiteUrl;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -64,6 +79,9 @@ export class User {
     displayName?: string;
     iconUrl?: string;
     bio?: string;
+    githubUrl?: string;
+    twitterUrl?: string;
+    websiteUrl?: string;
   }): void {
     this.props = {
       ...this.props,
@@ -90,6 +108,9 @@ export class User {
       githubUserId: this.props.githubUserId,
       githubInstallationId: this.props.githubInstallationId,
       role: this.props.role,
+      githubUrl: this.props.githubUrl,
+      twitterUrl: this.props.twitterUrl,
+      websiteUrl: this.props.websiteUrl,
       createdAt: this.props.createdAt.toISOString(),
       updatedAt: this.props.updatedAt.toISOString(),
     };

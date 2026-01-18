@@ -11,12 +11,10 @@ enabled = true
 [assets]
 directory = "dist"
 
+# Production environment (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-web-production"
-routes = [
-  { pattern = "web.maronn-room.com", custom_domain = true }
-]
 
-[env.production.vars]
-PUBLIC_API_URL = "https://api.maronn-room.com"
-PUBLIC_APP_URL = "https://web.maronn-room.com"
+[[env.production.routes]]
+pattern = "web.maronn-room.com"
+custom_domain = true

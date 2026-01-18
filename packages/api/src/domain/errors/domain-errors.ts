@@ -80,3 +80,57 @@ export class TooManyImagesError extends AppError {
     super(`Article has ${count} images, maximum is ${maxCount}`);
   }
 }
+
+export class NotificationNotFoundError extends AppError {
+  readonly code = 'NOTIFICATION_NOT_FOUND';
+  readonly statusCode = 404;
+
+  constructor(notificationId: string) {
+    super(`Notification not found: ${notificationId}`);
+  }
+}
+
+export class InvalidWebhookSignatureError extends AppError {
+  readonly code = 'INVALID_WEBHOOK_SIGNATURE';
+  readonly statusCode = 401;
+
+  constructor() {
+    super('Invalid webhook signature');
+  }
+}
+
+export class InvalidAvatarTypeError extends AppError {
+  readonly code = 'INVALID_AVATAR_TYPE';
+  readonly statusCode = 400;
+
+  constructor(contentType: string) {
+    super(`Unsupported avatar type: ${contentType}. Allowed: jpg, png, webp`);
+  }
+}
+
+export class AvatarSizeLimitExceededError extends AppError {
+  readonly code = 'AVATAR_SIZE_LIMIT_EXCEEDED';
+  readonly statusCode = 400;
+
+  constructor(size: number, maxSize: number) {
+    super(`Avatar size ${size} bytes exceeds maximum ${maxSize} bytes`);
+  }
+}
+
+export class RepositoryNotAccessibleError extends AppError {
+  readonly code = 'REPOSITORY_NOT_ACCESSIBLE';
+  readonly statusCode = 400;
+
+  constructor(repoFullName: string) {
+    super(`Repository not accessible: ${repoFullName}`);
+  }
+}
+
+export class RepositoryAlreadyLinkedByOtherUserError extends AppError {
+  readonly code = 'REPOSITORY_ALREADY_LINKED_BY_OTHER_USER';
+  readonly statusCode = 409;
+
+  constructor(repoFullName: string) {
+    super(`Repository ${repoFullName} is already linked by another user`);
+  }
+}

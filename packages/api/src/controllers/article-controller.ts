@@ -1,21 +1,50 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import type { Env } from '../types/env';
 import { ArticleRepository } from '../infrastructure/repositories/article-repository';
 import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { requireAuth } from '../middleware/auth';
 import { NotFoundError, ForbiddenError, UnauthorizedError } from '@maronn-auth-blog/shared';
+import { SearchArticlesUsecase } from '../usecases/article/search-articles';
+import { GetArticlesByCategoryUsecase } from '../usecases/article/get-articles-by-category';
+import { GetArticlesByTagUsecase } from '../usecases/article/get-articles-by-tag';
+import { GetCategoriesUsecase } from '../usecases/article/get-categories';
+import { GetTagsUsecase } from '../usecases/article/get-tags';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// GET /articles - Get published articles feed
+// GET /articles - Get published articles feed with optional filtering
 app.get('/', async (c) => {
   const page = parseInt(c.req.query('page') || '1');
   const limit = parseInt(c.req.query('limit') || '20');
   const offset = (page - 1) * limit;
+  const category = c.req.query('category');
+  const tag = c.req.query('tag');
 
   const articleRepo = new ArticleRepository(c.env.DB);
-  const articles = await articleRepo.findPublished(limit, offset);
+
+  let articles;
+  let total;
+
+  if (category) {
+    // Filter by category
+    const usecase = new GetArticlesByCategoryUsecase(articleRepo);
+    const result = await usecase.execute({ category, page, limit });
+    articles = result.items;
+    total = result.total;
+  } else if (tag) {
+    // Filter by tag
+    const usecase = new GetArticlesByTagUsecase(articleRepo);
+    const result = await usecase.execute({ tag, page, limit });
+    articles = result.items;
+    total = result.total;
+  } else {
+    // Default: all published
+    articles = await articleRepo.findPublished(limit, offset);
+    total = await articleRepo.countPublished();
+  }
 
   // Get tags for each article
   const articlesWithTags = await Promise.all(
@@ -30,9 +59,68 @@ app.get('/', async (c) => {
 
   return c.json({
     articles: articlesWithTags,
+    total,
     page,
     limit,
+    hasMore: offset + articles.length < total,
   });
+});
+
+// GET /articles/search - Search articles by title
+app.get(
+  '/search',
+  zValidator('query', z.object({
+    q: z.string().min(1),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })),
+  async (c) => {
+    const { q, page, limit } = c.req.valid('query');
+
+    const articleRepo = new ArticleRepository(c.env.DB);
+    const usecase = new SearchArticlesUsecase(articleRepo);
+    const result = await usecase.execute({ query: q, page, limit });
+
+    // Get tags for each article
+    const articlesWithTags = await Promise.all(
+      result.items.map(async (article) => {
+        const tags = await articleRepo.findTags(article.id);
+        return {
+          ...article.toJSON(),
+          tags,
+        };
+      })
+    );
+
+    return c.json({
+      articles: articlesWithTags,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.hasMore,
+      query: q,
+    });
+  }
+);
+
+// GET /articles/categories - Get all categories with counts
+app.get('/categories', async (c) => {
+  const articleRepo = new ArticleRepository(c.env.DB);
+  const usecase = new GetCategoriesUsecase(articleRepo);
+  const categories = await usecase.execute();
+
+  return c.json({ categories });
+});
+
+// GET /articles/tags - Get all tags with counts
+app.get('/tags', async (c) => {
+  const limit = parseInt(c.req.query('limit') || '50');
+
+  const articleRepo = new ArticleRepository(c.env.DB);
+  const usecase = new GetTagsUsecase(articleRepo);
+  const tags = await usecase.execute(limit);
+
+  return c.json({ tags });
 });
 
 // GET /articles/:username/:slug - Get article detail
@@ -132,6 +220,9 @@ app.delete('/:id', requireAuth(), async (c) => {
   // Delete cached HTML
   const kvClient = new KVClient(c.env.KV);
   await kvClient.deleteArticleHtml(article.userId, article.slug.toString());
+
+  // Remove from FTS index
+  await articleRepo.removeFtsIndex(article.id);
 
   return c.json({ success: true });
 });

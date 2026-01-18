@@ -76,6 +76,7 @@ echo ""
 # GitHub App Configuration
 print_info "GitHub App Configuration:"
 read -p "GitHub App ID: " GITHUB_APP_ID
+read -p "GitHub App Slug (the name in the GitHub App URL, e.g., 'my-blog-app' from github.com/apps/my-blog-app): " GITHUB_APP_SLUG
 echo "GitHub App Private Key (paste the entire key including -----BEGIN/END----- lines):"
 echo "Press Enter when done, then Ctrl+D:"
 GITHUB_APP_PRIVATE_KEY=$(cat)
@@ -101,7 +102,7 @@ fi
 
 COOKIE_DOMAIN=".${ROOT_DOMAIN}"
 API_DOMAIN="api.${ROOT_DOMAIN}"
-WEB_DOMAIN="${ROOT_DOMAIN}"
+WEB_DOMAIN="web.${ROOT_DOMAIN}"
 EMBED_DOMAIN="embed.${ROOT_DOMAIN}"
 print_success "Custom domain configured: ${ROOT_DOMAIN}"
 print_info "  Web:   https://${WEB_DOMAIN}"
@@ -416,9 +417,11 @@ print_info "Deploying Web to Cloudflare Workers..."
 cd packages/web
 
 # Create .env for build
+GITHUB_APP_INSTALL_URL="https://github.com/apps/${GITHUB_APP_SLUG}/installations/new"
 cat > .env << EOF
 PUBLIC_API_URL=$API_URL
 PUBLIC_APP_URL=$WEB_URL
+PUBLIC_GITHUB_APP_INSTALL_URL=$GITHUB_APP_INSTALL_URL
 EOF
 
 # Deploy to Cloudflare Workers
@@ -480,6 +483,9 @@ echo "3. Update GitHub App Settings:"
 echo "   → https://github.com/settings/apps"
 echo "   - Webhook URL: ${API_URL}/webhook/github"
 echo "   - Homepage URL: ${WEB_URL}"
+echo "   - Post installation > Setup URL: ${WEB_URL}/dashboard/settings"
+echo "   - Post installation > Redirect on update: ✓ (checked)"
+echo "   Note: The 'Post installation redirect URL' is REQUIRED for repository selection to work."
 echo ""
 echo "4. Test the application:"
 echo "   - Visit: ${WEB_URL}"

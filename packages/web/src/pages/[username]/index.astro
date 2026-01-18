@@ -1,30 +1,49 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import UserArticleList from '../../islands/UserArticleList';
+import UserProfileCard from '../../islands/UserProfileCard';
 
 const { username } = Astro.params;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
-// Fetch user data
+// Get session cookie from request to check if viewing own profile
+const cookie = Astro.request.headers.get('cookie') || '';
+
+// Fetch user data, stats, and check current user
 let user = null;
+let stats = { totalArticles: 0, publishedArticles: 0, pendingArticles: 0, rejectedArticles: 0 };
 let articles = [];
+let isOwner = false;
 let error = null;
 
 try {
-  const userResponse = await fetch(`${API_URL}/users/${username}`);
-  if (userResponse.ok) {
-    user = await userResponse.json();
+  // Fetch user, stats, and articles in parallel
+  const [userRes, statsRes, articlesRes, authRes] = await Promise.all([
+    fetch(`${API_URL}/users/${username}`),
+    fetch(`${API_URL}/users/${username}/stats`),
+    fetch(`${API_URL}/users/${username}/articles`),
+    fetch(`${API_URL}/auth/me`, { headers: { Cookie: cookie } }),
+  ]);
+
+  if (userRes.ok) {
+    user = await userRes.json();
   } else {
     error = 'ユーザーが見つかりません';
   }
 
-  // Fetch user's articles
-  if (user) {
-    const articlesResponse = await fetch(`${API_URL}/users/${username}/articles`);
-    if (articlesResponse.ok) {
-      const data = await articlesResponse.json();
-      articles = data.articles || [];
-    }
+  if (statsRes.ok) {
+    const data = await statsRes.json();
+    stats = data.stats || stats;
+  }
+
+  if (articlesRes.ok) {
+    const data = await articlesRes.json();
+    articles = data.articles || [];
+  }
+
+  if (authRes.ok) {
+    const authData = await authRes.json();
+    isOwner = authData.username === username;
   }
 } catch (err) {
   error = 'ユーザー情報の取得に失敗しました';
@@ -37,13 +56,13 @@ if (error || !user) {
 
 <BaseLayout title={`${user.displayName} (@${user.username}) - GitHub Blog`}>
   <div class="container">
-    <div class="user-profile">
-      {user.iconUrl && (
-        <img src={user.iconUrl} alt={user.displayName} class="avatar" />
-      )}
-      <h1>{user.displayName}</h1>
-      <p class="username">@{user.username}</p>
-      {user.bio && <p class="bio">{user.bio}</p>}
+    <div class="profile-section">
+      <UserProfileCard
+        user={user}
+        stats={stats}
+        isOwner={isOwner}
+        client:load
+      />
     </div>
 
     <section class="articles-section">
@@ -60,34 +79,8 @@ if (error || !user) {
     padding: 0 1rem;
   }
 
-  .user-profile {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
+  .profile-section {
     margin-bottom: 2rem;
-    text-align: center;
-  }
-
-  .avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    margin-bottom: 1rem;
-  }
-
-  .user-profile h1 {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .username {
-    color: #666;
-    margin-bottom: 1rem;
-  }
-
-  .bio {
-    color: #333;
-    line-height: 1.6;
   }
 
   .articles-section h2 {

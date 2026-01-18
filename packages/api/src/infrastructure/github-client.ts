@@ -6,6 +6,18 @@ export interface GitHubFile {
   sha: string;
 }
 
+export interface InstallationRepository {
+  id: number;
+  name: string;
+  fullName: string;
+  owner: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  htmlUrl: string;
+  pushedAt: string | null;
+}
+
 export class GitHubClient {
   constructor(
     private appId: string,
@@ -109,6 +121,29 @@ export class GitHubClient {
     }
 
     throw new Error('Not a directory');
+  }
+
+  async listInstallationRepositories(
+    installationId: string
+  ): Promise<InstallationRepository[]> {
+    const token = await this.getInstallationToken(installationId);
+    const octokit = new Octokit({ auth: token });
+
+    const { data } = await octokit.apps.listReposAccessibleToInstallation({
+      per_page: 100,
+    });
+
+    return (data.repositories ?? []).map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      fullName: repo.full_name,
+      owner: repo.owner?.login ?? '',
+      description: repo.description ?? null,
+      isPrivate: repo.private,
+      defaultBranch: repo.default_branch,
+      htmlUrl: repo.html_url,
+      pushedAt: repo.pushed_at ?? null,
+    }));
   }
 
   async verifyWebhookSignature(

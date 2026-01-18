@@ -1,4 +1,18 @@
 import { useState } from 'react';
+import AvatarUploader from './AvatarUploader';
+import RepositorySelector from './RepositorySelector';
+
+interface InstallationRepository {
+  id: number;
+  name: string;
+  fullName: string;
+  owner: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  htmlUrl: string;
+  pushedAt: string | null;
+}
 
 interface SettingsFormProps {
   user: {
@@ -7,21 +21,36 @@ interface SettingsFormProps {
     displayName: string;
     iconUrl?: string;
     bio?: string;
+    githubUrl?: string;
+    twitterUrl?: string;
+    websiteUrl?: string;
   };
   repository: {
     id: string;
     githubRepoFullName: string;
   } | null;
   apiUrl: string;
+  githubAppInstallUrl?: string;
+  initialMessage?: { type: 'success' | 'error'; text: string } | null;
+  availableRepositories?: InstallationRepository[];
 }
 
-export default function SettingsForm({ user, repository: initialRepository, apiUrl }: SettingsFormProps) {
+export default function SettingsForm({
+  user,
+  repository: initialRepository,
+  apiUrl,
+  githubAppInstallUrl,
+  initialMessage = null,
+  availableRepositories = [],
+}: SettingsFormProps) {
   const [displayName, setDisplayName] = useState(user.displayName || '');
   const [bio, setBio] = useState(user.bio || '');
-  const [repoFullName, setRepoFullName] = useState(initialRepository?.githubRepoFullName || '');
-  const [repository, setRepository] = useState(initialRepository);
+  const [githubUrl, setGithubUrl] = useState(user.githubUrl || '');
+  const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || '');
+  const [websiteUrl, setWebsiteUrl] = useState(user.websiteUrl || '');
+  const [avatarUrl, setAvatarUrl] = useState(user.iconUrl || '');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(initialMessage);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +62,7 @@ export default function SettingsForm({ user, repository: initialRepository, apiU
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName, bio }),
+        body: JSON.stringify({ displayName, bio, githubUrl, twitterUrl, websiteUrl }),
       });
 
       if (!response.ok) {
@@ -51,63 +80,8 @@ export default function SettingsForm({ user, repository: initialRepository, apiU
     }
   };
 
-  const handleSaveRepository = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/users/me/repository`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ githubRepoFullName: repoFullName }),
-      });
-
-      if (!response.ok) {
-        throw new Error('リポジトリの更新に失敗しました');
-      }
-
-      setMessage({ type: 'success', text: 'リポジトリを更新しました' });
-    } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : '更新に失敗しました',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUnlinkRepository = async () => {
-    if (!confirm('リポジトリの連携を解除しますか？')) {
-      return;
-    }
-
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`${apiUrl}/users/me/repository`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('連携解除に失敗しました');
-      }
-
-      setRepository(null);
-      setRepoFullName('');
-      setMessage({ type: 'success', text: '連携を解除しました' });
-    } catch (err) {
-      setMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : '連携解除に失敗しました',
-      });
-    } finally {
-      setSaving(false);
-    }
+  const handleAvatarUploadComplete = (newUrl: string) => {
+    setAvatarUrl(newUrl);
   };
 
   return (
@@ -121,6 +95,16 @@ export default function SettingsForm({ user, repository: initialRepository, apiU
       <section className="settings-section">
         <h2>プロフィール</h2>
         <form onSubmit={handleSaveProfile}>
+          <div className="form-group">
+            <label>プロフィール画像</label>
+            <AvatarUploader
+              currentAvatarUrl={avatarUrl}
+              displayName={displayName || user.displayName}
+              apiUrl={apiUrl}
+              onUploadComplete={handleAvatarUploadComplete}
+            />
+          </div>
+
           <div className="form-group">
             <label htmlFor="displayName">表示名</label>
             <input
@@ -142,6 +126,39 @@ export default function SettingsForm({ user, repository: initialRepository, apiU
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="githubUrl">GitHub URL</label>
+            <input
+              type="url"
+              id="githubUrl"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="https://github.com/username"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="twitterUrl">Twitter/X URL</label>
+            <input
+              type="url"
+              id="twitterUrl"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              placeholder="https://twitter.com/username"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="websiteUrl">ウェブサイト URL</label>
+            <input
+              type="url"
+              id="websiteUrl"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+
           <button type="submit" disabled={saving} className="btn-primary">
             {saving ? '保存中...' : 'プロフィールを保存'}
           </button>
@@ -150,35 +167,12 @@ export default function SettingsForm({ user, repository: initialRepository, apiU
 
       <section className="settings-section">
         <h2>リポジトリ連携</h2>
-        <form onSubmit={handleSaveRepository}>
-          <div className="form-group">
-            <label htmlFor="repoFullName">リポジトリ (例: username/repo-name)</label>
-            <input
-              type="text"
-              id="repoFullName"
-              value={repoFullName}
-              onChange={(e) => setRepoFullName(e.target.value)}
-              placeholder="username/repository"
-              required
-            />
-          </div>
-
-          <div className="button-group">
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? '保存中...' : 'リポジトリを保存'}
-            </button>
-            {repository && (
-              <button
-                type="button"
-                onClick={handleUnlinkRepository}
-                disabled={saving}
-                className="btn-danger"
-              >
-                連携を解除
-              </button>
-            )}
-          </div>
-        </form>
+        <RepositorySelector
+          apiUrl={apiUrl}
+          currentRepository={initialRepository}
+          availableRepositories={availableRepositories}
+          githubAppInstallUrl={githubAppInstallUrl}
+        />
       </section>
     </div>
   );

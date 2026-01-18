@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import NotificationBell from './NotificationBell';
 
 interface User {
   id: string;
@@ -11,9 +12,10 @@ interface User {
 interface HeaderProps {
   user: User | null;
   apiUrl: string;
+  unreadCount?: number;
 }
 
-export default function Header({ user: initialUser, apiUrl }: HeaderProps) {
+export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: HeaderProps) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -51,10 +53,12 @@ export default function Header({ user: initialUser, apiUrl }: HeaderProps) {
           </a>
           <div className="nav-links">
             <a href="/">フィード</a>
+            <a href="/articles/search">検索</a>
             {user ? (
               <>
                 <a href="/dashboard">ダッシュボード</a>
                 {user.role === 'admin' && <a href="/admin/reviews">審査</a>}
+                <NotificationBell initialCount={unreadCount} apiUrl={apiUrl} />
                 <a href={`/${user.username}`} className="user-link">
                   {user.iconUrl && (
                     <img src={user.iconUrl} alt={user.displayName} className="user-avatar" />

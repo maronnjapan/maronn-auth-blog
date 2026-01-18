@@ -48,6 +48,7 @@ echo ""
 # GitHub App Configuration
 print_info "GitHub App Configuration:"
 read -p "GitHub App ID: " GITHUB_APP_ID
+read -p "GitHub App Slug (the name in the GitHub App URL, e.g., 'my-blog-app' from github.com/apps/my-blog-app): " GITHUB_APP_SLUG
 echo "GitHub App Private Key (paste the entire key including -----BEGIN/END----- lines):"
 echo "Press Enter when done, then Ctrl+D:"
 GITHUB_APP_PRIVATE_KEY=$(cat)
@@ -90,9 +91,11 @@ print_success "API .dev.vars created"
 # ============================================
 print_header "Step 3: Creating Web Configuration"
 
+GITHUB_APP_INSTALL_URL="https://github.com/apps/${GITHUB_APP_SLUG}/installations/new"
 cat > packages/web/.env << EOF
 PUBLIC_API_URL=${PUBLIC_API_URL}
 PUBLIC_APP_URL=${PUBLIC_APP_URL}
+PUBLIC_GITHUB_APP_INSTALL_URL=${GITHUB_APP_INSTALL_URL}
 EOF
 
 print_success "Web .env created"
@@ -137,5 +140,10 @@ echo "Next steps:"
 echo "1. Install dependencies: pnpm install"
 echo "2. Start development servers: pnpm dev"
 echo "3. Update Auth0 callback URLs to include: ${AUTH0_CALLBACK_URL}"
+echo "4. Configure GitHub App settings:"
+echo "   → https://github.com/settings/apps"
+echo "   - Post installation > Setup URL: ${PUBLIC_APP_URL}/dashboard/settings"
+echo "   - Post installation > Redirect on update: ✓ (checked)"
+echo "   Note: This is REQUIRED for repository selection to work like Zenn."
 echo ""
 print_success "All done! 🎉"

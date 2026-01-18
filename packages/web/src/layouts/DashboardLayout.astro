@@ -27,6 +27,9 @@ const currentPath = Astro.url.pathname;
           <a href="/dashboard/articles" class:list={['nav-item', { active: currentPath === '/dashboard/articles' }]}>
             記事一覧
           </a>
+          <a href="/dashboard/notifications" class:list={['nav-item', { active: currentPath === '/dashboard/notifications' }]}>
+            通知
+          </a>
           <a href="/dashboard/settings" class:list={['nav-item', { active: currentPath === '/dashboard/settings' }]}>
             設定
           </a>

@@ -24,9 +24,6 @@ bucket_name = "maronn-auth-blog-images"
 # Production environment bindings (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-api-production"
-routes = [
-  { pattern = "api.maronn-room.com", custom_domain = true }
-]
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -43,3 +40,7 @@ bucket_name = "maronn-auth-blog-images"
 
 [env.production.vars]
 ENVIRONMENT = "production"
+
+[[env.production.routes]]
+pattern = "api.maronn-room.com"
+custom_domain = true

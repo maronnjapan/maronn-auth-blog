@@ -5,6 +5,7 @@ import type { Env } from '../types/env';
 import { ArticleRepository } from '../infrastructure/repositories/article-repository';
 import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../infrastructure/repositories/repository-repository';
+import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
 import { GitHubClient } from '../infrastructure/github-client';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
@@ -119,6 +120,7 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
   const articleRepo = new ArticleRepository(c.env.DB);
   const userRepo = new UserRepository(c.env.DB);
   const repoRepo = new RepositoryRepository(c.env.DB);
+  const notificationRepo = new NotificationRepository(c.env.DB);
   const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
   const kvClient = new KVClient(c.env.KV);
   const r2Client = new R2Client(c.env.R2);
@@ -127,6 +129,7 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
     articleRepo,
     userRepo,
     repoRepo,
+    notificationRepo,
     githubClient,
     kvClient,
     r2Client,
@@ -149,7 +152,8 @@ app.post(
     const { reason } = c.req.valid('json');
 
     const articleRepo = new ArticleRepository(c.env.DB);
-    const usecase = new RejectArticleUsecase(articleRepo);
+    const notificationRepo = new NotificationRepository(c.env.DB);
+    const usecase = new RejectArticleUsecase(articleRepo, notificationRepo);
 
     await usecase.execute(articleId, reason);
 

@@ -12,6 +12,9 @@ export const userSchema = z.object({
   githubUserId: z.string(),
   githubInstallationId: z.string().optional(),
   role: userRoleSchema,
+  githubUrl: z.string().url().optional(),
+  twitterUrl: z.string().url().optional(),
+  websiteUrl: z.string().url().optional(),
   createdAt: datetimeSchema,
   updatedAt: datetimeSchema,
 });
@@ -21,6 +24,9 @@ export const userInputSchema = userSchema.pick({
   displayName: true,
   iconUrl: true,
   bio: true,
+  githubUrl: true,
+  twitterUrl: true,
+  websiteUrl: true,
 });
 
 export const userResponseSchema = userSchema;
