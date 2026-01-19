@@ -6,7 +6,7 @@ import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
-import { parseArticle, convertImagePaths } from '../../utils/markdown-parser';
+import { parseArticle } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
 import { CreateNotificationUsecase } from '../notification/create-notification';
 
@@ -97,17 +97,9 @@ export class ApproveArticleUsecase {
       );
     }
 
-    // Convert image paths in HTML
-    const html = convertImagePaths(
-      parsed.html,
-      user.id,
-      article.slug.toString(),
-      this.imageUrl
-    );
-
-    // Save HTML to KV
-    console.info(`[ApproveArticle] Saving HTML to KV`);
-    await this.kvClient.setArticleHtml(user.id, article.slug.toString(), html);
+    // Save Markdown to KV
+    console.info(`[ApproveArticle] Saving Markdown to KV`);
+    await this.kvClient.setArticleMarkdown(user.id, article.slug.toString(), markdown);
 
     // Update article status
     article.approve(sha);
