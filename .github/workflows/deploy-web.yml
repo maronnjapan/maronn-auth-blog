@@ -1,0 +1,53 @@
+name: Deploy Web
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/web/**
+      - packages/shared/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+      PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
+      PUBLIC_GITHUB_APP_INSTALL_URL: ${{ secrets.PUBLIC_GITHUB_APP_INSTALL_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create web environment file
+        run: |
+          cat <<'ENVEOF' > packages/web/.env
+          PUBLIC_API_URL=${PUBLIC_API_URL}
+          PUBLIC_APP_URL=${PUBLIC_APP_URL}
+          PUBLIC_GITHUB_APP_INSTALL_URL=${PUBLIC_GITHUB_APP_INSTALL_URL}
+          ENVEOF
+
+      - name: Deploy web worker
+        run: pnpm --filter @maronn-auth-blog/web deploy -- --env production
