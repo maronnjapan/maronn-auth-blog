@@ -186,39 +186,6 @@ app.get('/users/:username/articles', async (c) => {
   });
 });
 
-// DELETE /articles/:id - Delete article (owner only)
-app.delete('/:id', requireAuth(), async (c) => {
-  const auth = c.get('auth');
-  if (!auth) {
-    throw new UnauthorizedError();
-  }
-
-  const articleId = c.req.param('id');
-  const articleRepo = new ArticleRepository(c.env.DB);
-  const article = await articleRepo.findById(articleId);
-
-  if (!article) {
-    throw new NotFoundError('Article', articleId);
-  }
-
-  if (article.userId !== auth.userId) {
-    throw new ForbiddenError('You do not own this article');
-  }
-
-  // Mark as deleted
-  article.delete();
-  await articleRepo.save(article);
-
-  // Delete cached Markdown
-  const kvClient = new KVClient(c.env.KV);
-  await kvClient.deleteArticleMarkdown(article.userId, article.slug.toString());
-
-  // Remove from FTS index
-  await articleRepo.removeFtsIndex(article.id);
-
-  return c.json({ success: true });
-});
-
 export default app;
 
 type ArticleAuthor = {
