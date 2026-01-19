@@ -7,7 +7,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
 // Fetch article for review on server-side
 let article = null;
-let html = '';
+let markdown = '';
 let error = null;
 
 try {
@@ -25,7 +25,7 @@ try {
   } else if (response.ok) {
     const data = await response.json();
     article = data.article;
-    html = data.html || '';
+    markdown = data.markdown || '';
   } else {
     error = '記事の取得に失敗しました';
   }
@@ -56,8 +56,8 @@ if (!article && !error) {
       </div>
 
       <div class="article-preview">
-        <h3>プレビュー</h3>
-        <div class="preview-content" set:html={html}></div>
+        <h3>Markdown</h3>
+        <pre class="preview-content"><code>{markdown}</code></pre>
       </div>
 
       <AdminReviewDetail
@@ -113,6 +113,18 @@ if (!article && !error) {
     background: #f9fafb;
     max-height: 70vh;
     overflow: auto;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .preview-content code {
+    font-family: inherit;
+    background: none;
+    padding: 0;
   }
 
   .review-actions {

@@ -80,8 +80,8 @@ app.get('/reviews/:id', adminOnly, async (c) => {
   const repoRepo = new RepositoryRepository(c.env.DB);
   const repo = await repoRepo.findByUserId(user.id);
 
-  // Generate preview by fetching and parsing markdown
-  let html = '';
+  // Fetch markdown for review (without converting to HTML)
+  let markdown = '';
   if (repo) {
     try {
       const [owner, repoName] = repo.github_repo_full_name.split('/');
@@ -94,25 +94,23 @@ app.get('/reviews/:id', adminOnly, async (c) => {
         await userRepo.save(user);
       }
 
-      const { content: markdown } = await githubClient.fetchFile(
+      const { content: markdownContent } = await githubClient.fetchFile(
         installationId,
         owner,
         repoName,
         article.githubPath
       );
 
-      const { parseArticle } = await import('../utils/markdown-parser');
-      const parsed = parseArticle(markdown, c.env.EMBED_ORIGIN);
-      html = parsed.html;
+      markdown = markdownContent;
     } catch (error) {
-      console.error('[AdminController] Failed to generate preview:', error);
-      html = '<p>プレビューの生成に失敗しました</p>';
+      console.error('[AdminController] Failed to fetch markdown:', error);
+      markdown = 'マークダウンの取得に失敗しました';
     }
   }
 
   return c.json({
     article: article.toJSON(),
-    html,
+    markdown,
     tags,
     author: user.toJSON(),
     repository: repo,

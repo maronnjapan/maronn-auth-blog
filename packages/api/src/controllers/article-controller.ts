@@ -13,6 +13,7 @@ import { GetArticlesByTagUsecase } from '../usecases/article/get-articles-by-tag
 import { GetCategoriesUsecase } from '../usecases/article/get-categories';
 import { GetTagsUsecase } from '../usecases/article/get-tags';
 import type { Article as ArticleEntity } from '../domain/entities/article';
+import { parseArticle, convertImagePaths } from '../utils/markdown-parser';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -137,9 +138,21 @@ app.get('/:username/:slug', async (c) => {
     throw new NotFoundError('Article', slug);
   }
 
-  // Get cached HTML
+  // Get cached Markdown
   const kvClient = new KVClient(c.env.KV);
-  const html = await kvClient.getArticleHtml(user.id, slug);
+  const markdown = await kvClient.getArticleMarkdown(user.id, slug);
+
+  // Convert Markdown to HTML
+  let html = '';
+  if (markdown) {
+    const parsed = parseArticle(markdown, c.env.EMBED_ORIGIN);
+    html = convertImagePaths(
+      parsed.html,
+      user.id,
+      slug,
+      c.env.IMAGE_URL
+    );
+  }
 
   // Get tags
   const tags = await articleRepo.findTags(article.id);
@@ -196,9 +209,9 @@ app.delete('/:id', requireAuth(), async (c) => {
   article.delete();
   await articleRepo.save(article);
 
-  // Delete cached HTML
+  // Delete cached Markdown
   const kvClient = new KVClient(c.env.KV);
-  await kvClient.deleteArticleHtml(article.userId, article.slug.toString());
+  await kvClient.deleteArticleMarkdown(article.userId, article.slug.toString());
 
   // Remove from FTS index
   await articleRepo.removeFtsIndex(article.id);
