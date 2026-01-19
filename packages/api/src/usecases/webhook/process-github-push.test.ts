@@ -214,6 +214,104 @@ describe('ProcessGitHubPushUsecase', () => {
     );
   });
 
+  it('marks a rejected article for re-review when updated', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Rejected Article',
+      category: undefined,
+      status: ArticleStatus.rejected(),
+      githubPath: 'articles/test.md',
+      githubSha: 'old-sha',
+      publishedSha: undefined,
+      rejectionReason: 'Needs fixes',
+      publishedAt: undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTags: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({
+        content: ['---', 'title: Test Article', 'published: true', '---', 'Content'].join('\n'),
+        sha: 'new-sha',
+      }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: ['articles/test.md'],
+          removed: [],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(article.status.toString()).toBe('pending_update');
+    expect(article.githubSha).toBe('new-sha');
+    expect(article.rejectionReason).toBeUndefined();
+    expect(articleRepo.save).toHaveBeenCalledWith(article);
+  });
+
   it('removes cached markdown when the source file is deleted', async () => {
     const user = new User({
       ...baseUserProps,
