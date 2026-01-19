@@ -20,8 +20,7 @@ export class ApproveArticleUsecase {
     private kvClient: KVClient,
     private r2Client: R2Client,
     private embedOrigin: string,
-    private imageUrl: string
-  ) {}
+  ) { }
 
   async execute(articleId: string): Promise<void> {
     console.info(`[ApproveArticle] Starting approval for article: ${articleId}`);

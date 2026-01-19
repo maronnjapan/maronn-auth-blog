@@ -18,7 +18,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Admin-only middleware
 async function adminOnly(c: any, next: any) {
-  await requireAuth()(c, async () => {});
+  await requireAuth()(c, async () => { });
 
   const auth = c.get('auth');
   if (!auth) {
@@ -138,7 +138,6 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
     kvClient,
     r2Client,
     c.env.EMBED_ORIGIN,
-    c.env.IMAGE_URL
   );
 
   await usecase.execute(articleId);
