@@ -43,15 +43,127 @@ if (!article && !error) {
   {error ? (
     <div class="error"><p>{error}</p></div>
   ) : (
-    <AdminReviewDetail article={article} html={html} apiUrl={API_URL} client:load />
+    <div class="review-detail">
+      <div class="article-info">
+        <h2>{article.title}</h2>
+        <div class="meta">
+          <span>ユーザー: {article.userId}</span>
+          <span>カテゴリ: {article.category || 'なし'}</span>
+          <span>
+            作成日: {new Date(article.createdAt).toLocaleDateString('ja-JP')}
+          </span>
+        </div>
+      </div>
+
+      <div class="article-preview">
+        <h3>プレビュー</h3>
+        <div class="preview-content" set:html={html}></div>
+      </div>
+
+      <AdminReviewDetail
+        articleId={article.id}
+        apiUrl={API_URL}
+        client:only="react"
+      />
+    </div>
   )}
 </DashboardLayout>
 
-<style>
+<style is:global>
   .error {
     background: white;
     padding: 2rem;
     border-radius: 8px;
     color: #f44336;
+  }
+
+  .review-detail {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .article-info h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #1f2937;
+  }
+
+  .article-info .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+
+  .article-preview h3 {
+    margin-bottom: 1rem;
+  }
+
+  .preview-content {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: #f9fafb;
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  .review-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .approve-section,
+  .reject-section {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .btn-approve,
+  .btn-reject {
+    width: 100%;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-approve {
+    background: #10b981;
+    color: white;
+  }
+
+  .btn-reject {
+    background: #f87171;
+    color: white;
+    margin-top: 0.75rem;
+  }
+
+  textarea {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    padding: 0.75rem;
+    font-size: 1rem;
+    resize: vertical;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
   }
 </style>

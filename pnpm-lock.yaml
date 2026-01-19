@@ -113,6 +113,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      zenn-content-css:
+        specifier: ^0.3.1
+        version: 0.3.1
     devDependencies:
       '@types/react':
         specifier: ^18.2.48
@@ -2833,6 +2836,9 @@ packages:
 
   youch@3.3.4:
     resolution: {integrity: sha512-UeVBXie8cA35DS6+nBkls68xaBBXCye0CNznrhszZjTbRVnJKQuNsyLKBTTL4ln1o1rh2PKtv35twV7irj5SEg==}
+
+  zenn-content-css@0.3.1:
+    resolution: {integrity: sha512-ZxZMuRSevvBo7B3J97YUygK3B2pZlNJykqiD1AdvLeaYEbepkMzGZd35k10t/O51AUTICksRQ2Kh0eYpC4/vBg==}
 
   zenn-markdown-html@0.1.162:
     resolution: {integrity: sha512-EnhcOZ9XjON+MS0tYvdu1lKYA+YQkDOaTYWhL6lzOEHPgH56RgU4sbIzYNoXuih0S49yupDDFUdQGpQr5jsh4A==}
@@ -5821,6 +5827,8 @@ snapshots:
       cookie: 0.7.2
       mustache: 4.2.0
       stacktracey: 2.1.8
+
+  zenn-content-css@0.3.1: {}
 
   zenn-markdown-html@0.1.162(@types/markdown-it@14.1.2):
     dependencies:

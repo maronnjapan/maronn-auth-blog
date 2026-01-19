@@ -21,7 +21,6 @@ export interface InstallationRepository {
 
 export class GitHubClient {
   private readonly convertedPrivateKey: string;
-
   constructor(
     private appId: string,
     privateKey: string
@@ -43,6 +42,21 @@ export class GitHubClient {
     });
 
     return token;
+  }
+
+  private async getAppOctokit(): Promise<Octokit> {
+    const auth = createAppAuth({
+      appId: this.appId,
+      privateKey: this.convertedPrivateKey,
+    });
+    const appAuthentication = await auth({ type: 'app' });
+    return new Octokit({ auth: appAuthentication.token });
+  }
+
+  async getInstallationIdForRepo(owner: string, repo: string): Promise<string> {
+    const octokit = await this.getAppOctokit();
+    const { data } = await octokit.apps.getRepoInstallation({ owner, repo });
+    return data.id.toString();
   }
 
   async fetchFile(

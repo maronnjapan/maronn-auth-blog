@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import type { Article } from '@maronn-auth-blog/shared';
 
 interface AdminReviewDetailProps {
-  article: Article;
-  html: string;
+  articleId: string;
   apiUrl: string;
 }
 
-export default function AdminReviewDetail({ article, html, apiUrl }: AdminReviewDetailProps) {
+export default function AdminReviewDetail({ articleId, apiUrl }: AdminReviewDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -18,7 +16,7 @@ export default function AdminReviewDetail({ article, html, apiUrl }: AdminReview
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${apiUrl}/admin/reviews/${article.id}/approve`, {
+      const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/approve`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -48,7 +46,7 @@ export default function AdminReviewDetail({ article, html, apiUrl }: AdminReview
 
     setSubmitting(true);
     try {
-      const response = await fetch(`${apiUrl}/admin/reviews/${article.id}/reject`, {
+      const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -69,52 +67,25 @@ export default function AdminReviewDetail({ article, html, apiUrl }: AdminReview
   };
 
   return (
-    <div className="review-detail">
-      <div className="article-info">
-        <h2>{article.title}</h2>
-        <div className="meta">
-          <span>ユーザー: {article.userId}</span>
-          <span>カテゴリ: {article.category || 'なし'}</span>
-          <span>作成日: {new Date(article.createdAt).toLocaleDateString('ja-JP')}</span>
-        </div>
+    <div className="review-actions">
+      <div className="approve-section">
+        <button onClick={handleApprove} disabled={submitting} className="btn-approve">
+          {submitting ? '処理中...' : '承認する'}
+        </button>
       </div>
 
-      <div className="article-preview">
-        <h3>プレビュー</h3>
-        <div
-          className="preview-content"
-          dangerouslySetInnerHTML={{ __html: html }}
+      <div className="reject-section">
+        <label htmlFor="rejectionReason">却下理由</label>
+        <textarea
+          id="rejectionReason"
+          value={rejectionReason}
+          onChange={(e) => setRejectionReason(e.target.value)}
+          placeholder="却下する理由を入力してください"
+          rows={4}
         />
-      </div>
-
-      <div className="review-actions">
-        <div className="approve-section">
-          <button
-            onClick={handleApprove}
-            disabled={submitting}
-            className="btn-approve"
-          >
-            {submitting ? '処理中...' : '承認する'}
-          </button>
-        </div>
-
-        <div className="reject-section">
-          <label htmlFor="rejectionReason">却下理由</label>
-          <textarea
-            id="rejectionReason"
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="却下する理由を入力してください"
-            rows={4}
-          />
-          <button
-            onClick={handleReject}
-            disabled={submitting}
-            className="btn-reject"
-          >
-            {submitting ? '処理中...' : '却下する'}
-          </button>
-        </div>
+        <button onClick={handleReject} disabled={submitting} className="btn-reject">
+          {submitting ? '処理中...' : '却下する'}
+        </button>
       </div>
     </div>
   );

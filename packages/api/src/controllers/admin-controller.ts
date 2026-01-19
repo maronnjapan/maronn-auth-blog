@@ -82,13 +82,20 @@ app.get('/reviews/:id', adminOnly, async (c) => {
 
   // Generate preview by fetching and parsing markdown
   let html = '';
-  if (repo && user.githubInstallationId) {
+  if (repo) {
     try {
       const [owner, repoName] = repo.github_repo_full_name.split('/');
       const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
 
+      const installationId = await githubClient.getInstallationIdForRepo(owner, repoName);
+
+      if (user.githubInstallationId !== installationId) {
+        user.setGitHubInstallation(installationId);
+        await userRepo.save(user);
+      }
+
       const { content: markdown } = await githubClient.fetchFile(
-        user.githubInstallationId,
+        installationId,
         owner,
         repoName,
         article.githubPath

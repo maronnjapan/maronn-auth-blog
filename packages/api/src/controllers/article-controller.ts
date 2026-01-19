@@ -12,6 +12,7 @@ import { GetArticlesByCategoryUsecase } from '../usecases/article/get-articles-b
 import { GetArticlesByTagUsecase } from '../usecases/article/get-articles-by-tag';
 import { GetCategoriesUsecase } from '../usecases/article/get-categories';
 import { GetTagsUsecase } from '../usecases/article/get-tags';
+import type { Article as ArticleEntity } from '../domain/entities/article';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,7 @@ app.get('/', async (c) => {
   const tag = c.req.query('tag');
 
   const articleRepo = new ArticleRepository(c.env.DB);
+  const userRepo = new UserRepository(c.env.DB);
 
   let articles;
   let total;
@@ -47,15 +49,7 @@ app.get('/', async (c) => {
   }
 
   // Get tags for each article
-  const articlesWithTags = await Promise.all(
-    articles.map(async (article) => {
-      const tags = await articleRepo.findTags(article.id);
-      return {
-        ...article.toJSON(),
-        tags,
-      };
-    })
-  );
+  const articlesWithTags = await buildArticleListResponse(articleRepo, userRepo, articles);
 
   return c.json({
     articles: articlesWithTags,
@@ -80,16 +74,11 @@ app.get(
     const articleRepo = new ArticleRepository(c.env.DB);
     const usecase = new SearchArticlesUsecase(articleRepo);
     const result = await usecase.execute({ query: q, page, limit });
-
-    // Get tags for each article
-    const articlesWithTags = await Promise.all(
-      result.items.map(async (article) => {
-        const tags = await articleRepo.findTags(article.id);
-        return {
-          ...article.toJSON(),
-          tags,
-        };
-      })
+    const userRepo = new UserRepository(c.env.DB);
+    const articlesWithTags = await buildArticleListResponse(
+      articleRepo,
+      userRepo,
+      result.items
     );
 
     return c.json({
@@ -176,17 +165,7 @@ app.get('/users/:username/articles', async (c) => {
 
   const articleRepo = new ArticleRepository(c.env.DB);
   const articles = await articleRepo.findPublishedByUserId(user.id);
-
-  // Get tags for each article
-  const articlesWithTags = await Promise.all(
-    articles.map(async (article) => {
-      const tags = await articleRepo.findTags(article.id);
-      return {
-        ...article.toJSON(),
-        tags,
-      };
-    })
-  );
+  const articlesWithTags = await buildArticleListResponse(articleRepo, userRepo, articles);
 
   return c.json({
     articles: articlesWithTags,
@@ -228,3 +207,52 @@ app.delete('/:id', requireAuth(), async (c) => {
 });
 
 export default app;
+
+type ArticleAuthor = {
+  id: string;
+  username: string;
+  displayName: string;
+  iconUrl?: string;
+};
+
+async function buildArticleListResponse(
+  articleRepo: ArticleRepository,
+  userRepo: UserRepository,
+  articles: ArticleEntity[]
+) {
+  const authorCache = new Map<string, ArticleAuthor>();
+
+  const getAuthor = async (userId: string): Promise<ArticleAuthor | undefined> => {
+    if (authorCache.has(userId)) {
+      return authorCache.get(userId);
+    }
+
+    const user = await userRepo.findById(userId);
+    if (!user) {
+      return undefined;
+    }
+
+    const data = user.toJSON();
+    const author: ArticleAuthor = {
+      id: data.id,
+      username: data.username,
+      displayName: data.displayName,
+      iconUrl: data.iconUrl,
+    };
+    authorCache.set(userId, author);
+    return author;
+  };
+
+  return Promise.all(
+    articles.map(async (article) => {
+      const tags = await articleRepo.findTags(article.id);
+      const author = await getAuthor(article.userId);
+
+      return {
+        ...article.toJSON(),
+        tags,
+        author,
+      };
+    })
+  );
+}

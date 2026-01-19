@@ -1,6 +1,13 @@
-import markdownToHtml from 'zenn-markdown-html';
+import markdownToHtmlImport from 'zenn-markdown-html';
 import { frontmatterSchema, type Frontmatter } from '@maronn-auth-blog/shared';
 import { ValidationError } from '@maronn-auth-blog/shared';
+
+type MarkdownToHtmlFn = (markdown: string, options: { embedOrigin: string }) => string;
+
+const markdownToHtml: MarkdownToHtmlFn =
+  typeof markdownToHtmlImport === 'function'
+    ? (markdownToHtmlImport as MarkdownToHtmlFn)
+    : ((markdownToHtmlImport as { default: MarkdownToHtmlFn }).default as MarkdownToHtmlFn);
 
 export interface ParsedArticle {
   frontmatter: Frontmatter;

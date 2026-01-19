@@ -67,7 +67,7 @@ if (error || !user) {
 
     <section class="articles-section">
       <h2>記事一覧</h2>
-      <UserArticleList articles={articles} client:load />
+      <UserArticleList articles={articles} username={username} client:load />
     </section>
   </div>
 </BaseLayout>
