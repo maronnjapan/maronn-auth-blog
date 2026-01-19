@@ -3,7 +3,6 @@ import type { Article } from '@maronn-auth-blog/shared';
 
 interface DashboardArticleListProps {
   articles: Article[];
-  apiUrl: string;
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -14,29 +13,8 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   deleted: { label: '削除済み', color: '#9e9e9e' },
 };
 
-export default function DashboardArticleList({ articles: initialArticles, apiUrl }: DashboardArticleListProps) {
-  const [articles, setArticles] = useState<Article[]>(initialArticles);
-
-  const handleDelete = async (articleId: string) => {
-    if (!confirm('本当に削除しますか？')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/articles/${articleId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('削除に失敗しました');
-      }
-
-      setArticles(articles.filter((a) => a.id !== articleId));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '削除に失敗しました');
-    }
-  };
+export default function DashboardArticleList({ articles: initialArticles }: DashboardArticleListProps) {
+  const [articles] = useState<Article[]>(initialArticles);
 
   if (articles.length === 0) {
     return (
@@ -55,7 +33,6 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
             <th>タイトル</th>
             <th>ステータス</th>
             <th>作成日</th>
-            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -81,14 +58,6 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
                   </span>
                 </td>
                 <td>{new Date(article.createdAt).toLocaleDateString('ja-JP')}</td>
-                <td>
-                  <button
-                    onClick={() => handleDelete(article.id)}
-                    className="btn-delete"
-                  >
-                    削除
-                  </button>
-                </td>
               </tr>
             );
           })}
