@@ -119,6 +119,7 @@ export class Article {
       ...this.props,
       status: ArticleStatus.pendingUpdate(),
       githubSha: newSha,
+      rejectionReason: undefined,
       updatedAt: new Date(),
     };
   }

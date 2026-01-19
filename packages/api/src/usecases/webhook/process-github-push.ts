@@ -189,8 +189,8 @@ export class ProcessGitHubPushUsecase {
         return;
       }
 
-      // Mark for update if currently published
-      if (existingArticle.status.toString() === 'published') {
+      // Mark for update if currently published or rejected
+      if (['published', 'rejected'].includes(existingArticle.status.toString())) {
         existingArticle.markForUpdate(sha);
         await this.articleRepo.save(existingArticle);
 
