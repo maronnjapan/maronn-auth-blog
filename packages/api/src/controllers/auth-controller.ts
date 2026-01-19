@@ -7,6 +7,7 @@ import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { User, type UserProps } from '../domain/entities/user';
 import { encryptSessionId, requireAuth } from '../middleware/auth';
 import { UnauthorizedError } from '@maronn-auth-blog/shared';
+import { extractPermissionsFromAccessToken } from '../utils/token';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -16,17 +17,19 @@ app.get('/login', (c) => {
     c.env.AUTH0_DOMAIN,
     c.env.AUTH0_CLIENT_ID,
     c.env.AUTH0_CLIENT_SECRET,
-    c.env.AUTH0_CALLBACK_URL
+    c.env.AUTH0_CALLBACK_URL,
+    c.env.API_URL
   );
 
   // Generate state and code verifier for PKCE
   const { state, codeVerifier } = auth0.generateOAuthParams();
 
   // Cookie options for cross-subdomain sharing
+  // SameSite=None is required for cross-origin fetch requests with credentials
   const cookieOptions = {
     httpOnly: true,
     secure: c.env.ENVIRONMENT === 'production',
-    sameSite: 'Lax' as const,
+    sameSite: c.env.ENVIRONMENT === 'production' ? 'None' as const : 'Lax' as const,
     path: '/',
     // Set domain for cross-subdomain cookie sharing (e.g., '.maronn-room.com')
     ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {}),
@@ -70,16 +73,20 @@ app.get('/callback', async (c) => {
     throw new UnauthorizedError('State mismatch - possible CSRF attack');
   }
 
-  // Delete OAuth cookies after validation
-  const deleteOptions = c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN, path: '/' } : { path: '/' };
-  deleteCookie(c, 'oauth_state', deleteOptions);
-  deleteCookie(c, 'oauth_code_verifier', deleteOptions);
+  // Delete OAuth cookies after validation (from both domains)
+  deleteCookie(c, 'oauth_state', { path: '/' });
+  deleteCookie(c, 'oauth_code_verifier', { path: '/' });
+  if (c.env.COOKIE_DOMAIN) {
+    deleteCookie(c, 'oauth_state', { domain: c.env.COOKIE_DOMAIN, path: '/' });
+    deleteCookie(c, 'oauth_code_verifier', { domain: c.env.COOKIE_DOMAIN, path: '/' });
+  }
 
   const auth0 = new Auth0Client(
     c.env.AUTH0_DOMAIN,
     c.env.AUTH0_CLIENT_ID,
     c.env.AUTH0_CLIENT_SECRET,
-    c.env.AUTH0_CALLBACK_URL
+    c.env.AUTH0_CALLBACK_URL,
+    c.env.API_URL
   );
 
   // Exchange code for tokens using arctic library with PKCE
@@ -115,21 +122,25 @@ app.get('/callback', async (c) => {
   const sessionId = crypto.randomUUID();
   const kvClient = new KVClient(c.env.KV);
 
+  const permissions = extractPermissionsFromAccessToken(tokens.access_token);
+
   await kvClient.setSession(sessionId, {
     userId: user.id,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
     idToken: tokens.id_token,
     expiresAt: Date.now() + tokens.expires_in * 1000,
+    permissions,
   });
 
   // Set encrypted session cookie
   const encryptedSessionId = await encryptSessionId(sessionId, c.env.SESSION_SECRET);
 
+  // SameSite=None is required for cross-origin fetch requests with credentials
   setCookie(c, 'session', encryptedSessionId, {
     httpOnly: true,
     secure: c.env.ENVIRONMENT === 'production',
-    sameSite: 'Lax',
+    sameSite: c.env.ENVIRONMENT === 'production' ? 'None' : 'Lax',
     maxAge: 90 * 24 * 60 * 60, // 90 days
     path: '/',
     // Set domain for cross-subdomain cookie sharing
@@ -141,19 +152,32 @@ app.get('/callback', async (c) => {
 });
 
 // POST /auth/logout - Logout
-app.post('/logout', requireAuth(), async (c) => {
-  const auth = c.get('auth');
-  if (!auth) {
-    throw new UnauthorizedError();
+// Note: This endpoint doesn't require auth - it just clears the session cookie
+// If there's a valid session, it also deletes it from KV
+app.post('/logout', async (c) => {
+  // Try to delete session from KV if we can get the session ID
+  try {
+    const token = getCookie(c, 'session');
+    if (token) {
+      const { decryptSessionId } = await import('../middleware/auth');
+      const sessionId = await decryptSessionId(token, c.env.SESSION_SECRET);
+      if (sessionId) {
+        const kvClient = new KVClient(c.env.KV);
+        await kvClient.deleteSession(sessionId);
+      }
+    }
+  } catch {
+    // Ignore errors - just proceed to delete the cookie
   }
 
-  // Delete session from KV
-  const kvClient = new KVClient(c.env.KV);
-  await kvClient.deleteSession(auth.sessionId);
+  // Delete cookies from both domains to clean up any legacy cookies
+  // 1. Delete from specific subdomain (api.maronn-room.com) - no domain specified
+  deleteCookie(c, 'session', { path: '/' });
 
-  // Delete cookie with domain if set
-  const deleteOptions = c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN, path: '/' } : { path: '/' };
-  deleteCookie(c, 'session', deleteOptions);
+  // 2. Delete from parent domain (.maronn-room.com) if COOKIE_DOMAIN is set
+  if (c.env.COOKIE_DOMAIN) {
+    deleteCookie(c, 'session', { domain: c.env.COOKIE_DOMAIN, path: '/' });
+  }
 
   return c.json({ success: true });
 });

@@ -209,7 +209,10 @@ GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
 
 SESSION_SECRET=random-32-char-string
 
+API_URL=http://localhost:8787
+WEB_URL=http://localhost:4321
 EMBED_ORIGIN=http://localhost:8788
+IMAGE_URL=http://localhost:8787
 ```
 
 #### packages/web/.env

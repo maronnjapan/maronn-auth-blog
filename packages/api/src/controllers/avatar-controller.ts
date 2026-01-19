@@ -33,7 +33,7 @@ app.post('/upload', requireAuth(), async (c) => {
   const result = await usecase.execute({
     userId: auth.userId,
     file: uploadFile,
-    apiUrl: c.env.API_URL,
+    imageUrl: c.env.IMAGE_URL,
   });
 
   return c.json(result);

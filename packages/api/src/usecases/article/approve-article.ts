@@ -20,7 +20,7 @@ export class ApproveArticleUsecase {
     private kvClient: KVClient,
     private r2Client: R2Client,
     private embedOrigin: string,
-    private apiUrl: string
+    private imageUrl: string
   ) {}
 
   async execute(articleId: string): Promise<void> {
@@ -102,7 +102,7 @@ export class ApproveArticleUsecase {
       parsed.html,
       user.id,
       article.slug.toString(),
-      this.apiUrl
+      this.imageUrl
     );
 
     // Save HTML to KV

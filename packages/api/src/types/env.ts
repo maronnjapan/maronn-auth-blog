@@ -20,6 +20,7 @@ export interface Env {
   API_URL: string;
   WEB_URL: string;
   EMBED_ORIGIN: string;
+  IMAGE_URL: string;
 
   // Cookie domain for cross-subdomain sharing (e.g., '.maronn-room.com')
   COOKIE_DOMAIN?: string;

@@ -19,14 +19,17 @@ export interface Auth0UserInfo {
 export class Auth0Client {
   private auth0: Auth0;
   private domain: string;
+  private audience: string;
 
   constructor(
     domain: string,
     clientId: string,
     clientSecret: string,
-    redirectUri: string
+    redirectUri: string,
+    audience: string
   ) {
     this.domain = domain;
+    this.audience = audience;
     this.auth0 = new Auth0(domain, clientId, clientSecret, redirectUri);
   }
 
@@ -46,7 +49,9 @@ export class Auth0Client {
    */
   createAuthorizationURL(state: string, codeVerifier: string): URL {
     const scopes = ['openid', 'profile', 'email', 'offline_access'];
-    return this.auth0.createAuthorizationURL(state, codeVerifier, scopes);
+    const url = this.auth0.createAuthorizationURL(state, codeVerifier, scopes);
+    url.searchParams.set('audience', this.audience);
+    return url;
   }
 
   /**

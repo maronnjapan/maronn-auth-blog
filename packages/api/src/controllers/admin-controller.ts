@@ -25,10 +25,9 @@ async function adminOnly(c: any, next: any) {
     throw new UnauthorizedError();
   }
 
-  const userRepo = new UserRepository(c.env.DB);
-  const user = await userRepo.findById(auth.userId);
+  const hasAdminPermission = auth.permissions?.includes('admin:users');
 
-  if (!user || !user.isAdmin()) {
+  if (!hasAdminPermission) {
     throw new ForbiddenError('Admin access required');
   }
 
@@ -134,7 +133,7 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
     kvClient,
     r2Client,
     c.env.EMBED_ORIGIN,
-    c.env.API_URL
+    c.env.IMAGE_URL
   );
 
   await usecase.execute(articleId);

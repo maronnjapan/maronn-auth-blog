@@ -1,5 +1,6 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
+import { convertPKCS1ToPKCS8 } from './pkcs-converter';
 
 export interface GitHubFile {
   content: string;
@@ -19,20 +20,26 @@ export interface InstallationRepository {
 }
 
 export class GitHubClient {
+  private readonly convertedPrivateKey: string;
+
   constructor(
     private appId: string,
-    private privateKey: string
-  ) {}
+    privateKey: string
+  ) {
+    // GitHub App が生成する PKCS#1 形式を PKCS#8 形式に変換
+    // Cloudflare Workers の universal-github-app-jwt は PKCS#8 のみサポート
+    this.convertedPrivateKey = convertPKCS1ToPKCS8(privateKey);
+  }
 
   private async getInstallationToken(installationId: string): Promise<string> {
     const auth = createAppAuth({
       appId: this.appId,
-      privateKey: this.privateKey,
+      privateKey: this.convertedPrivateKey,
     });
 
     const { token } = await auth({
       type: 'installation',
-      installationId,
+      installationId: Number(installationId),
     });
 
     return token;
@@ -45,25 +52,31 @@ export class GitHubClient {
     path: string,
     ref: string = 'main'
   ): Promise<GitHubFile> {
+    console.info(`[GitHubClient] fetchFile: installationId=${installationId}, owner=${owner}, repo=${repo}, path=${path}, ref=${ref}`);
     const token = await this.getInstallationToken(installationId);
     const octokit = new Octokit({ auth: token });
 
-    const { data } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path,
-      ref,
-    });
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref,
+      });
 
-    if ('content' in data && data.type === 'file') {
-      const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      return {
-        content,
-        sha: data.sha,
-      };
+      if ('content' in data && data.type === 'file') {
+        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        return {
+          content,
+          sha: data.sha,
+        };
+      }
+
+      throw new Error('Not a file');
+    } catch (error) {
+      console.error(`[GitHubClient] fetchFile error:`, error);
+      throw error;
     }
-
-    throw new Error('Not a file');
   }
 
   async fetchImage(
@@ -170,6 +183,29 @@ export class GitHubClient {
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('')}`;
 
-    return signature === expectedSignature;
+    // タイミングセーフな比較を使用
+    return this.timingSafeEqual(signature, expectedSignature);
+  }
+
+  /**
+   * タイミング攻撃を防ぐための定時間比較
+   * 2つの文字列の長さや内容に関係なく、常に同じ時間で比較を行う
+   */
+  private timingSafeEqual(a: string, b: string): boolean {
+    const encoder = new TextEncoder();
+    const aBytes = encoder.encode(a);
+    const bBytes = encoder.encode(b);
+
+    // 長さが異なる場合でも全バイトを比較する（タイミング攻撃対策）
+    const maxLength = Math.max(aBytes.length, bBytes.length);
+    let result = aBytes.length === bBytes.length ? 0 : 1;
+
+    for (let i = 0; i < maxLength; i++) {
+      const aByte = i < aBytes.length ? aBytes[i] : 0;
+      const bByte = i < bBytes.length ? bBytes[i] : 0;
+      result |= aByte ^ bByte;
+    }
+
+    return result === 0;
   }
 }

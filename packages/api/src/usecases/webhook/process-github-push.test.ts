@@ -1,0 +1,312 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ProcessGitHubPushUsecase, type GitHubPushEvent } from './process-github-push';
+import type { ArticleRepository } from '../../infrastructure/repositories/article-repository';
+import type { UserRepository } from '../../infrastructure/repositories/user-repository';
+import type { RepositoryRepository } from '../../infrastructure/repositories/repository-repository';
+import type { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
+import type { GitHubClient } from '../../infrastructure/github-client';
+import type { KVClient } from '../../infrastructure/storage/kv-client';
+import type { R2Client } from '../../infrastructure/storage/r2-client';
+import { User, type UserProps } from '../../domain/entities/user';
+import { Article } from '../../domain/entities/article';
+import { ArticleStatus } from '../../domain/value-objects/article-status';
+import { Slug } from '../../domain/value-objects/slug';
+import type { UserRole } from '@maronn-auth-blog/shared';
+
+const baseUserProps: Omit<UserProps, 'role'> & { role: UserRole } = {
+  id: 'user-1',
+  username: 'test-user',
+  displayName: 'Test User',
+  githubUserId: '123',
+  role: 'user',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const IMAGE_URL = 'https://images.example.com';
+
+function createUsecase(options: {
+  userInstallationId?: string;
+  eventInstallationId?: number;
+  markdown?: string;
+}) {
+  const user = new User({
+    ...baseUserProps,
+    githubInstallationId: options.userInstallationId,
+  });
+
+  const articleRepo = {
+    findByGitHubPath: vi.fn().mockResolvedValue(null),
+    save: vi.fn().mockResolvedValue(undefined),
+    saveTags: vi.fn().mockResolvedValue(undefined),
+    removeFtsIndex: vi.fn().mockResolvedValue(undefined),
+  } as unknown as ArticleRepository;
+
+  const userRepo = {
+    findById: vi.fn().mockResolvedValue(user),
+  } as unknown as UserRepository;
+
+  const repoRepo = {
+    findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+      id: 'repo-1',
+      user_id: user.id,
+      github_repo_full_name: 'foo/bar',
+      created_at: new Date().toISOString(),
+    }),
+  } as unknown as RepositoryRepository;
+
+  const notificationRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+  } as unknown as NotificationRepository;
+
+  const markdown =
+    options.markdown ?? ['---', 'title: Test Article', 'published: true', '---', 'Content', ''].join('\n');
+
+  const githubClient = {
+    fetchFile: vi.fn().mockResolvedValue({
+      content: markdown,
+      sha: 'abc123',
+    }),
+    fetchImage: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+  } as unknown as GitHubClient;
+
+  const kvClientMock = {
+    setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+    deleteArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+  };
+  const kvClient = kvClientMock as unknown as KVClient;
+
+  const r2ClientMock = {
+    putImage: vi.fn().mockResolvedValue(undefined),
+    deleteImages: vi.fn().mockResolvedValue(undefined),
+  };
+  const r2Client = r2ClientMock as unknown as R2Client;
+
+  const usecase = new ProcessGitHubPushUsecase(
+    articleRepo,
+    userRepo,
+    repoRepo,
+    notificationRepo,
+    githubClient,
+    kvClient,
+    r2Client,
+    IMAGE_URL
+  );
+
+  const event: GitHubPushEvent = {
+    ref: 'refs/heads/main',
+    repository: {
+      full_name: 'foo/bar',
+    },
+    commits: [
+      {
+        added: ['articles/test.md'],
+        modified: [],
+        removed: [],
+      },
+    ],
+    installation: options.eventInstallationId
+      ? { id: options.eventInstallationId }
+      : undefined,
+  };
+
+  return { usecase, githubClient, kvClientMock, r2ClientMock, event };
+}
+
+describe('ProcessGitHubPushUsecase', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses installation id from the webhook event when user record lacks installation id', async () => {
+    const { usecase, githubClient, event } = createUsecase({
+      userInstallationId: undefined,
+      eventInstallationId: 12345,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchFile).toHaveBeenCalledWith(
+      '12345',
+      'foo',
+      'bar',
+      'articles/test.md'
+    );
+  });
+
+  it('falls back to user installation id when webhook event omits installation data', async () => {
+    const { usecase, githubClient, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchFile).toHaveBeenCalledWith(
+      '67890',
+      'foo',
+      'bar',
+      'articles/test.md'
+    );
+  });
+
+  it('skips processing when neither webhook event nor user record has installation id', async () => {
+    const { usecase, githubClient, event } = createUsecase({
+      userInstallationId: undefined,
+      eventInstallationId: undefined,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchFile).not.toHaveBeenCalled();
+  });
+
+  it('stores the latest markdown content in KV for downstream processing', async () => {
+    const { usecase, kvClientMock, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+    });
+
+    await usecase.execute(event);
+
+    expect(kvClientMock.setArticleMarkdown).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      expect.stringContaining('title: Test Article')
+    );
+  });
+
+  it('uploads referenced images to R2 and rewrites markdown URLs', async () => {
+    const markdownWithImage = [
+      '---',
+      'title: Test Article',
+      'published: true',
+      '---',
+      '![alt](./images/sample.png)',
+      '',
+    ].join('\n');
+
+    const { usecase, githubClient, kvClientMock, r2ClientMock, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+      markdown: markdownWithImage,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchImage).toHaveBeenCalledWith(
+      '67890',
+      'foo',
+      'bar',
+      'images/sample.png'
+    );
+    expect(r2ClientMock.putImage).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      'sample.png',
+      expect.any(ArrayBuffer),
+      'image/png'
+    );
+    expect(kvClientMock.setArticleMarkdown).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      expect.stringContaining(`${IMAGE_URL}/images/user-1/test/sample.png`)
+    );
+  });
+
+  it('removes cached markdown when the source file is deleted', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Existing Article',
+      category: undefined,
+      status: ArticleStatus.published(),
+      githubPath: 'articles/test.md',
+      githubSha: 'abc',
+      publishedSha: 'abc',
+      rejectionReason: undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      findById: vi.fn(),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTags: vi.fn(),
+      removeFtsIndex: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn(),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn(),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClientMock = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+    };
+    const kvClient = kvClientMock as unknown as KVClient;
+
+    const r2ClientMock = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn().mockResolvedValue(undefined),
+    };
+    const r2Client = r2ClientMock as unknown as R2Client;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: [],
+          removed: ['articles/test.md'],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(kvClientMock.deleteArticleMarkdown).toHaveBeenCalledWith('user-1', 'test');
+    expect(r2ClientMock.deleteImages).toHaveBeenCalledWith('user-1', 'test');
+  });
+});

@@ -71,11 +71,11 @@ export function convertImagePaths(
   html: string,
   userId: string,
   slug: string,
-  apiUrl: string
+  imageUrl: string
 ): string {
   return html.replace(
     /src="\.\/images\/([^"]+)"/g,
-    `src="${apiUrl}/images/${userId}/${slug}/$1"`
+    `src="${imageUrl}/images/${userId}/${slug}/$1"`
   );
 }
 

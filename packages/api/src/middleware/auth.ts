@@ -3,11 +3,12 @@ import { getCookie } from 'hono/cookie';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Env } from '../types/env';
 import { KVClient } from '../infrastructure/storage/kv-client';
-import { UnauthorizedError } from '@maronn-auth-blog/shared';
+import { UnauthorizedError, ForbiddenError } from '@maronn-auth-blog/shared';
 
 export interface AuthContext {
   userId: string;
   sessionId: string;
+  permissions: string[];
 }
 
 declare module 'hono' {
@@ -74,6 +75,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
   c.set('auth', {
     userId: session.userId,
     sessionId,
+    permissions: session.permissions ?? [],
   });
 
   await next();
@@ -92,8 +94,10 @@ export function requireAdmin() {
       throw new UnauthorizedError();
     }
 
-    // TODO: Check if user is admin
-    // This will be implemented in the user registration section
+    const hasAdminPermission = auth.permissions?.includes('admin:users');
+    if (!hasAdminPermission) {
+      throw new ForbiddenError('Admin access required');
+    }
 
     await next();
   };

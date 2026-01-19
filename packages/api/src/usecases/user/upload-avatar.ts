@@ -12,7 +12,7 @@ const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export interface UploadAvatarInput {
   userId: string;
   file: File;
-  apiUrl: string;
+  imageUrl: string;
 }
 
 export interface UploadAvatarOutput {
@@ -54,7 +54,7 @@ export class UploadAvatarUsecase {
     await this.r2Client.putAvatar(input.userId, filename, arrayBuffer, contentType);
 
     // Construct URL
-    const avatarUrl = `${input.apiUrl}/avatars/${input.userId}/${filename}`;
+    const avatarUrl = `${input.imageUrl}/avatars/${input.userId}/${filename}`;
 
     // Update user icon_url
     user.updateProfile({ iconUrl: avatarUrl });

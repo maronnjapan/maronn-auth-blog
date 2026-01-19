@@ -85,6 +85,12 @@ await loadAvailableRepositories();
 
 const installationId = Astro.url.searchParams.get('installation_id');
 const setupAction = Astro.url.searchParams.get('setup_action');
+const successParam = Astro.url.searchParams.get('success');
+
+// GitHub App連携成功後のメッセージ表示
+if (successParam === 'github-app') {
+  initialMessage = { type: 'success', text: 'GitHub App を連携しました' };
+}
 
 if (installationId && setupAction !== 'uninstall') {
   try {
@@ -99,12 +105,8 @@ if (installationId && setupAction !== 'uninstall') {
     });
 
     if (response.ok) {
-      initialMessage = { type: 'success', text: 'GitHub App を連携しました' };
-      user = {
-        ...user,
-        githubInstallationId: installationId,
-      };
-      await loadAvailableRepositories();
+      // 連携成功後、クリーンなURLにリダイレクトして最新データを取得
+      return Astro.redirect('/dashboard/settings?success=github-app');
     } else {
       const data = await response.json().catch(() => null);
       const apiMessage = data?.error?.message || 'GitHub App の連携に失敗しました';

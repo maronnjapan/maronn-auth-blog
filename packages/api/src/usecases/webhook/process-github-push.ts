@@ -3,16 +3,27 @@ import { UserRepository } from '../../infrastructure/repositories/user-repositor
 import { RepositoryRepository } from '../../infrastructure/repositories/repository-repository';
 import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
 import { GitHubClient } from '../../infrastructure/github-client';
+import { KVClient } from '../../infrastructure/storage/kv-client';
+import { R2Client } from '../../infrastructure/storage/r2-client';
 import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
-import { extractFrontmatter } from '../../utils/markdown-parser';
+import { extractFrontmatter, extractImagePaths } from '../../utils/markdown-parser';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import {
+  validateImageCount,
+  validateImageContentType,
+  validateImageSize,
+  getImageFilename,
+} from '../../utils/image-validator';
 
 export interface GitHubPushEvent {
   ref: string;
   repository: {
     full_name: string;
+  };
+  installation?: {
+    id: number;
   };
   commits: Array<{
     added: string[];
@@ -27,7 +38,10 @@ export class ProcessGitHubPushUsecase {
     private userRepo: UserRepository,
     private repoRepo: RepositoryRepository,
     private notificationRepo: NotificationRepository,
-    private githubClient: GitHubClient
+    private githubClient: GitHubClient,
+    private kvClient: KVClient,
+    private r2Client: R2Client,
+    private imageUrl: string
   ) {}
 
   async execute(event: GitHubPushEvent): Promise<void> {
@@ -50,8 +64,18 @@ export class ProcessGitHubPushUsecase {
     }
 
     const user = await this.userRepo.findById(repo.user_id);
-    if (!user || !user.githubInstallationId) {
-      console.info(`[ProcessGitHubPush] User or installation not found for repo ${repoFullName}`);
+    if (!user) {
+      console.info(`[ProcessGitHubPush] User not found for repo ${repoFullName}`);
+      return;
+    }
+
+    const installationId =
+      event.installation?.id.toString() ?? user.githubInstallationId;
+
+    if (!installationId) {
+      console.info(
+        `[ProcessGitHubPush] Installation ID missing for repo ${repoFullName} (event lacks installation info and user record has none)`
+      );
       return;
     }
 
@@ -79,7 +103,7 @@ export class ProcessGitHubPushUsecase {
       try {
         await this.processMarkdownFile(
           user.id,
-          user.githubInstallationId,
+          installationId,
           owner,
           repoName,
           filePath
@@ -146,6 +170,17 @@ export class ProcessGitHubPushUsecase {
 
     // Check if article already exists
     const existingArticle = await this.articleRepo.findByGitHubPath(userId, filePath);
+    const slug = existingArticle?.slug ?? Slug.create(slugValue);
+    const processedMarkdown = await this.processImagesAndRewriteMarkdown(
+      markdown,
+      userId,
+      slug.toString(),
+      installationId,
+      owner,
+      repoName
+    );
+
+    await this.kvClient.setArticleMarkdown(userId, slug.toString(), processedMarkdown);
 
     if (existingArticle) {
       // Article exists - check if it needs update
@@ -172,8 +207,6 @@ export class ProcessGitHubPushUsecase {
       }
     } else {
       // Create new article
-      const slug = Slug.create(slugValue);
-
       const articleProps: ArticleProps = {
         id: crypto.randomUUID(),
         userId,
@@ -219,7 +252,68 @@ export class ProcessGitHubPushUsecase {
       // Remove from FTS index
       await this.articleRepo.removeFtsIndex(article.id);
 
+      await Promise.all([
+        this.kvClient.deleteArticleMarkdown(userId, article.slug.toString()),
+        this.r2Client.deleteImages(userId, article.slug.toString()),
+      ]);
+
       console.info(`[ProcessGitHubPush] Article ${article.id} marked as deleted`);
     }
+  }
+
+  private async processImagesAndRewriteMarkdown(
+    markdown: string,
+    userId: string,
+    slug: string,
+    installationId: string,
+    owner: string,
+    repoName: string
+  ): Promise<string> {
+    const imagePaths = extractImagePaths(markdown);
+    if (imagePaths.length === 0) {
+      return markdown;
+    }
+
+    validateImageCount(imagePaths.length);
+
+    let updatedMarkdown = markdown;
+    const uniquePaths = Array.from(new Set(imagePaths));
+
+    for (const imagePath of uniquePaths) {
+      const imagePathInRepo = imagePath.replace('./', '');
+      const filename = getImageFilename(imagePath);
+
+      const imageData = await this.githubClient.fetchImage(
+        installationId,
+        owner,
+        repoName,
+        imagePathInRepo
+      );
+
+      const contentType = this.detectContentType(filename);
+      validateImageContentType(contentType);
+      validateImageSize(imageData.byteLength);
+
+      await this.r2Client.putImage(userId, slug, filename, imageData, contentType);
+
+      const r2Url = `${this.imageUrl}/images/${userId}/${slug}/${filename}`;
+      updatedMarkdown = updatedMarkdown.replaceAll(imagePath, r2Url);
+    }
+
+    return updatedMarkdown;
+  }
+
+  private detectContentType(filename: string): string {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (lower.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (lower.endsWith('.gif')) {
+      return 'image/gif';
+    }
+    return 'image/jpeg';
   }
 }

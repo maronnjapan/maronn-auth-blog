@@ -4,6 +4,7 @@ export interface SessionData {
   refreshToken?: string;
   idToken: string;
   expiresAt: number;
+  permissions?: string[];
 }
 
 export class KVClient {
@@ -40,5 +41,18 @@ export class KVClient {
 
   async deleteArticleHtml(userId: string, slug: string): Promise<void> {
     await this.kv.delete(`article:${userId}:${slug}`);
+  }
+
+  // Article markdown cache
+  async getArticleMarkdown(userId: string, slug: string): Promise<string | null> {
+    return await this.kv.get(`article-markdown:${userId}:${slug}`);
+  }
+
+  async setArticleMarkdown(userId: string, slug: string, markdown: string): Promise<void> {
+    await this.kv.put(`article-markdown:${userId}:${slug}`, markdown);
+  }
+
+  async deleteArticleMarkdown(userId: string, slug: string): Promise<void> {
+    await this.kv.delete(`article-markdown:${userId}:${slug}`);
   }
 }

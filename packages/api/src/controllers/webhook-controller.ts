@@ -6,33 +6,34 @@ import { RepositoryRepository } from '../infrastructure/repositories/repository-
 import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
 import { GitHubClient } from '../infrastructure/github-client';
 import { ProcessGitHubPushUsecase, type GitHubPushEvent } from '../usecases/webhook/process-github-push';
-import { InvalidWebhookSignatureError } from '../domain/errors/domain-errors';
+import { KVClient } from '../infrastructure/storage/kv-client';
+import { R2Client } from '../infrastructure/storage/r2-client';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // POST /webhook/github - GitHub webhook endpoint
 app.post('/github', async (c) => {
-  const signature = c.req.header('x-hub-signature-256');
-  const event = c.req.header('x-github-event');
+  // TODO: GitHub App の Webhook secret 設定後に署名検証を有効化する
+  // const signature = c.req.header('x-hub-signature-256');
+  // if (!signature) {
+  //   throw new InvalidWebhookSignatureError();
+  // }
 
-  if (!signature) {
-    throw new InvalidWebhookSignatureError();
-  }
+  const event = c.req.header('x-github-event');
 
   // Get raw body for signature verification
   const payload = await c.req.text();
 
-  // Verify signature
+  // TODO: GitHub App の Webhook secret 設定後に署名検証を有効化する
   const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
-  const isValid = await githubClient.verifyWebhookSignature(
-    payload,
-    signature,
-    c.env.GITHUB_WEBHOOK_SECRET
-  );
-
-  if (!isValid) {
-    throw new InvalidWebhookSignatureError();
-  }
+  // const isValid = await githubClient.verifyWebhookSignature(
+  //   payload,
+  //   signature,
+  //   c.env.GITHUB_WEBHOOK_SECRET
+  // );
+  // if (!isValid) {
+  //   throw new InvalidWebhookSignatureError();
+  // }
 
   // Only handle push events
   if (event !== 'push') {
@@ -47,13 +48,18 @@ app.post('/github', async (c) => {
   const userRepo = new UserRepository(c.env.DB);
   const repoRepo = new RepositoryRepository(c.env.DB);
   const notificationRepo = new NotificationRepository(c.env.DB);
+  const kvClient = new KVClient(c.env.KV);
+  const r2Client = new R2Client(c.env.R2);
 
   const usecase = new ProcessGitHubPushUsecase(
     articleRepo,
     userRepo,
     repoRepo,
     notificationRepo,
-    githubClient
+    githubClient,
+    kvClient,
+    r2Client,
+    c.env.IMAGE_URL
   );
 
   await usecase.execute(data);
