@@ -234,6 +234,7 @@ describe('ProcessGitHubPushUsecase', () => {
       publishedAt: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
+      targetCategory: 'authentication'
     });
 
     const articleRepo = {
@@ -332,6 +333,7 @@ describe('ProcessGitHubPushUsecase', () => {
       publishedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      targetCategory: 'authentication'
     });
 
     const articleRepo = {
