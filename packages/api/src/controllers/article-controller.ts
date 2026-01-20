@@ -8,9 +8,9 @@ import { KVClient } from '../infrastructure/storage/kv-client';
 import { NotFoundError } from '@maronn-auth-blog/shared';
 import { SearchArticlesUsecase } from '../usecases/article/search-articles';
 import { GetArticlesByCategoryUsecase } from '../usecases/article/get-articles-by-category';
-import { GetArticlesByTagUsecase } from '../usecases/article/get-articles-by-tag';
+import { GetArticlesByTopicUsecase } from '../usecases/article/get-articles-by-topic';
 import { GetCategoriesUsecase } from '../usecases/article/get-categories';
-import { GetTagsUsecase } from '../usecases/article/get-tags';
+import { GetTopicsUsecase } from '../usecases/article/get-topics';
 import type { Article as ArticleEntity } from '../domain/entities/article';
 import { parseArticle, convertImagePaths } from '../utils/markdown-parser';
 
@@ -22,7 +22,7 @@ app.get('/', async (c) => {
   const limit = parseInt(c.req.query('limit') || '20');
   const offset = (page - 1) * limit;
   const category = c.req.query('category');
-  const tag = c.req.query('tag');
+  const topic = c.req.query('topic');
 
   const articleRepo = new ArticleRepository(c.env.DB);
   const userRepo = new UserRepository(c.env.DB);
@@ -36,10 +36,10 @@ app.get('/', async (c) => {
     const result = await usecase.execute({ category, page, limit });
     articles = result.items;
     total = result.total;
-  } else if (tag) {
-    // Filter by tag
-    const usecase = new GetArticlesByTagUsecase(articleRepo);
-    const result = await usecase.execute({ tag, page, limit });
+  } else if (topic) {
+    // Filter by topic
+    const usecase = new GetArticlesByTopicUsecase(articleRepo);
+    const result = await usecase.execute({ topic, page, limit });
     articles = result.items;
     total = result.total;
   } else {
@@ -48,11 +48,11 @@ app.get('/', async (c) => {
     total = await articleRepo.countPublished();
   }
 
-  // Get tags for each article
-  const articlesWithTags = await buildArticleListResponse(articleRepo, userRepo, articles);
+  // Get topics for each article
+  const articlesWithTopics = await buildArticleListResponse(articleRepo, userRepo, articles);
 
   return c.json({
-    articles: articlesWithTags,
+    articles: articlesWithTopics,
     total,
     page,
     limit,
@@ -75,14 +75,14 @@ app.get(
     const usecase = new SearchArticlesUsecase(articleRepo);
     const result = await usecase.execute({ query: q, page, limit });
     const userRepo = new UserRepository(c.env.DB);
-    const articlesWithTags = await buildArticleListResponse(
+    const articlesWithTopics = await buildArticleListResponse(
       articleRepo,
       userRepo,
       result.items
     );
 
     return c.json({
-      articles: articlesWithTags,
+      articles: articlesWithTopics,
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -101,15 +101,15 @@ app.get('/categories', async (c) => {
   return c.json({ categories });
 });
 
-// GET /articles/tags - Get all tags with counts
-app.get('/tags', async (c) => {
+// GET /articles/topics - Get all topics with counts
+app.get('/topics', async (c) => {
   const limit = parseInt(c.req.query('limit') || '50');
 
   const articleRepo = new ArticleRepository(c.env.DB);
-  const usecase = new GetTagsUsecase(articleRepo);
-  const tags = await usecase.execute(limit);
+  const usecase = new GetTopicsUsecase(articleRepo);
+  const topics = await usecase.execute(limit);
 
-  return c.json({ tags });
+  return c.json({ topics });
 });
 
 // GET /articles/:username/:slug - Get article detail
@@ -153,13 +153,13 @@ app.get('/:username/:slug', async (c) => {
     );
   }
 
-  // Get tags
-  const tags = await articleRepo.findTags(article.id);
+  // Get topics
+  const topics = await articleRepo.findTopics(article.id);
 
   return c.json({
     ...article.toJSON(),
     html,
-    tags,
+    topics,
     author: user.toJSON(),
   });
 });
@@ -177,10 +177,10 @@ app.get('/users/:username/articles', async (c) => {
 
   const articleRepo = new ArticleRepository(c.env.DB);
   const articles = await articleRepo.findPublishedByUserId(user.id);
-  const articlesWithTags = await buildArticleListResponse(articleRepo, userRepo, articles);
+  const articlesWithTopics = await buildArticleListResponse(articleRepo, userRepo, articles);
 
   return c.json({
-    articles: articlesWithTags,
+    articles: articlesWithTopics,
     user: user.toJSON(),
   });
 });
@@ -224,12 +224,12 @@ async function buildArticleListResponse(
 
   return Promise.all(
     articles.map(async (article) => {
-      const tags = await articleRepo.findTags(article.id);
+      const topics = await articleRepo.findTopics(article.id);
       const author = await getAuthor(article.userId);
 
       return {
         ...article.toJSON(),
-        tags,
+        topics,
         author,
       };
     })

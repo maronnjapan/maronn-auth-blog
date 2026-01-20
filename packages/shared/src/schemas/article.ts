@@ -44,7 +44,7 @@ export const articleInputSchema = articleSchema.omit({
 });
 
 export const articleResponseSchema = articleSchema.extend({
-  tags: z.array(z.string()).optional(),
+  topics: z.array(z.string()).optional(),
 });
 
 export const frontmatterSchema = z.object({
@@ -52,7 +52,7 @@ export const frontmatterSchema = z.object({
   published: z.boolean(),
   category: z.string().max(50).optional(),
   targetCategory: targetCategorySchema,
-  tags: z.array(z.string().max(30)).max(10),
+  topics: z.array(z.string().max(30)).max(10),
 });
 
 export type Article = z.infer<typeof articleSchema>;

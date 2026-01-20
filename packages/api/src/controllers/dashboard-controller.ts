@@ -21,18 +21,18 @@ app.get('/articles', requireAuth(), async (c) => {
   const articleRepo = new ArticleRepository(c.env.DB);
   const articles = await articleRepo.findByUserId(auth.userId);
 
-  // Get tags for each article
-  const articlesWithTags = await Promise.all(
+  // Get topics for each article
+  const articlesWithTopics = await Promise.all(
     articles.map(async (article) => {
-      const tags = await articleRepo.findTags(article.id);
+      const topics = await articleRepo.findTopics(article.id);
       return {
         ...article.toJSON(),
-        tags,
+        topics,
       };
     })
   );
 
-  return c.json({ articles: articlesWithTags });
+  return c.json({ articles: articlesWithTopics });
 });
 
 // GET /dashboard/notifications - Get notifications (paginated)

@@ -43,10 +43,10 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
             <span class="category">{article.category}</span>
           )}
         </div>
-        {article.tags && article.tags.length > 0 && (
-          <div class="tags">
-            {article.tags.map((tag: string) => (
-              <span class="tag">#{tag}</span>
+        {article.topics && article.topics.length > 0 && (
+          <div class="topics">
+            {article.topics.map((topic: string) => (
+              <span class="topic">#{topic}</span>
             ))}
           </div>
         )}
@@ -108,14 +108,14 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
     font-size: 0.85rem;
   }
 
-  .tags {
+  .topics {
     display: flex;
     gap: 0.5rem;
     margin-top: 1rem;
     flex-wrap: wrap;
   }
 
-  .tag {
+  .topic {
     background: #f5f5f5;
     color: #666;
     padding: 0.25rem 0.75rem;

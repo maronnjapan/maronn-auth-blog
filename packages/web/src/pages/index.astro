@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ArticleList from '../islands/ArticleList';
 import SearchBar from '../islands/SearchBar';
 import CategoryFilter from '../islands/CategoryFilter';
-import TagCloud from '../islands/TagCloud';
+import TopicCloud from '../islands/TopicCloud';
 import Pagination from '../islands/Pagination';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
@@ -11,27 +11,27 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 // Get query parameters
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
 const category = Astro.url.searchParams.get('category') || '';
-const tag = Astro.url.searchParams.get('tag') || '';
+const topic = Astro.url.searchParams.get('topic') || '';
 const limit = 20;
 
-// Fetch articles, categories, and tags on server-side
+// Fetch articles, categories, and topics on server-side
 let articles = [];
 let total = 0;
 let categories = [];
-let tags = [];
+let topics = [];
 let error = null;
 
 try {
   // Build URL with filters
   let articlesUrl = `${API_URL}/articles?page=${page}&limit=${limit}`;
   if (category) articlesUrl += `&category=${encodeURIComponent(category)}`;
-  if (tag) articlesUrl += `&tag=${encodeURIComponent(tag)}`;
+  if (topic) articlesUrl += `&topic=${encodeURIComponent(topic)}`;
 
   // Fetch all data in parallel
-  const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
+  const [articlesRes, categoriesRes, topicsRes] = await Promise.all([
     fetch(articlesUrl),
     fetch(`${API_URL}/articles/categories`),
-    fetch(`${API_URL}/articles/tags?limit=30`),
+    fetch(`${API_URL}/articles/topics?limit=30`),
   ]);
 
   if (articlesRes.ok) {
@@ -47,9 +47,9 @@ try {
     categories = data.categories || [];
   }
 
-  if (tagsRes.ok) {
-    const data = await tagsRes.json();
-    tags = data.tags || [];
+  if (topicsRes.ok) {
+    const data = await topicsRes.json();
+    topics = data.topics || [];
   }
 } catch (err) {
   error = '記事の取得に失敗しました';
@@ -59,12 +59,12 @@ try {
 const totalPages = Math.ceil(total / limit);
 let baseUrl = '/';
 if (category) baseUrl = `/?category=${encodeURIComponent(category)}`;
-else if (tag) baseUrl = `/?tag=${encodeURIComponent(tag)}`;
+else if (topic) baseUrl = `/?topic=${encodeURIComponent(topic)}`;
 
 // Title based on filter
 let pageTitle = '最新の記事';
 if (category) pageTitle = `カテゴリ: ${category}`;
-else if (tag) pageTitle = `タグ: ${tag}`;
+else if (topic) pageTitle = `トピック: ${topic}`;
 ---
 
 <BaseLayout title={`${pageTitle} - GitHub Blog`}>
@@ -84,10 +84,10 @@ else if (tag) pageTitle = `タグ: ${tag}`;
           </div>
         ) : (
           <>
-            {(category || tag) && (
+            {(category || topic) && (
               <div class="filter-notice">
                 <p>
-                  {category ? `カテゴリ「${category}」` : `タグ「${tag}」`}でフィルタリング中
+                  {category ? `カテゴリ「${category}」` : `トピック「${topic}」`}でフィルタリング中
                   <a href="/" class="clear-filter">クリア</a>
                 </p>
               </div>
@@ -111,9 +111,9 @@ else if (tag) pageTitle = `タグ: ${tag}`;
           selectedCategory={category}
           client:load
         />
-        <TagCloud
-          tags={tags}
-          selectedTag={tag}
+        <TopicCloud
+          topics={topics}
+          selectedTopic={topic}
           client:load
         />
       </aside>

@@ -145,30 +145,30 @@ export class ArticleRepository {
       .run();
   }
 
-  async saveTags(articleId: string, tags: string[]): Promise<void> {
-    // Delete existing tags
+  async saveTopics(articleId: string, topics: string[]): Promise<void> {
+    // Delete existing topics
     await this.db
-      .prepare('DELETE FROM article_tags WHERE article_id = ?')
+      .prepare('DELETE FROM article_topics WHERE article_id = ?')
       .bind(articleId)
       .run();
 
-    // Insert new tags
-    for (const tag of tags) {
-      const tagId = crypto.randomUUID();
+    // Insert new topics
+    for (const topic of topics) {
+      const topicId = crypto.randomUUID();
       await this.db
-        .prepare('INSERT INTO article_tags (id, article_id, tag) VALUES (?, ?, ?)')
-        .bind(tagId, articleId, tag)
+        .prepare('INSERT INTO article_topics (id, article_id, topic) VALUES (?, ?, ?)')
+        .bind(topicId, articleId, topic)
         .run();
     }
   }
 
-  async findTags(articleId: string): Promise<string[]> {
+  async findTopics(articleId: string): Promise<string[]> {
     const results = await this.db
-      .prepare('SELECT tag FROM article_tags WHERE article_id = ?')
+      .prepare('SELECT topic FROM article_topics WHERE article_id = ?')
       .bind(articleId)
-      .all<{ tag: string }>();
+      .all<{ topic: string }>();
 
-    return results.results.map((row) => row.tag);
+    return results.results.map((row) => row.topic);
   }
 
   async countPublished(): Promise<number> {
@@ -189,14 +189,14 @@ export class ArticleRepository {
     return result?.count ?? 0;
   }
 
-  async countPublishedByTag(tag: string): Promise<number> {
+  async countPublishedByTopic(topic: string): Promise<number> {
     const result = await this.db
       .prepare(`
         SELECT COUNT(*) as count FROM articles a
-        INNER JOIN article_tags at ON a.id = at.article_id
-        WHERE a.status = ? AND at.tag = ?
+        INNER JOIN article_topics at ON a.id = at.article_id
+        WHERE a.status = ? AND at.topic = ?
       `)
-      .bind('published', tag)
+      .bind('published', topic)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -219,19 +219,19 @@ export class ArticleRepository {
     return results.results.map((row) => this.rowToEntity(row));
   }
 
-  async findPublishedByTag(
-    tag: string,
+  async findPublishedByTopic(
+    topic: string,
     limit: number = 20,
     offset: number = 0
   ): Promise<Article[]> {
     const results = await this.db
       .prepare(
         `SELECT a.* FROM articles a
-         INNER JOIN article_tags at ON a.id = at.article_id
-         WHERE a.status = ? AND at.tag = ?
+         INNER JOIN article_topics at ON a.id = at.article_id
+         WHERE a.status = ? AND at.topic = ?
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('published', tag, limit, offset)
+      .bind('published', topic, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -281,16 +281,16 @@ export class ArticleRepository {
     return results.results;
   }
 
-  async getAllTags(limit: number = 50): Promise<Array<{ tag: string; count: number }>> {
+  async getAllTopics(limit: number = 50): Promise<Array<{ topic: string; count: number }>> {
     const results = await this.db
       .prepare(
-        `SELECT at.tag, COUNT(*) as count FROM article_tags at
+        `SELECT at.topic, COUNT(*) as count FROM article_topics at
          INNER JOIN articles a ON at.article_id = a.id
          WHERE a.status = ?
-         GROUP BY at.tag ORDER BY count DESC LIMIT ?`
+         GROUP BY at.topic ORDER BY count DESC LIMIT ?`
       )
       .bind('published', limit)
-      .all<{ tag: string; count: number }>();
+      .all<{ topic: string; count: number }>();
 
     return results.results;
   }

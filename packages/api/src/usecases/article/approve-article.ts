@@ -104,8 +104,8 @@ export class ApproveArticleUsecase {
     article.approve(sha);
     await this.articleRepo.save(article);
 
-    // Save tags
-    await this.articleRepo.saveTags(article.id, parsed.frontmatter.tags);
+    // Save topics
+    await this.articleRepo.saveTopics(article.id, parsed.frontmatter.topics);
 
     // Update FTS index
     await this.articleRepo.syncFtsIndex(article.id, article.title);

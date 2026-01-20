@@ -2,22 +2,22 @@ import { ArticleRepository } from '../../infrastructure/repositories/article-rep
 import type { Article } from '../../domain/entities/article';
 import type { PaginatedResponse } from '@maronn-auth-blog/shared';
 
-export interface GetArticlesByTagInput {
-  tag: string;
+export interface GetArticlesByTopicInput {
+  topic: string;
   page: number;
   limit: number;
 }
 
-export class GetArticlesByTagUsecase {
+export class GetArticlesByTopicUsecase {
   constructor(private articleRepo: ArticleRepository) {}
 
-  async execute(input: GetArticlesByTagInput): Promise<PaginatedResponse<Article>> {
-    const { tag, page, limit } = input;
+  async execute(input: GetArticlesByTopicInput): Promise<PaginatedResponse<Article>> {
+    const { topic, page, limit } = input;
     const offset = (page - 1) * limit;
 
     const [articles, total] = await Promise.all([
-      this.articleRepo.findPublishedByTag(tag, limit, offset),
-      this.articleRepo.countPublishedByTag(tag),
+      this.articleRepo.findPublishedByTopic(topic, limit, offset),
+      this.articleRepo.countPublishedByTopic(topic),
     ]);
 
     return {
