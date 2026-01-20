@@ -7,7 +7,7 @@ describe('extractFrontmatter', () => {
 title: "Test Article"
 published: true
 targetCategory: "security"
-tags: ["auth0", "oauth"]
+topics: ["auth0", "oauth"]
 ---
 
 # Content`;
@@ -17,7 +17,7 @@ tags: ["auth0", "oauth"]
     expect(result.frontmatter.title).toBe('Test Article');
     expect(result.frontmatter.published).toBe(true);
     expect(result.frontmatter.targetCategory).toBe('security');
-    expect(result.frontmatter.tags).toEqual(['auth0', 'oauth']);
+    expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
     expect(result.content).toBe('\n# Content');
   });
 
@@ -26,7 +26,7 @@ tags: ["auth0", "oauth"]
 title: Test Article
 published: true
 targetCategory: authentication
-tags: [auth0, oauth]
+topics: [auth0, oauth]
 ---
 
 # Content`;
@@ -36,7 +36,7 @@ tags: [auth0, oauth]
     expect(result.frontmatter.title).toBe('Test Article');
     expect(result.frontmatter.published).toBe(true);
     expect(result.frontmatter.targetCategory).toBe('authentication');
-    expect(result.frontmatter.tags).toEqual(['auth0', 'oauth']);
+    expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
   });
 
   it('should handle single quotes', () => {
@@ -44,7 +44,7 @@ tags: [auth0, oauth]
 title: 'Test Article'
 published: true
 targetCategory: 'authorization'
-tags: ['auth0', 'oauth']
+topics: ['auth0', 'oauth']
 ---
 
 # Content`;
@@ -53,10 +53,10 @@ tags: ['auth0', 'oauth']
 
     expect(result.frontmatter.title).toBe('Test Article');
     expect(result.frontmatter.targetCategory).toBe('authorization');
-    expect(result.frontmatter.tags).toEqual(['auth0', 'oauth']);
+    expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
   });
 
-  it('should set default empty array for tags if not present', () => {
+  it('should set default empty array for topics if not present', () => {
     const markdown = `---
 title: "Test Article"
 published: true
@@ -67,7 +67,7 @@ targetCategory: "security"
 
     const result = extractFrontmatter(markdown);
 
-    expect(result.frontmatter.tags).toEqual([]);
+    expect(result.frontmatter.topics).toEqual([]);
   });
 
   it('should handle optional category field', () => {
@@ -76,7 +76,7 @@ title: "Test Article"
 published: true
 category: "認証"
 targetCategory: "authentication"
-tags: ["auth0"]
+topics: ["auth0"]
 ---
 
 # Content`;
@@ -91,14 +91,14 @@ tags: ["auth0"]
 title: "Test Article"
 published: true
 targetCategory: "security"
-tags: []
+topics: []
 ---
 
 # Content`;
 
     const result = extractFrontmatter(markdown);
 
-    expect(result.frontmatter.tags).toEqual([]);
+    expect(result.frontmatter.topics).toEqual([]);
   });
 
   it('should throw error for invalid frontmatter format', () => {
@@ -149,7 +149,7 @@ title: "Complete Article"
 published: true
 category: "認証"
 targetCategory: "authentication"
-tags: ["auth0", "oauth", "security"]
+topics: ["auth0", "oauth", "security"]
 ---
 
 # Article Content
@@ -163,7 +163,7 @@ tags: ["auth0", "oauth", "security"]
     expect(result.frontmatter.published).toBe(true);
     expect(result.frontmatter.category).toBe('認証');
     expect(result.frontmatter.targetCategory).toBe('authentication');
-    expect(result.frontmatter.tags).toEqual(['auth0', 'oauth', 'security']);
+    expect(result.frontmatter.topics).toEqual(['auth0', 'oauth', 'security']);
     expect(result.images).toEqual(['./images/test.png']);
     expect(result.html).toContain('<h1');
   });
@@ -173,7 +173,7 @@ tags: ["auth0", "oauth", "security"]
 title: ""
 published: true
 targetCategory: "invalid_category"
-tags: ["tag"]
+topics: ["topic"]
 ---
 
 # Content`;

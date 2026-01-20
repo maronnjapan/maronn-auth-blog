@@ -73,9 +73,9 @@ export function extractFrontmatter(markdown: string): {
     frontmatter[key.trim()] = removeQuotes(value);
   }
 
-  // Set default empty array for tags if not present
-  if (!frontmatter.tags) {
-    frontmatter.tags = [];
+  // Set default empty array for topics if not present
+  if (!frontmatter.topics) {
+    frontmatter.topics = [];
   }
 
   return { frontmatter, content };
