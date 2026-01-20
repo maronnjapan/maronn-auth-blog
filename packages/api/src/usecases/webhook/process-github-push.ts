@@ -158,9 +158,15 @@ export class ProcessGitHubPushUsecase {
 
     const title = (frontmatter.title as string) || '';
     const category = (frontmatter.category as string) || undefined;
+    const targetCategory = frontmatter.targetCategory as 'authentication' | 'authorization' | 'security';
 
     if (!title) {
       console.info(`[ProcessGitHubPush] File ${filePath} has no title, skipping`);
+      return;
+    }
+
+    if (!targetCategory) {
+      console.info(`[ProcessGitHubPush] File ${filePath} has no targetCategory, skipping`);
       return;
     }
 
@@ -194,6 +200,12 @@ export class ProcessGitHubPushUsecase {
         existingArticle.markForUpdate(sha);
         await this.articleRepo.save(existingArticle);
 
+        // Save tags if present
+        if (Array.isArray(frontmatter.tags)) {
+          const tags = (frontmatter.tags as string[]).filter(t => typeof t === 'string');
+          await this.articleRepo.saveTags(existingArticle.id, tags);
+        }
+
         // Create notification
         const createNotification = new CreateNotificationUsecase(this.notificationRepo);
         await createNotification.execute({
@@ -213,6 +225,7 @@ export class ProcessGitHubPushUsecase {
         slug,
         title,
         category,
+        targetCategory,
         status: ArticleStatus.pendingNew(),
         githubPath: filePath,
         githubSha: sha,
