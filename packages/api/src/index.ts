@@ -23,7 +23,6 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// Health check
 app.get('/health', (c) => {
   return c.json({ status: 'ok' });
 });

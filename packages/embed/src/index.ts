@@ -5,7 +5,6 @@ const app = new Hono();
 
 app.use('*', cors());
 
-// Health check
 app.get('/health', (c) => {
   return c.json({ status: 'ok' });
 });

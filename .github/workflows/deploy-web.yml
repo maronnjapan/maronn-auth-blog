@@ -22,9 +22,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
-      PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
-      PUBLIC_GITHUB_APP_INSTALL_URL: ${{ secrets.PUBLIC_GITHUB_APP_INSTALL_URL }}
+      PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+      PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
+      PUBLIC_GITHUB_APP_INSTALL_URL: ${{ vars.PUBLIC_GITHUB_APP_INSTALL_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
