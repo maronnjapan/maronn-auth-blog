@@ -1,7 +1,7 @@
 import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
-import type { ArticleStatus as ArticleStatusType } from '@maronn-auth-blog/shared';
+import type { ArticleStatus as ArticleStatusType, TargetCategory } from '@maronn-auth-blog/shared';
 
 interface ArticleRow {
   id: string;
@@ -9,6 +9,7 @@ interface ArticleRow {
   slug: string;
   title: string;
   category: string | null;
+  target_category: TargetCategory;
   status: ArticleStatusType;
   github_path: string;
   github_sha: string | null;
@@ -29,6 +30,7 @@ export class ArticleRepository {
       slug: Slug.create(row.slug),
       title: row.title,
       category: row.category ?? undefined,
+      targetCategory: row.target_category,
       status: ArticleStatus.fromString(row.status),
       githubPath: row.github_path,
       githubSha: row.github_sha ?? undefined,
@@ -108,14 +110,15 @@ export class ArticleRepository {
     await this.db
       .prepare(`
         INSERT INTO articles (
-          id, user_id, slug, title, category, status,
+          id, user_id, slug, title, category, target_category, status,
           github_path, github_sha, published_sha, rejection_reason,
           published_at, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           category = excluded.category,
+          target_category = excluded.target_category,
           status = excluded.status,
           github_sha = excluded.github_sha,
           published_sha = excluded.published_sha,
@@ -129,6 +132,7 @@ export class ArticleRepository {
         json.slug,
         json.title,
         json.category ?? null,
+        json.targetCategory,
         json.status,
         json.githubPath,
         json.githubSha ?? null,

@@ -10,6 +10,7 @@ import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
 import { extractFrontmatter, extractImagePaths } from '../../utils/markdown-parser';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import type { TargetCategory } from '@maronn-auth-blog/shared';
 import {
   validateImageCount,
   validateImageContentType,
@@ -158,9 +159,16 @@ export class ProcessGitHubPushUsecase {
 
     const title = (frontmatter.title as string) || '';
     const category = (frontmatter.category as string) || undefined;
+    const targetCategory = frontmatter.targetCategory as TargetCategory;
+    const tags = frontmatter.tags as string[];
 
     if (!title) {
       console.info(`[ProcessGitHubPush] File ${filePath} has no title, skipping`);
+      return;
+    }
+
+    if (!targetCategory) {
+      console.info(`[ProcessGitHubPush] File ${filePath} has no targetCategory, skipping`);
       return;
     }
 
@@ -194,6 +202,9 @@ export class ProcessGitHubPushUsecase {
         existingArticle.markForUpdate(sha);
         await this.articleRepo.save(existingArticle);
 
+        // Save tags
+        await this.articleRepo.saveTags(existingArticle.id, tags);
+
         // Create notification
         const createNotification = new CreateNotificationUsecase(this.notificationRepo);
         await createNotification.execute({
@@ -213,6 +224,7 @@ export class ProcessGitHubPushUsecase {
         slug,
         title,
         category,
+        targetCategory,
         status: ArticleStatus.pendingNew(),
         githubPath: filePath,
         githubSha: sha,
@@ -226,13 +238,8 @@ export class ProcessGitHubPushUsecase {
       const article = new Article(articleProps);
       await this.articleRepo.save(article);
 
-      // Save tags if present
-      if (Array.isArray(frontmatter.tags)) {
-        const tags = (frontmatter.tags as string[]).filter(t => typeof t === 'string');
-        if (tags.length > 0) {
-          await this.articleRepo.saveTags(article.id, tags);
-        }
-      }
+      // Save tags
+      await this.articleRepo.saveTags(article.id, tags);
 
       console.info(`[ProcessGitHubPush] New article created: ${article.id}`);
     }
