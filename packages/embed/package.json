@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "wrangler dev --port 8788 --inspector-port 9230",
     "build": "tsc && wrangler deploy --dry-run",
-    "deploy": "wrangler deploy",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:production": "pnpm build && wrangler deploy --env production",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
