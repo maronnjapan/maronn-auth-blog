@@ -16,6 +16,20 @@ export interface ParsedArticle {
   images: string[];
 }
 
+/**
+ * Remove surrounding quotes from a string
+ */
+function removeQuotes(str: string): string {
+  const trimmed = str.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 export function extractFrontmatter(markdown: string): {
   frontmatter: Record<string, any>;
   content: string;
@@ -50,13 +64,18 @@ export function extractFrontmatter(markdown: string): {
       const arrayContent = value.slice(1, -1);
       frontmatter[key.trim()] = arrayContent
         .split(',')
-        .map((item) => item.trim())
+        .map((item) => removeQuotes(item))
         .filter((item) => item.length > 0);
       continue;
     }
 
-    // Parse string
-    frontmatter[key.trim()] = value;
+    // Parse string (remove quotes)
+    frontmatter[key.trim()] = removeQuotes(value);
+  }
+
+  // Set default empty array for topics if not present
+  if (!frontmatter.topics) {
+    frontmatter.topics = [];
   }
 
   return { frontmatter, content };
