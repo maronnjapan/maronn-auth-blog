@@ -60,7 +60,17 @@ function createUsecase(options: {
   } as unknown as NotificationRepository;
 
   const markdown =
-    options.markdown ?? ['---', 'title: Test Article', 'published: true', '---', 'Content', ''].join('\n');
+    options.markdown ??
+    [
+      '---',
+      'title: Test Article',
+      'published: true',
+      'targetCategory: authentication',
+      'tags: []',
+      '---',
+      'Content',
+      '',
+    ].join('\n');
 
   const githubClient = {
     fetchFile: vi.fn().mockResolvedValue({
@@ -181,6 +191,8 @@ describe('ProcessGitHubPushUsecase', () => {
       '---',
       'title: Test Article',
       'published: true',
+      'targetCategory: security',
+      'tags: []',
       '---',
       '![alt](./images/sample.png)',
       '',
@@ -263,7 +275,15 @@ describe('ProcessGitHubPushUsecase', () => {
 
     const githubClient = {
       fetchFile: vi.fn().mockResolvedValue({
-        content: ['---', 'title: Test Article', 'published: true', '---', 'Content'].join('\n'),
+        content: [
+          '---',
+          'title: Test Article',
+          'published: true',
+          'targetCategory: authentication',
+          'tags: []',
+          '---',
+          'Content',
+        ].join('\n'),
         sha: 'new-sha',
       }),
       fetchImage: vi.fn(),
