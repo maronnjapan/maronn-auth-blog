@@ -21,6 +21,7 @@ export const articleSchema = z.object({
   slug: slugSchema,
   title: z.string().min(1).max(200),
   category: z.string().max(50).optional(),
+  targetCategory: z.string().max(50).optional(),
   status: articleStatusSchema,
   githubPath: z.string(),
   githubSha: z.string().optional(),
@@ -46,6 +47,7 @@ export const frontmatterSchema = z.object({
   title: z.string().min(1).max(200),
   published: z.boolean(),
   category: z.string().max(50).optional(),
+  targetCategory: z.string().max(50).optional(),
   tags: z.array(z.string().max(30)).max(10).optional(),
 });
 

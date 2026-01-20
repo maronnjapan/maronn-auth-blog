@@ -8,6 +8,7 @@ export interface ArticleProps {
   slug: Slug;
   title: string;
   category?: string;
+  targetCategory?: string;
   status: ArticleStatus;
   githubPath: string;
   githubSha?: string;
@@ -39,6 +40,10 @@ export class Article {
 
   get category(): string | undefined {
     return this.props.category;
+  }
+
+  get targetCategory(): string | undefined {
+    return this.props.targetCategory;
   }
 
   get status(): ArticleStatus {
@@ -107,7 +112,7 @@ export class Article {
     };
   }
 
-  markForUpdate(newSha: string): void {
+  markForUpdate(newSha: string, metadata?: { title?: string; category?: string; targetCategory?: string }): void {
     if (!this.props.status.canUpdate()) {
       throw new InvalidStatusTransitionError(
         this.props.status.toString(),
@@ -117,6 +122,9 @@ export class Article {
 
     this.props = {
       ...this.props,
+      title: metadata?.title ?? this.props.title,
+      category: metadata?.category !== undefined ? metadata.category : this.props.category,
+      targetCategory: metadata?.targetCategory !== undefined ? metadata.targetCategory : this.props.targetCategory,
       status: ArticleStatus.pendingUpdate(),
       githubSha: newSha,
       rejectionReason: undefined,
@@ -146,6 +154,7 @@ export class Article {
       slug: this.props.slug.toString(),
       title: this.props.title,
       category: this.props.category,
+      targetCategory: this.props.targetCategory,
       status: this.props.status.toString(),
       githubPath: this.props.githubPath,
       githubSha: this.props.githubSha,
