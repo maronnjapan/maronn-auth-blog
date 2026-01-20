@@ -6,6 +6,7 @@ node_modules/
 dist/
 .astro/
 .output/
+*.tsbuildinfo
 
 # Environment variables
 .env
