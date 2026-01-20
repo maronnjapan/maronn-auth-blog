@@ -242,7 +242,7 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE articles_fts MATCH ? AND a.status = ?
+         WHERE fts.articles_fts MATCH ? AND a.status = ?
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
       .bind(query, 'published', limit, offset)
@@ -256,7 +256,7 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE articles_fts MATCH ? AND a.status = ?`
+         WHERE fts.articles_fts MATCH ? AND a.status = ?`
       )
       .bind(query, 'published')
       .first<{ count: number }>();
