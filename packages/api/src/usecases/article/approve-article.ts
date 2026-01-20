@@ -104,10 +104,8 @@ export class ApproveArticleUsecase {
     article.approve(sha);
     await this.articleRepo.save(article);
 
-    // Save tags (including empty array to clear existing tags)
-    if (parsed.frontmatter.tags !== undefined) {
-      await this.articleRepo.saveTags(article.id, parsed.frontmatter.tags);
-    }
+    // Save tags
+    await this.articleRepo.saveTags(article.id, parsed.frontmatter.tags);
 
     // Update FTS index
     await this.articleRepo.syncFtsIndex(article.id, article.title);

@@ -1,7 +1,7 @@
 import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
-import type { ArticleStatus as ArticleStatusType } from '@maronn-auth-blog/shared';
+import type { ArticleStatus as ArticleStatusType, TargetCategory } from '@maronn-auth-blog/shared';
 
 interface ArticleRow {
   id: string;
@@ -9,7 +9,7 @@ interface ArticleRow {
   slug: string;
   title: string;
   category: string | null;
-  target_category: 'authentication' | 'authorization' | 'security';
+  target_category: TargetCategory;
   status: ArticleStatusType;
   github_path: string;
   github_sha: string | null;

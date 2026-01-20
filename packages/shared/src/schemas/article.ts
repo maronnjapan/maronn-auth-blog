@@ -15,11 +15,9 @@ export const articleStatusSchema = z.enum([
   'deleted',
 ]);
 
-export const targetCategorySchema = z.enum([
-  'authentication',
-  'authorization',
-  'security',
-]);
+// Target category constants for reuse across the codebase
+export const TARGET_CATEGORIES = ['authentication', 'authorization', 'security'] as const;
+export const targetCategorySchema = z.enum(TARGET_CATEGORIES);
 
 export const articleSchema = z.object({
   id: uuidSchema,
@@ -54,7 +52,7 @@ export const frontmatterSchema = z.object({
   published: z.boolean(),
   category: z.string().max(50).optional(),
   targetCategory: targetCategorySchema,
-  tags: z.array(z.string().max(30)).max(10).optional(),
+  tags: z.array(z.string().max(30)).max(10),
 });
 
 export type Article = z.infer<typeof articleSchema>;

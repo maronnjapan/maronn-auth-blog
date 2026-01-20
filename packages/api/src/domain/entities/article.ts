@@ -1,6 +1,7 @@
 import { ArticleStatus } from '../value-objects/article-status';
 import { Slug } from '../value-objects/slug';
 import { InvalidStatusTransitionError } from '../errors/domain-errors';
+import type { TargetCategory } from '@maronn-auth-blog/shared';
 
 export interface ArticleProps {
   id: string;
@@ -8,7 +9,7 @@ export interface ArticleProps {
   slug: Slug;
   title: string;
   category?: string;
-  targetCategory: 'authentication' | 'authorization' | 'security';
+  targetCategory: TargetCategory;
   status: ArticleStatus;
   githubPath: string;
   githubSha?: string;
@@ -42,7 +43,7 @@ export class Article {
     return this.props.category;
   }
 
-  get targetCategory(): 'authentication' | 'authorization' | 'security' {
+  get targetCategory(): TargetCategory {
     return this.props.targetCategory;
   }
 
