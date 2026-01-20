@@ -1423,3 +1423,7 @@ console.error(`[ApproveArticle] Failed to approve article: ${articleId}`, error)
 - GitHub API エラー時は適切にリトライ
 - Webhook 処理失敗時はログに記録
 - ユーザー向けエラーメッセージは分かりやすく
+
+## DBについて
+
+- DBの変更があるときは現状のマイグレーションファイルを更新するのではなく、新しいマイグレーションファイルを作成すること
