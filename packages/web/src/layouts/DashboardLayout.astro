@@ -13,12 +13,20 @@ const currentPath = Astro.url.pathname;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+    <link rel="stylesheet" href="/styles/global.css" />
   </head>
   <body>
     <div class="dashboard-layout">
-      <aside class="sidebar">
+      <button class="mobile-sidebar-toggle" id="sidebarToggle" aria-label="サイドバーを開く">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <a href="/" class="logo">GitHub Blog</a>
+          <button class="sidebar-close" id="sidebarClose" aria-label="サイドバーを閉じる">×</button>
         </div>
         <nav class="sidebar-nav">
           <a href="/dashboard" class:list={['nav-item', { active: currentPath === '/dashboard' }]}>
@@ -39,6 +47,8 @@ const currentPath = Astro.url.pathname;
         </nav>
       </aside>
 
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
       <main class="main-content">
         <header class="content-header">
           <h1>{title}</h1>
@@ -48,6 +58,37 @@ const currentPath = Astro.url.pathname;
         </div>
       </main>
     </div>
+
+    <script>
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarClose = document.getElementById('sidebarClose');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      const openSidebar = () => {
+        sidebar?.classList.add('open');
+        overlay?.classList.add('active');
+      };
+
+      const closeSidebar = () => {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('active');
+      };
+
+      sidebarToggle?.addEventListener('click', openSidebar);
+      sidebarClose?.addEventListener('click', closeSidebar);
+      overlay?.addEventListener('click', closeSidebar);
+
+      // Close sidebar when clicking a link (on mobile)
+      const navLinks = document.querySelectorAll('.sidebar .nav-item');
+      navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 768) {
+            closeSidebar();
+          }
+        });
+      });
+    </script>
   </body>
 </html>
 
@@ -68,6 +109,67 @@ const currentPath = Astro.url.pathname;
   .dashboard-layout {
     display: flex;
     min-height: 100vh;
+    position: relative;
+  }
+
+  .mobile-sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 999;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.5rem;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-sidebar-toggle span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: #333;
+    transition: all 0.3s;
+  }
+
+  .sidebar-close {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .sidebar {
@@ -76,11 +178,15 @@ const currentPath = Astro.url.pathname;
     color: white;
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s ease;
   }
 
   .sidebar-header {
     padding: 1.5rem;
     border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .logo {
@@ -122,6 +228,7 @@ const currentPath = Astro.url.pathname;
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 
   .content-header {
@@ -137,5 +244,72 @@ const currentPath = Astro.url.pathname;
   .content-body {
     flex: 1;
     padding: 2rem;
+    overflow-x: hidden;
+  }
+
+  /* Tablet and Mobile Responsive Styles */
+  @media (max-width: 768px) {
+    .mobile-sidebar-toggle {
+      display: flex;
+    }
+
+    .sidebar-close {
+      display: flex;
+    }
+
+    .sidebar-overlay {
+      display: block;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -250px;
+      height: 100vh;
+      z-index: 1000;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar.open {
+      transform: translateX(250px);
+    }
+
+    .main-content {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .content-header {
+      padding: 1rem 1rem 1rem 3.5rem;
+    }
+
+    .content-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .content-body {
+      padding: 1.5rem 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .mobile-sidebar-toggle {
+      top: 0.75rem;
+      left: 0.75rem;
+      width: 36px;
+      height: 36px;
+    }
+
+    .content-header {
+      padding: 0.75rem 0.75rem 0.75rem 3rem;
+    }
+
+    .content-header h1 {
+      font-size: 1.25rem;
+    }
+
+    .content-body {
+      padding: 1rem 0.75rem;
+    }
   }
 </style>

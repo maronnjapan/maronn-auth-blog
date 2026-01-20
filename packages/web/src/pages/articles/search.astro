@@ -109,4 +109,55 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
     border-radius: 8px;
     color: #999;
   }
+
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 0.75rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .results-info {
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .error,
+    .empty {
+      padding: 2rem 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding: 0 0.5rem;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .search-section {
+      margin-bottom: 1.25rem;
+    }
+
+    .results-info {
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .error,
+    .empty {
+      padding: 1.5rem 0.75rem;
+      font-size: 0.9rem;
+    }
+  }
 </style>
