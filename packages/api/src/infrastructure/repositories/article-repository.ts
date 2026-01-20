@@ -9,7 +9,7 @@ interface ArticleRow {
   slug: string;
   title: string;
   category: string | null;
-  target_category: TargetCategory;
+  target_category: TargetCategory | null;
   status: ArticleStatusType;
   github_path: string;
   github_sha: string | null;
@@ -30,7 +30,7 @@ export class ArticleRepository {
       slug: Slug.create(row.slug),
       title: row.title,
       category: row.category ?? undefined,
-      targetCategory: row.target_category,
+      targetCategory: row.target_category ?? 'security',
       status: ArticleStatus.fromString(row.status),
       githubPath: row.github_path,
       githubSha: row.github_sha ?? undefined,
