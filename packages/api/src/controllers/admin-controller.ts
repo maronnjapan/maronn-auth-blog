@@ -39,22 +39,22 @@ app.get('/reviews', adminOnly, async (c) => {
   const articleRepo = new ArticleRepository(c.env.DB);
   const articles = await articleRepo.findPendingReview();
 
-  // Get tags for each article
-  const articlesWithTags = await Promise.all(
+  // Get topics for each article
+  const articlesWithTopics = await Promise.all(
     articles.map(async (article) => {
-      const tags = await articleRepo.findTags(article.id);
+      const topics = await articleRepo.findTopics(article.id);
       const userRepo = new UserRepository(c.env.DB);
       const user = await userRepo.findById(article.userId);
 
       return {
         ...article.toJSON(),
-        tags,
+        topics,
         author: user?.toJSON(),
       };
     })
   );
 
-  return c.json({ articles: articlesWithTags });
+  return c.json({ articles: articlesWithTopics });
 });
 
 // GET /admin/reviews/:id - Get article for review (with preview)
@@ -74,7 +74,7 @@ app.get('/reviews/:id', adminOnly, async (c) => {
     throw new NotFoundError('User', article.userId);
   }
 
-  const tags = await articleRepo.findTags(article.id);
+  const topics = await articleRepo.findTopics(article.id);
 
   // Get repository
   const repoRepo = new RepositoryRepository(c.env.DB);
@@ -111,7 +111,7 @@ app.get('/reviews/:id', adminOnly, async (c) => {
   return c.json({
     article: article.toJSON(),
     markdown,
-    tags,
+    topics,
     author: user.toJSON(),
     repository: repo,
   });

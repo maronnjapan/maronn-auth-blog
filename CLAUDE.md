@@ -351,17 +351,17 @@ CREATE INDEX idx_articles_status ON articles(status);
 CREATE INDEX idx_articles_published_at ON articles(published_at DESC);
 ```
 
-### article_tags
+### article_topics
 
 ```sql
-CREATE TABLE article_tags (
+CREATE TABLE article_topics (
   id TEXT PRIMARY KEY,
   article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
-  tag TEXT NOT NULL,
-  UNIQUE(article_id, tag)
+  topic TEXT NOT NULL,
+  UNIQUE(article_id, topic)
 );
 
-CREATE INDEX idx_article_tags_tag ON article_tags(tag);
+CREATE INDEX idx_article_topics_topic ON article_topics(topic);
 ```
 
 ## KV 設計
@@ -477,7 +477,7 @@ interface ParsedArticle {
     title: string;
     published: boolean;
     category?: string;
-    tags?: string[];
+    topics?: string[];
   };
   content: string;
   html: string;
@@ -504,7 +504,7 @@ function parseArticle(markdown: string, embedOrigin: string): ParsedArticle {
 title: 記事タイトル        # 必須
 published: true           # 必須、true で申請対象
 category: 認証            # 任意
-tags: [auth0, oauth]      # 任意、最大10個
+topics: [auth0, oauth]    # 任意、最大10個
 ---
 ```
 

@@ -48,12 +48,12 @@ CREATE INDEX IF NOT EXISTS idx_articles_user_id ON articles(user_id);
 CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status);
 CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC);
 
--- Article tags table
-CREATE TABLE IF NOT EXISTS article_tags (
+-- Article topics table
+CREATE TABLE IF NOT EXISTS article_topics (
   id TEXT PRIMARY KEY,
   article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
-  tag TEXT NOT NULL,
-  UNIQUE(article_id, tag)
+  topic TEXT NOT NULL,
+  UNIQUE(article_id, topic)
 );
 
-CREATE INDEX IF NOT EXISTS idx_article_tags_tag ON article_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_article_topics_topic ON article_topics(topic);

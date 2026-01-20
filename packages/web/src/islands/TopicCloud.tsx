@@ -1,20 +1,20 @@
-interface Tag {
-  tag: string;
+interface Topic {
+  topic: string;
   count: number;
 }
 
-interface TagCloudProps {
-  tags: Tag[];
-  selectedTag?: string;
+interface TopicCloudProps {
+  topics: Topic[];
+  selectedTopic?: string;
 }
 
-export default function TagCloud({ tags, selectedTag }: TagCloudProps) {
-  if (tags.length === 0) {
+export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
+  if (topics.length === 0) {
     return null;
   }
 
-  const maxCount = Math.max(...tags.map(t => t.count));
-  const minCount = Math.min(...tags.map(t => t.count));
+  const maxCount = Math.max(...topics.map(t => t.count));
+  const minCount = Math.min(...topics.map(t => t.count));
 
   const getSize = (count: number) => {
     if (maxCount === minCount) return 1;
@@ -23,42 +23,42 @@ export default function TagCloud({ tags, selectedTag }: TagCloudProps) {
   };
 
   return (
-    <div className="tag-cloud">
-      <h3>タグ</h3>
-      <div className="tags">
-        {tags.map(({ tag, count }) => (
+    <div className="topic-cloud">
+      <h3>トピック</h3>
+      <div className="topics">
+        {topics.map(({ topic, count }) => (
           <a
-            key={tag}
-            href={`/?tag=${encodeURIComponent(tag)}`}
-            className={`tag ${selectedTag === tag ? 'active' : ''}`}
+            key={topic}
+            href={`/?topic=${encodeURIComponent(topic)}`}
+            className={`topic ${selectedTopic === topic ? 'active' : ''}`}
             style={{ fontSize: `${getSize(count)}rem` }}
           >
-            {tag}
+            {topic}
           </a>
         ))}
       </div>
 
       <style>{`
-        .tag-cloud {
+        .topic-cloud {
           background: white;
           border: 1px solid #e0e0e0;
           border-radius: 8px;
           padding: 1rem;
         }
 
-        .tag-cloud h3 {
+        .topic-cloud h3 {
           margin: 0 0 0.75rem 0;
           font-size: 1rem;
           color: #333;
         }
 
-        .tags {
+        .topics {
           display: flex;
           flex-wrap: wrap;
           gap: 0.5rem;
         }
 
-        .tag {
+        .topic {
           display: inline-block;
           padding: 0.25rem 0.75rem;
           background: #f5f5f5;
@@ -69,12 +69,12 @@ export default function TagCloud({ tags, selectedTag }: TagCloudProps) {
           white-space: nowrap;
         }
 
-        .tag:hover {
+        .topic:hover {
           background: #e0e0e0;
           color: #333;
         }
 
-        .tag.active {
+        .topic.active {
           background: #0066cc;
           color: white;
         }
