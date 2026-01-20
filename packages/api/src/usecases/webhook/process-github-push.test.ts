@@ -38,7 +38,7 @@ function createUsecase(options: {
   const articleRepo = {
     findByGitHubPath: vi.fn().mockResolvedValue(null),
     save: vi.fn().mockResolvedValue(undefined),
-    saveTags: vi.fn().mockResolvedValue(undefined),
+    saveTopics: vi.fn().mockResolvedValue(undefined),
     removeFtsIndex: vi.fn().mockResolvedValue(undefined),
   } as unknown as ArticleRepository;
 
@@ -60,7 +60,7 @@ function createUsecase(options: {
   } as unknown as NotificationRepository;
 
   const markdown =
-    options.markdown ?? ['---', 'title: Test Article', 'published: true', '---', 'Content', ''].join('\n');
+    options.markdown ?? ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content', ''].join('\n');
 
   const githubClient = {
     fetchFile: vi.fn().mockResolvedValue({
@@ -181,6 +181,8 @@ describe('ProcessGitHubPushUsecase', () => {
       '---',
       'title: Test Article',
       'published: true',
+      'targetCategory: authentication',
+      'topics: []',
       '---',
       '![alt](./images/sample.png)',
       '',
@@ -240,7 +242,7 @@ describe('ProcessGitHubPushUsecase', () => {
     const articleRepo = {
       findByGitHubPath: vi.fn().mockResolvedValue(article),
       save: vi.fn().mockResolvedValue(undefined),
-      saveTags: vi.fn(),
+      saveTopics: vi.fn(),
       removeFtsIndex: vi.fn(),
     } as unknown as ArticleRepository;
 
@@ -263,7 +265,7 @@ describe('ProcessGitHubPushUsecase', () => {
 
     const githubClient = {
       fetchFile: vi.fn().mockResolvedValue({
-        content: ['---', 'title: Test Article', 'published: true', '---', 'Content'].join('\n'),
+        content: ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content'].join('\n'),
         sha: 'new-sha',
       }),
       fetchImage: vi.fn(),
@@ -340,7 +342,7 @@ describe('ProcessGitHubPushUsecase', () => {
       findByGitHubPath: vi.fn().mockResolvedValue(article),
       findById: vi.fn(),
       save: vi.fn().mockResolvedValue(undefined),
-      saveTags: vi.fn(),
+      saveTopics: vi.fn(),
       removeFtsIndex: vi.fn().mockResolvedValue(undefined),
     } as unknown as ArticleRepository;
 
