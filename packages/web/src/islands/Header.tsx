@@ -18,6 +18,7 @@ interface HeaderProps {
 export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: HeaderProps) {
   const [user, setUser] = useState<User | null>(initialUser);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     if (!confirm('ログアウトしますか？')) {
@@ -44,6 +45,14 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
     }
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <header className="header">
       <div className="container">
@@ -51,15 +60,30 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           <a href="/" className="logo">
             GitHub Blog
           </a>
-          <div className="nav-links">
-            <a href="/">フィード</a>
-            <a href="/articles/search">検索</a>
+
+          <button
+            className="mobile-menu-button"
+            onClick={toggleMobileMenu}
+            aria-label="メニューを開く"
+          >
+            <span className={`hamburger ${mobileMenuOpen ? 'open' : ''}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+
+          <div className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+            <a href="/" onClick={closeMobileMenu}>フィード</a>
+            <a href="/articles/search" onClick={closeMobileMenu}>検索</a>
             {user ? (
               <>
-                <a href="/dashboard">ダッシュボード</a>
-                {user.role === 'admin' && <a href="/admin/reviews">審査</a>}
-                <NotificationBell initialCount={unreadCount} apiUrl={apiUrl} />
-                <a href={`/${user.username}`} className="user-link">
+                <a href="/dashboard" onClick={closeMobileMenu}>ダッシュボード</a>
+                {user.role === 'admin' && <a href="/admin/reviews" onClick={closeMobileMenu}>審査</a>}
+                <div className="notification-wrapper">
+                  <NotificationBell initialCount={unreadCount} apiUrl={apiUrl} />
+                </div>
+                <a href={`/${user.username}`} className="user-link" onClick={closeMobileMenu}>
                   {user.iconUrl && (
                     <img src={user.iconUrl} alt={user.displayName} className="user-avatar" />
                   )}
@@ -95,6 +119,7 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           display: flex;
           justify-content: space-between;
           align-items: center;
+          position: relative;
         }
 
         .logo {
@@ -102,6 +127,43 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           font-weight: bold;
           color: #333;
           text-decoration: none;
+          z-index: 1001;
+        }
+
+        .mobile-menu-button {
+          display: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0.5rem;
+          z-index: 1001;
+        }
+
+        .hamburger {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          width: 24px;
+        }
+
+        .hamburger span {
+          display: block;
+          width: 100%;
+          height: 2px;
+          background: #333;
+          transition: all 0.3s;
+        }
+
+        .hamburger.open span:nth-child(1) {
+          transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger.open span:nth-child(2) {
+          opacity: 0;
+        }
+
+        .hamburger.open span:nth-child(3) {
+          transform: rotate(-45deg) translate(6px, -6px);
         }
 
         .nav-links {
@@ -114,10 +176,16 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           color: #666;
           text-decoration: none;
           transition: color 0.2s;
+          white-space: nowrap;
         }
 
         .nav-links a:hover {
           color: #333;
+        }
+
+        .notification-wrapper {
+          display: flex;
+          align-items: center;
         }
 
         .user-link {
@@ -175,6 +243,85 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
         .btn-secondary:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+          .logo {
+            font-size: 1.25rem;
+          }
+
+          .mobile-menu-button {
+            display: block;
+          }
+
+          .nav-links {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 80%;
+            max-width: 300px;
+            height: 100vh;
+            background: white;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 5rem 2rem 2rem;
+            gap: 1rem;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            z-index: 1000;
+          }
+
+          .nav-links.mobile-open {
+            right: 0;
+          }
+
+          .nav-links a,
+          .nav-links .notification-wrapper,
+          .nav-links .user-link,
+          .nav-links button {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            justify-content: flex-start;
+          }
+
+          .nav-links a {
+            border-bottom: 1px solid #f0f0f0;
+          }
+
+          .user-link {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+          }
+
+          .btn-primary,
+          .btn-secondary {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .logo {
+            font-size: 1.1rem;
+          }
+
+          .container {
+            padding: 0 0.75rem;
+          }
+
+          .nav-links {
+            width: 85%;
+            padding: 4rem 1.5rem 1.5rem;
+          }
+
+          .user-avatar {
+            width: 28px;
+            height: 28px;
+          }
         }
       `}</style>
     </header>
