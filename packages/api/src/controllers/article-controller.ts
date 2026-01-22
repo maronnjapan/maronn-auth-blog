@@ -131,9 +131,12 @@ app.get('/:username/:slug', async (c) => {
     throw new NotFoundError('Article', slug);
   }
 
-  // Only show published articles to non-owners
   const auth = c.get('auth');
-  if (article.status.toString() !== 'published' && (!auth || auth.userId !== user.id)) {
+  const isOwner = auth?.userId === user.id;
+  const isPublished = !!article.publishedAt && article.status.toString() !== 'deleted';
+
+  // Only show published articles to non-owners
+  if (!isOwner && !isPublished) {
     throw new NotFoundError('Article', slug);
   }
 
