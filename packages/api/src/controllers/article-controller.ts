@@ -137,12 +137,9 @@ app.get('/:username/:slug', async (c) => {
     throw new NotFoundError('Article', slug);
   }
 
-  const auth = c.get('auth');
-  const isOwner = auth?.userId === user.id;
   const isPublished = !!article.publishedAt && article.status.toString() !== 'deleted';
 
-  // Only show published articles to non-owners
-  if (!isOwner && !isPublished) {
+  if (!isPublished) {
     throw new NotFoundError('Article', slug);
   }
 
@@ -165,10 +162,8 @@ app.get('/:username/:slug', async (c) => {
   // Get topics
   const topics = await articleRepo.findTopics(article.id);
 
-  const articleJson = isOwner ? article.toJSON() : toPublicArticle(article);
-
   return c.json({
-    ...articleJson,
+    ...toPublicArticle(article),
     html,
     topics,
     author: user.toJSON(),
