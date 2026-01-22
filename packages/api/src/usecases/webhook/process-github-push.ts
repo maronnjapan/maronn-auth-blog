@@ -179,16 +179,20 @@ export class ProcessGitHubPushUsecase {
     // Check if article already exists
     const existingArticle = await this.articleRepo.findByGitHubPath(userId, filePath);
     const slug = existingArticle?.slug ?? Slug.create(slugValue);
-    const processedMarkdown = await this.processImagesAndRewriteMarkdown(
-      markdown,
-      userId,
-      slug.toString(),
-      installationId,
-      owner,
-      repoName
-    );
+    const shouldCacheDraft = !existingArticle || !existingArticle.publishedAt;
 
-    await this.kvClient.setArticleMarkdown(userId, slug.toString(), processedMarkdown);
+    if (shouldCacheDraft) {
+      const processedMarkdown = await this.processImagesAndRewriteMarkdown(
+        markdown,
+        userId,
+        slug.toString(),
+        installationId,
+        owner,
+        repoName
+      );
+
+      await this.kvClient.setArticleMarkdown(userId, slug.toString(), processedMarkdown);
+    }
 
     if (existingArticle) {
       // Article exists - check if it needs update

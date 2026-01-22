@@ -49,7 +49,12 @@ app.get('/', async (c) => {
   }
 
   // Get topics for each article
-  const articlesWithTopics = await buildArticleListResponse(articleRepo, userRepo, articles);
+  const articlesWithTopics = await buildArticleListResponse(
+    articleRepo,
+    userRepo,
+    articles,
+    'public'
+  );
 
   return c.json({
     articles: articlesWithTopics,
@@ -78,7 +83,8 @@ app.get(
     const articlesWithTopics = await buildArticleListResponse(
       articleRepo,
       userRepo,
-      result.items
+      result.items,
+      'public'
     );
 
     return c.json({
@@ -131,9 +137,9 @@ app.get('/:username/:slug', async (c) => {
     throw new NotFoundError('Article', slug);
   }
 
-  // Only show published articles to non-owners
-  const auth = c.get('auth');
-  if (article.status.toString() !== 'published' && (!auth || auth.userId !== user.id)) {
+  const isPublished = !!article.publishedAt && article.status.toString() !== 'deleted';
+
+  if (!isPublished) {
     throw new NotFoundError('Article', slug);
   }
 
@@ -157,7 +163,7 @@ app.get('/:username/:slug', async (c) => {
   const topics = await articleRepo.findTopics(article.id);
 
   return c.json({
-    ...article.toJSON(),
+    ...toPublicArticle(article),
     html,
     topics,
     author: user.toJSON(),
@@ -177,7 +183,12 @@ app.get('/users/:username/articles', async (c) => {
 
   const articleRepo = new ArticleRepository(c.env.DB);
   const articles = await articleRepo.findPublishedByUserId(user.id);
-  const articlesWithTopics = await buildArticleListResponse(articleRepo, userRepo, articles);
+  const articlesWithTopics = await buildArticleListResponse(
+    articleRepo,
+    userRepo,
+    articles,
+    'public'
+  );
 
   return c.json({
     articles: articlesWithTopics,
@@ -197,7 +208,8 @@ type ArticleAuthor = {
 async function buildArticleListResponse(
   articleRepo: ArticleRepository,
   userRepo: UserRepository,
-  articles: ArticleEntity[]
+  articles: ArticleEntity[],
+  visibility: 'public' | 'owner'
 ) {
   const authorCache = new Map<string, ArticleAuthor>();
 
@@ -227,11 +239,23 @@ async function buildArticleListResponse(
       const topics = await articleRepo.findTopics(article.id);
       const author = await getAuthor(article.userId);
 
+      const articleJson = visibility === 'public' ? toPublicArticle(article) : article.toJSON();
+
       return {
-        ...article.toJSON(),
+        ...articleJson,
         topics,
         author,
       };
     })
   );
+}
+
+function toPublicArticle(article: ArticleEntity) {
+  const json = article.toJSON();
+
+  return {
+    ...json,
+    status: 'published',
+    rejectionReason: undefined,
+  };
 }
