@@ -112,10 +112,11 @@ export class GitHubClient {
 
     if ('content' in data && data.type === 'file') {
       const buffer = Buffer.from(data.content, 'base64');
-      return buffer.buffer.slice(
-        buffer.byteOffset,
-        buffer.byteOffset + buffer.byteLength
-      );
+      // return buffer.buffer.slice(
+      //   buffer.byteOffset,
+      //   buffer.byteOffset + buffer.byteLength
+      // );
+      return new Uint8Array(buffer).buffer;
     }
 
     throw new Error('Not a file');
