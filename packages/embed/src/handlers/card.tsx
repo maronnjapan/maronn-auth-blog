@@ -1,20 +1,8 @@
 import type { Context } from 'hono';
-import { createEmbedPageHtml } from '../utils/embed-page';
 import { fetchOgp } from '../utils/ogp';
 import { CARD_CSP, sanitizeUrl } from '../utils/security';
 import { LinkCard, FallbackCard } from '../components/Card';
 import { ErrorMessage } from '../components/Layout';
-
-/**
- * Card page handler - returns HTML page that loads link card via JavaScript
- */
-export function cardPageHandler(c: Context): Response {
-  const html = createEmbedPageHtml({
-    type: 'card',
-    apiEndpoint: '/api/card',
-  });
-  return c.html(html);
-}
 
 /**
  * Link card embed handler

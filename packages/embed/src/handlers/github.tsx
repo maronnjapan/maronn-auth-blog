@@ -1,19 +1,7 @@
 import type { Context } from 'hono';
-import { createEmbedPageHtml } from '../utils/embed-page';
 import { GITHUB_CSP } from '../utils/security';
 import { GitHubEmbed, GitHubFallback } from '../components/GitHub';
 import { ErrorMessage } from '../components/Layout';
-
-/**
- * GitHub page handler - returns HTML page that loads GitHub file via JavaScript
- */
-export function githubPageHandler(c: Context): Response {
-  const html = createEmbedPageHtml({
-    type: 'github',
-    apiEndpoint: '/api/github',
-  });
-  return c.html(html);
-}
 
 interface GitHubFileInfo {
   owner: string;

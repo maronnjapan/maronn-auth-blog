@@ -1,19 +1,7 @@
 import type { Context } from 'hono';
-import { createEmbedPageHtml } from '../utils/embed-page';
 import { TWITTER_CSP } from '../utils/security';
 import { TweetEmbed, TweetFallback } from '../components/Tweet';
 import { ErrorMessage } from '../components/Layout';
-
-/**
- * Tweet page handler - returns HTML page that loads tweet via JavaScript
- */
-export function tweetPageHandler(c: Context): Response {
-  const html = createEmbedPageHtml({
-    type: 'tweet',
-    apiEndpoint: '/api/tweet',
-  });
-  return c.html(html);
-}
 
 /**
  * Twitter/X embed handler

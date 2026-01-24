@@ -1,19 +1,7 @@
 import type { Context } from 'hono';
-import { createEmbedPageHtml } from '../utils/embed-page';
 import { GIST_CSP } from '../utils/security';
 import { GistEmbed } from '../components/Gist';
 import { ErrorMessage } from '../components/Layout';
-
-/**
- * Gist page handler - returns HTML page that loads Gist via JavaScript
- */
-export function gistPageHandler(c: Context): Response {
-  const html = createEmbedPageHtml({
-    type: 'gist',
-    apiEndpoint: '/api/gist',
-  });
-  return c.html(html);
-}
 
 /**
  * GitHub Gist embed handler
