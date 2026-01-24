@@ -533,30 +533,44 @@ function convertImagePaths(
 
 `zenn-markdown-html` が生成する埋め込み iframe 用のエンドポイント。
 
-### 対応サービス
+### zenn-markdown-html が直接処理するサービス（embed サーバー不要）
 
-- Twitter/X
-- YouTube
-- GitHub Gist
-- CodePen
-- その他 oEmbed 対応サービス
+以下のサービスは `zenn-markdown-html` が直接外部サービスの iframe URL に変換するため、embed サーバーでの対応は不要。
+
+- **YouTube**: `youtube-nocookie.com/embed/...` に直接変換
+- **StackBlitz**: `stackblitz.com/edit/...` に直接変換
+- **SpeakerDeck**: `speakerdeck.com/player/...` に直接変換
+- **CodePen**: `codepen.io/embed/...` に直接変換（正しい URL 形式が必要）
+- **CodeSandbox**: `codesandbox.io/embed/...` に直接変換
+
+### embed サーバーが必要なサービス
+
+以下のサービスは `embedOrigin` に設定した embed サーバーが必要。
+
+| エンドポイント | 用途 | 実装方針 |
+|----------------|------|----------|
+| `/tweet` | Twitter/X ポスト | oEmbed API で公式埋め込みを取得 |
+| `/gist` | GitHub Gist | 公式埋め込みスクリプトを使用 |
+| `/github` | GitHub ファイル/コード | カスタム実装（公式埋め込みなし） |
+| `/card` | 一般 URL のリンクカード | OGP を取得してカード表示 |
 
 ### 実装方針
 
+**公式埋め込みを優先**: Twitter/X や Gist など、公式の埋め込み機能がある場合はそれを使用する。独自 HTML でのレンダリングは公式埋め込みがない場合のみ行う。
+
 ```typescript
 // packages/embed/src/index.ts
-app.get('/embed/:service', async (c) => {
-  const service = c.req.param('service');
-  const url = c.req.query('url');
-  
-  switch (service) {
-    case 'twitter':
-      return handleTwitterEmbed(url);
-    case 'youtube':
-      return handleYouTubeEmbed(url);
-    // ...
-  }
-});
+// ページエンドポイント（iframe で表示）
+app.get('/tweet', tweetPageHandler);
+app.get('/github', githubPageHandler);
+app.get('/gist', gistPageHandler);
+app.get('/card', cardPageHandler);
+
+// API エンドポイント（データ取得）
+app.get('/api/tweet', tweetHandler);  // oEmbed API 使用
+app.get('/api/github', githubHandler); // カスタム実装
+app.get('/api/gist', gistHandler);     // 公式スクリプト使用
+app.get('/api/card', cardHandler);     // OGP 取得
 ```
 
 ## 画像処理
