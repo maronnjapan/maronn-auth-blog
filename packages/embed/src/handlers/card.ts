@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { createEmbedHtml, createErrorHtml, escapeHtml } from '../utils/html-template';
 import { createEmbedPageHtml } from '../utils/embed-page';
 import { fetchOgp, type OgpData } from '../utils/ogp';
+import { CARD_CSP, sanitizeUrl } from '../utils/security';
 
 /**
  * Card page handler - returns HTML page that loads link card via JavaScript
@@ -27,25 +28,32 @@ export async function cardHandler(c: Context): Promise<Response> {
 
   const decodedUrl = decodeURIComponent(url);
 
-  // Validate URL
-  try {
-    new URL(decodedUrl);
-  } catch {
+  // Validate URL - only allow http/https
+  const validatedUrl = sanitizeUrl(decodedUrl);
+  if (!validatedUrl) {
     return c.html(createErrorHtml('無効なURLです'), 400);
   }
 
   try {
-    const ogpData = await fetchOgp(decodedUrl);
-    const html = renderLinkCard(ogpData, decodedUrl);
+    const ogpData = await fetchOgp(validatedUrl);
+    // Sanitize OGP URLs
+    ogpData.image = sanitizeUrl(ogpData.image);
+    ogpData.favicon = sanitizeUrl(ogpData.favicon);
+
+    const html = renderLinkCard(ogpData, validatedUrl);
     return c.html(html, 200, {
-      'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+      'Cache-Control': 'public, max-age=86400',
+      'Content-Security-Policy': CARD_CSP,
     });
   } catch (error) {
     console.error('Failed to fetch OGP:', error);
     return c.html(
-      createFallbackCard(decodedUrl),
+      createFallbackCard(validatedUrl),
       200,
-      { 'Cache-Control': 'public, max-age=3600' }
+      {
+        'Cache-Control': 'public, max-age=3600',
+        'Content-Security-Policy': CARD_CSP,
+      }
     );
   }
 }

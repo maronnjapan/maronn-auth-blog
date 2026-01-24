@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { createEmbedHtml, createErrorHtml, escapeHtml } from '../utils/html-template';
 import { createEmbedPageHtml } from '../utils/embed-page';
+import { GITHUB_CSP } from '../utils/security';
 
 /**
  * GitHub page handler - returns HTML page that loads GitHub file via JavaScript
@@ -45,13 +46,17 @@ export async function githubHandler(c: Context): Promise<Response> {
     const html = renderGitHubEmbed(content, fileInfo, decodedUrl);
     return c.html(html, 200, {
       'Cache-Control': 'public, max-age=3600',
+      'Content-Security-Policy': GITHUB_CSP,
     });
   } catch (error) {
     console.error('Failed to fetch GitHub file:', error);
     return c.html(
       createFallbackGitHub(fileInfo, decodedUrl),
       200,
-      { 'Cache-Control': 'public, max-age=300' }
+      {
+        'Cache-Control': 'public, max-age=300',
+        'Content-Security-Policy': GITHUB_CSP,
+      }
     );
   }
 }

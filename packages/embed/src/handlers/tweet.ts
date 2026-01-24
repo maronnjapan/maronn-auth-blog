@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { createEmbedPageHtml } from '../utils/embed-page';
 import { escapeHtml } from '../utils/html-template';
+import { TWITTER_CSP } from '../utils/security';
 
 /**
  * Tweet page handler - returns HTML page that loads tweet via JavaScript
@@ -37,11 +38,13 @@ export async function tweetHandler(c: Context): Promise<Response> {
     const html = renderOfficialTweet(oembedData);
     return c.html(html, 200, {
       'Cache-Control': 'public, max-age=3600',
+      'Content-Security-Policy': TWITTER_CSP,
     });
   } catch (error) {
     console.error('Failed to fetch tweet oEmbed:', error);
     return c.html(createFallbackTweet(decodedUrl), 200, {
       'Cache-Control': 'public, max-age=300',
+      'Content-Security-Policy': TWITTER_CSP,
     });
   }
 }

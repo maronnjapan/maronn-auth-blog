@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { createEmbedPageHtml } from '../utils/embed-page';
 import { escapeHtml } from '../utils/html-template';
+import { GIST_CSP } from '../utils/security';
 
 /**
  * Gist page handler - returns HTML page that loads Gist via JavaScript
@@ -35,6 +36,7 @@ export async function gistHandler(c: Context): Promise<Response> {
   const html = renderOfficialGist(gistInfo, decodedUrl);
   return c.html(html, 200, {
     'Cache-Control': 'public, max-age=3600',
+    'Content-Security-Policy': GIST_CSP,
   });
 }
 
