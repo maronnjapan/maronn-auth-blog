@@ -75,17 +75,27 @@ const cardStyles = `
     color: #8899a6;
     min-width: 0;
   }
-  .card-meta img {
+  .card-favicon {
     width: 16px;
     height: 16px;
     border-radius: 2px;
     flex-shrink: 0;
   }
-  .card-meta span {
+  .card-site-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  /* No image variant */
+  .link-card.no-image {
+    flex-direction: column;
+  }
+  .link-card.no-image .card-content {
+    padding: 16px;
+  }
+
+  /* Fallback card */
   .fallback-card {
     display: flex;
     align-items: center;
@@ -93,13 +103,14 @@ const cardStyles = `
     padding: 16px;
     border: 1px solid #e1e8ed;
     border-radius: 12px;
-    background: #f7f9fa;
+    background: #fff;
     text-decoration: none;
     color: inherit;
     max-width: 100%;
+    transition: background-color 0.2s;
   }
   .fallback-card:hover {
-    background: #ebeef1;
+    background: #f7f9fa;
   }
   .fallback-icon {
     flex-shrink: 0;
@@ -112,11 +123,18 @@ const cardStyles = `
     border-radius: 8px;
     color: #8899a6;
   }
+  .fallback-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
   .fallback-title {
     font-size: 14px;
     font-weight: 600;
     color: #1a1a1a;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .fallback-url {
     font-size: 12px;
@@ -125,45 +143,50 @@ const cardStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .link-card.no-image {
-    flex-direction: column;
-  }
-  .link-card.no-image .card-content {
-    padding: 16px;
-  }
+
+  /* Mobile styles */
   @media (max-width: 500px) {
     .link-card {
-      flex-direction: column;
-    }
-    .link-card.no-image {
       flex-direction: column;
     }
     .card-image {
       width: 100%;
       height: auto;
       aspect-ratio: 1.91 / 1;
-      max-height: 200px;
+      max-height: 180px;
     }
     .card-content {
       padding: 12px;
     }
     .card-title {
       font-size: 14px;
+      margin-bottom: 6px;
     }
     .card-description {
       font-size: 12px;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 2;
+      margin-bottom: 8px;
     }
+    .card-meta {
+      font-size: 11px;
+    }
+    .card-favicon {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Fallback mobile */
     .fallback-card {
       padding: 12px;
+      gap: 10px;
     }
     .fallback-icon {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
     }
     .fallback-icon svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
     }
     .fallback-title {
       font-size: 13px;
@@ -210,10 +233,11 @@ export const LinkCard: FC<LinkCardProps> = ({ ogp, originalUrl }) => {
               <img
                 src={ogp.favicon}
                 alt=""
+                class="card-favicon"
                 onError="this.style.display='none'"
               />
             )}
-            <span>{ogp.siteName || domain}</span>
+            <span class="card-site-name">{ogp.siteName || domain}</span>
           </div>
         </div>
       </a>
@@ -242,9 +266,9 @@ export const FallbackCard: FC<FallbackCardProps> = ({ url }) => {
         <div class="fallback-icon">
           <LinkIcon />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div class="fallback-content">
           <div class="fallback-title">{domain}</div>
-          <div class="fallback-url">{truncate(url, 60)}</div>
+          <div class="fallback-url">{truncate(url, 50)}</div>
         </div>
       </a>
     </EmbedLayout>
