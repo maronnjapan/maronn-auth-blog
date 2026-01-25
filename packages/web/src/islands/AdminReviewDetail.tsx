@@ -220,6 +220,11 @@ export default function AdminReviewDetail({ articleId, apiUrl, targetCategory, m
           <button onClick={handleCopyPrompt} className="btn-copy-prompt">
             {copied ? 'コピーしました!' : 'AIチェック用プロンプトをコピー'}
           </button>
+          <p className="guide-link">
+            <a href={`/guide/review-prompt#${targetCategory}`} target="_blank" rel="noopener noreferrer">
+              審査基準の詳細を見る
+            </a>
+          </p>
         </div>
       )}
 
