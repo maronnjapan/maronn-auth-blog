@@ -51,6 +51,6 @@ export function extractPermissionsFromAccessToken(token: string): string[] {
  * Check if the given permissions include admin permission
  */
 export function isAdminFromPermissions(permissions: string[]): boolean {
-  return permissions.includes('admin');
+  return permissions.includes('admin:users');
 }
 

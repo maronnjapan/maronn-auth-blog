@@ -94,7 +94,7 @@ export function requireAdmin() {
       throw new UnauthorizedError();
     }
 
-    const hasAdminPermission = auth.permissions?.includes('admin');
+    const hasAdminPermission = auth.permissions?.includes('admin:users');
     if (!hasAdminPermission) {
       throw new ForbiddenError('Admin access required');
     }
