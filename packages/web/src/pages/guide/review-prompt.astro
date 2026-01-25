@@ -1,16 +1,19 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { marked } from 'marked';
-import fs from 'node:fs';
-import path from 'node:path';
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { marked } from "marked";
+import fs from "fs";
+import path from "node:path";
 
 // Markdownファイルを読み込み
-const markdownPath = path.join(process.cwd(), 'src/content/guide/review-prompt.md');
-let markdownContent = '';
-let htmlContent = '';
+const markdownPath = path.join(
+  process.cwd(),
+  "src/content/guide/review-prompt.md",
+);
+let markdownContent = "";
+let htmlContent = "";
 
 try {
-  markdownContent = fs.readFileSync(markdownPath, 'utf-8');
+  markdownContent = fs.readFileSync(markdownPath, "utf-8");
 
   // markedの設定
   marked.setOptions({
@@ -21,8 +24,8 @@ try {
   // MarkdownをHTMLに変換
   htmlContent = await marked.parse(markdownContent);
 } catch (error) {
-  console.error('Failed to read markdown file:', error);
-  htmlContent = '<p>コンテンツの読み込みに失敗しました。</p>';
+  console.error("Failed to read markdown file:", error);
+  htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
 }
 ---
 
@@ -152,7 +155,7 @@ try {
     background: #f5f5f5;
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
     font-size: 0.9em;
   }
 
