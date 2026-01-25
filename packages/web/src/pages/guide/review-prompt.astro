@@ -1,20 +1,11 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { marked } from "marked";
-import fs from "fs";
-import path from "node:path";
+import guideContent from "./usage-guide.md?raw";
 
-// Markdownファイルを読み込み
-const markdownPath = path.join(
-  process.cwd(),
-  "src/content/guide/review-prompt.md",
-);
-let markdownContent = "";
 let htmlContent = "";
 
 try {
-  markdownContent = fs.readFileSync(markdownPath, "utf-8");
-
   // markedの設定
   marked.setOptions({
     gfm: true,
@@ -22,7 +13,7 @@ try {
   });
 
   // MarkdownをHTMLに変換
-  htmlContent = await marked.parse(markdownContent);
+  htmlContent = await marked.parse(guideContent);
 } catch (error) {
   console.error("Failed to read markdown file:", error);
   htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
