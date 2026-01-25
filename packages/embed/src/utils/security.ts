@@ -29,6 +29,7 @@ export function generateCsp(options: {
   allowStyles?: string[];
   allowImages?: string[];
   allowFrames?: string[];
+  allowConnect?: string[];
 }): string {
   const directives: string[] = [
     "default-src 'self'",
@@ -36,7 +37,7 @@ export function generateCsp(options: {
     `style-src 'self' 'unsafe-inline' ${(options.allowStyles || []).join(' ')}`.trim(),
     `img-src 'self' data: https: ${(options.allowImages || []).join(' ')}`.trim(),
     `frame-src ${(options.allowFrames || ["'none'"]).join(' ')}`.trim(),
-    "connect-src 'self'",
+    `connect-src 'self' ${(options.allowConnect || []).join(' ')}`.trim(),
     "font-src 'self' https:",
     "object-src 'none'",
     "base-uri 'self'",
@@ -47,12 +48,32 @@ export function generateCsp(options: {
 
 /**
  * CSP for Twitter embed
+ * widgets.js requires access to multiple Twitter/X domains for proper rendering
+ *
+ * Reference: https://developer.x.com/en/docs/x-for-websites/javascript-api/guides/set-up-twitter-for-websites
  */
 export const TWITTER_CSP = generateCsp({
-  allowScripts: ['https://platform.twitter.com', 'https://cdn.syndication.twimg.com'],
-  allowStyles: ['https://platform.twitter.com'],
-  allowImages: ['https://pbs.twimg.com', 'https://abs.twimg.com'],
-  allowFrames: ['https://platform.twitter.com'],
+  allowScripts: [
+    'https://platform.twitter.com',
+    'https://cdn.syndication.twimg.com',
+  ],
+  allowStyles: [
+    'https://platform.twitter.com',
+    'https://ton.twimg.com',
+  ],
+  allowImages: [
+    'https://pbs.twimg.com',
+    'https://abs.twimg.com',
+    'https://ton.twimg.com',
+  ],
+  allowFrames: [
+    'https://platform.twitter.com',
+    'https://syndication.twitter.com',
+  ],
+  allowConnect: [
+    'https://syndication.twitter.com',
+    'https://cdn.syndication.twimg.com',
+  ],
 });
 
 /**
