@@ -2,7 +2,7 @@ import type { Context } from 'hono';
 import { fetchOgp } from '../utils/ogp';
 import { CARD_CSP, sanitizeUrl } from '../utils/security';
 import { LinkCard, FallbackCard } from '../components/Card';
-import { ErrorMessage } from '../components/Layout';
+import { ContentLoader, ErrorMessage } from '../components/Layout';
 
 /**
  * Link card embed handler
@@ -11,8 +11,9 @@ import { ErrorMessage } from '../components/Layout';
 export async function cardHandler(c: Context): Promise<Response> {
   const url = c.req.query('url');
 
+  // If no URL query, return loader that fetches from parent's data-content
   if (!url) {
-    return c.html(<ErrorMessage message="URLが指定されていません" />, 400);
+    return c.html(<ContentLoader embedType="card" />);
   }
 
   const decodedUrl = decodeURIComponent(url);

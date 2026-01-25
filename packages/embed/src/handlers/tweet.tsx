@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { TWITTER_CSP } from '../utils/security';
 import { TweetEmbed, TweetFallback } from '../components/Tweet';
-import { ErrorMessage } from '../components/Layout';
+import { ContentLoader, ErrorMessage } from '../components/Layout';
 
 /**
  * Twitter/X embed handler
@@ -10,8 +10,9 @@ import { ErrorMessage } from '../components/Layout';
 export async function tweetHandler(c: Context): Promise<Response> {
   const url = c.req.query('url');
 
+  // If no URL query, return loader that fetches from parent's data-content
   if (!url) {
-    return c.html(<ErrorMessage message="URLが指定されていません" />, 400);
+    return c.html(<ContentLoader embedType="tweet" />);
   }
 
   const decodedUrl = decodeURIComponent(url);
