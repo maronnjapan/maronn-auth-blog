@@ -18,7 +18,7 @@ try {
   });
   if (response.ok) {
     const user = await response.json();
-    isAdmin = user.role === 'admin';
+    isAdmin = user.permissions?.includes('admin') ?? false;
   }
 } catch (error) {
   console.error('Failed to fetch user info:', error);

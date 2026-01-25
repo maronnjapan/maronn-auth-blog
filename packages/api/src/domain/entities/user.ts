@@ -1,5 +1,3 @@
-import type { UserRole } from '@maronn-auth-blog/shared';
-
 export interface UserProps {
   id: string;
   username: string;
@@ -8,7 +6,6 @@ export interface UserProps {
   bio?: string;
   githubUserId: string;
   githubInstallationId?: string;
-  role: UserRole;
   githubUrl?: string;
   twitterUrl?: string;
   websiteUrl?: string;
@@ -47,10 +44,6 @@ export class User {
     return this.props.githubInstallationId;
   }
 
-  get role(): UserRole {
-    return this.props.role;
-  }
-
   get githubUrl(): string | undefined {
     return this.props.githubUrl;
   }
@@ -69,10 +62,6 @@ export class User {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
-  }
-
-  isAdmin(): boolean {
-    return this.props.role === 'admin';
   }
 
   updateProfile(updates: {
@@ -107,7 +96,6 @@ export class User {
       bio: this.props.bio,
       githubUserId: this.props.githubUserId,
       githubInstallationId: this.props.githubInstallationId,
-      role: this.props.role,
       githubUrl: this.props.githubUrl,
       twitterUrl: this.props.twitterUrl,
       websiteUrl: this.props.websiteUrl,
