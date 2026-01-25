@@ -63,6 +63,8 @@ if (!article && !error) {
       <AdminReviewDetail
         articleId={article.id}
         apiUrl={API_URL}
+        targetCategory={article.targetCategory}
+        markdown={markdown}
         client:only="react"
       />
     </div>
@@ -125,6 +127,48 @@ if (!article && !error) {
     font-family: inherit;
     background: none;
     padding: 0;
+  }
+
+  .review-actions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .ai-check-section {
+    background: #eff6ff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #bfdbfe;
+  }
+
+  .ai-check-section h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    color: #1e40af;
+  }
+
+  .ai-check-section .category-info {
+    margin: 0 0 1rem 0;
+    color: #374151;
+    font-size: 0.95rem;
+  }
+
+  .btn-copy-prompt {
+    width: 100%;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #3b82f6;
+    color: white;
+    transition: background 0.2s;
+  }
+
+  .btn-copy-prompt:hover {
+    background: #2563eb;
   }
 
   .review-actions {
