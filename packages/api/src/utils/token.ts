@@ -47,3 +47,10 @@ export function extractPermissionsFromAccessToken(token: string): string[] {
   return [];
 }
 
+/**
+ * Check if the given permissions include admin permission
+ */
+export function isAdminFromPermissions(permissions: string[]): boolean {
+  return permissions.some((p) => p === 'admin:users');
+}
+

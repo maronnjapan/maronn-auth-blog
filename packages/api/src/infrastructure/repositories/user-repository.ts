@@ -1,5 +1,4 @@
 import { User, type UserProps } from '../../domain/entities/user';
-import type { UserRole } from '@maronn-auth-blog/shared';
 
 interface UserRow {
   id: string;
@@ -9,7 +8,6 @@ interface UserRow {
   bio: string | null;
   github_user_id: string;
   github_installation_id: string | null;
-  role: UserRole;
   github_url: string | null;
   twitter_url: string | null;
   website_url: string | null;
@@ -36,7 +34,6 @@ export class UserRepository {
       bio: row.bio ?? undefined,
       githubUserId: row.github_user_id,
       githubInstallationId: row.github_installation_id ?? undefined,
-      role: row.role,
       githubUrl: row.github_url ?? undefined,
       twitterUrl: row.twitter_url ?? undefined,
       websiteUrl: row.website_url ?? undefined,
@@ -80,18 +77,17 @@ export class UserRepository {
       .prepare(`
         INSERT INTO users (
           id, username, display_name, icon_url, bio,
-          github_user_id, github_installation_id, role,
+          github_user_id, github_installation_id,
           github_url, twitter_url, website_url,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           username = excluded.username,
           display_name = excluded.display_name,
           icon_url = excluded.icon_url,
           bio = excluded.bio,
           github_installation_id = excluded.github_installation_id,
-          role = excluded.role,
           github_url = excluded.github_url,
           twitter_url = excluded.twitter_url,
           website_url = excluded.website_url,
@@ -105,7 +101,6 @@ export class UserRepository {
         json.bio ?? null,
         json.githubUserId,
         json.githubInstallationId ?? null,
-        json.role,
         json.githubUrl ?? null,
         json.twitterUrl ?? null,
         json.websiteUrl ?? null,

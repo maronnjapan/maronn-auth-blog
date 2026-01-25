@@ -110,7 +110,6 @@ app.get('/callback', async (c) => {
       displayName: userInfo.name,
       iconUrl: userInfo.picture,
       githubUserId,
-      role: 'user',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -196,7 +195,10 @@ app.get('/me', requireAuth(), async (c) => {
     throw new UnauthorizedError('User not found');
   }
 
-  return c.json(user.toJSON());
+  return c.json({
+    ...user.toJSON(),
+    permissions: auth.permissions,
+  });
 });
 
 export default app;

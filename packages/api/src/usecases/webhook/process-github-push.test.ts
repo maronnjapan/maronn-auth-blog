@@ -11,14 +11,12 @@ import { User, type UserProps } from '../../domain/entities/user';
 import { Article } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
-import type { UserRole } from '@maronn-auth-blog/shared';
 
-const baseUserProps: Omit<UserProps, 'role'> & { role: UserRole } = {
+const baseUserProps: UserProps = {
   id: 'user-1',
   username: 'test-user',
   displayName: 'Test User',
   githubUserId: '123',
-  role: 'user',
   createdAt: new Date(),
   updatedAt: new Date(),
 };

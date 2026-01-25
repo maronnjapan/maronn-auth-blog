@@ -6,7 +6,6 @@ const baseUserProps: UserProps = {
   username: 'tester',
   displayName: 'Tester',
   githubUserId: 'github-123',
-  role: 'user',
   createdAt: new Date('2024-01-01T00:00:00.000Z'),
   updatedAt: new Date('2024-01-01T00:00:00.000Z'),
 };
