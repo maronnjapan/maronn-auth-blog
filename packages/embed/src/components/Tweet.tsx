@@ -9,7 +9,7 @@ interface TweetOembedProps {
  * Twitter official embed component
  */
 export const TweetEmbed: FC<TweetOembedProps> = ({ html, authorName }) => {
-  const heightScript = `
+  const initScript = `
     (function() {
       function sendHeight() {
         var height = document.body.scrollHeight;
@@ -18,17 +18,21 @@ export const TweetEmbed: FC<TweetOembedProps> = ({ html, authorName }) => {
           window.parent.postMessage({ id: id, height: height }, '*');
         }
       }
-      function waitForTweet() {
-        var tweet = document.querySelector('.twitter-tweet-rendered, iframe[id^="twitter-widget"]');
-        if (tweet) {
-          setTimeout(sendHeight, 100);
+
+      function waitForTwttr() {
+        if (typeof twttr !== 'undefined' && twttr.widgets) {
+          twttr.widgets.load().then(function() {
+            setTimeout(sendHeight, 100);
+          });
         } else {
-          setTimeout(waitForTweet, 100);
+          setTimeout(waitForTwttr, 50);
         }
       }
+
       sendHeight();
-      waitForTweet();
+      waitForTwttr();
       window.addEventListener('resize', sendHeight);
+
       if (typeof MutationObserver !== 'undefined') {
         var observer = new MutationObserver(function() {
           setTimeout(sendHeight, 100);
@@ -49,7 +53,8 @@ export const TweetEmbed: FC<TweetOembedProps> = ({ html, authorName }) => {
             __html: `
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { background: transparent; }
-          .twitter-tweet { margin: 0 !important; }
+          .twitter-tweet { margin: 0 !important; max-width: 100% !important; }
+          .twitter-tweet iframe { max-width: 100% !important; }
         `,
           }}
         />
@@ -61,7 +66,7 @@ export const TweetEmbed: FC<TweetOembedProps> = ({ html, authorName }) => {
           src="https://platform.twitter.com/widgets.js"
           charset="utf-8"
         />
-        <script dangerouslySetInnerHTML={{ __html: heightScript }} />
+        <script dangerouslySetInnerHTML={{ __html: initScript }} />
       </body>
     </html>
   );
