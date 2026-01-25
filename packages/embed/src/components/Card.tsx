@@ -17,19 +17,11 @@ const cardStyles = `
     text-decoration: none;
     color: inherit;
     transition: background-color 0.2s, box-shadow 0.2s;
+    max-width: 100%;
   }
   .link-card:hover {
     background: #f7f9fa;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
-  @media (max-width: 500px) {
-    .link-card {
-      flex-direction: column;
-    }
-    .card-image {
-      width: 100%;
-      height: 160px;
-    }
   }
   .card-image {
     flex-shrink: 0;
@@ -50,6 +42,7 @@ const cardStyles = `
     flex-direction: column;
     justify-content: center;
     min-width: 0;
+    overflow: hidden;
   }
   .card-title {
     font-size: 15px;
@@ -61,6 +54,7 @@ const cardStyles = `
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-word;
   }
   .card-description {
     font-size: 13px;
@@ -71,6 +65,7 @@ const cardStyles = `
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-word;
   }
   .card-meta {
     display: flex;
@@ -78,11 +73,13 @@ const cardStyles = `
     gap: 6px;
     font-size: 12px;
     color: #8899a6;
+    min-width: 0;
   }
   .card-meta img {
     width: 16px;
     height: 16px;
     border-radius: 2px;
+    flex-shrink: 0;
   }
   .card-meta span {
     white-space: nowrap;
@@ -99,6 +96,7 @@ const cardStyles = `
     background: #f7f9fa;
     text-decoration: none;
     color: inherit;
+    max-width: 100%;
   }
   .fallback-card:hover {
     background: #ebeef1;
@@ -118,6 +116,7 @@ const cardStyles = `
     font-size: 14px;
     font-weight: 600;
     color: #1a1a1a;
+    word-break: break-word;
   }
   .fallback-url {
     font-size: 12px;
@@ -125,6 +124,53 @@ const cardStyles = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .link-card.no-image {
+    flex-direction: column;
+  }
+  .link-card.no-image .card-content {
+    padding: 16px;
+  }
+  @media (max-width: 500px) {
+    .link-card {
+      flex-direction: column;
+    }
+    .link-card.no-image {
+      flex-direction: column;
+    }
+    .card-image {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1.91 / 1;
+      max-height: 200px;
+    }
+    .card-content {
+      padding: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+    }
+    .card-description {
+      font-size: 12px;
+      -webkit-line-clamp: 3;
+    }
+    .fallback-card {
+      padding: 12px;
+    }
+    .fallback-icon {
+      width: 32px;
+      height: 32px;
+    }
+    .fallback-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .fallback-title {
+      font-size: 13px;
+    }
+    .fallback-url {
+      font-size: 11px;
+    }
   }
 `;
 
@@ -134,6 +180,7 @@ const cardStyles = `
 export const LinkCard: FC<LinkCardProps> = ({ ogp, originalUrl }) => {
   const domain = extractDomain(originalUrl);
   const hasImage = ogp.image && ogp.image.length > 0;
+  const cardClass = hasImage ? 'link-card' : 'link-card no-image';
 
   return (
     <EmbedLayout title={ogp.title || domain} styles={cardStyles}>
@@ -141,8 +188,7 @@ export const LinkCard: FC<LinkCardProps> = ({ ogp, originalUrl }) => {
         href={originalUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="link-card"
-        style={hasImage ? {} : { flexDirection: 'column' }}
+        class={cardClass}
       >
         {hasImage && (
           <div class="card-image">
