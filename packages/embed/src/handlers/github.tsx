@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { GITHUB_CSP } from '../utils/security';
 import { GitHubEmbed, GitHubFallback } from '../components/GitHub';
-import { ErrorMessage } from '../components/Layout';
+import { ContentLoader, ErrorMessage } from '../components/Layout';
 
 interface GitHubFileInfo {
   owner: string;
@@ -19,8 +19,9 @@ interface GitHubFileInfo {
 export async function githubHandler(c: Context): Promise<Response> {
   const url = c.req.query('url');
 
+  // If no URL query, return loader that fetches from parent's data-content
   if (!url) {
-    return c.html(<ErrorMessage message="URLが指定されていません" />, 400);
+    return c.html(<ContentLoader embedType="github" />);
   }
 
   const decodedUrl = decodeURIComponent(url);

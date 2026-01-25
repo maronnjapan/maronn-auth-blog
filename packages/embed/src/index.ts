@@ -14,7 +14,9 @@ app.get('/health', (c) => {
 });
 
 // Embed endpoints
-// Each endpoint receives ?url=<encoded-url> and returns complete HTML for iframe
+// Each endpoint:
+// - With ?url=<encoded-url>: Returns complete HTML for iframe
+// - Without query: Returns loader that fetches URL from parent's data-content attribute via postMessage
 app.get('/tweet', tweetHandler);
 app.get('/github', githubHandler);
 app.get('/gist', gistHandler);

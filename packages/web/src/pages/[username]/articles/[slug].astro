@@ -55,6 +55,39 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
       <div class="znc" set:html={article.html} />
     </article>
   </div>
+
+  <!-- Script to handle embed iframe messages (similar to zenn's listen-embed-event.js) -->
+  <script is:inline>
+    (function() {
+      window.addEventListener('message', function(event) {
+        var data = event.data;
+        if (!data || typeof data !== 'object') return;
+
+        // Handle request-content message from embed iframe
+        if (data.type === 'request-content' && data.id) {
+          var iframe = document.querySelector('iframe[src*="#' + data.id + '"]');
+          if (iframe) {
+            var content = iframe.getAttribute('data-content');
+            if (content && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({
+                type: 'content',
+                id: data.id,
+                content: decodeURIComponent(content)
+              }, '*');
+            }
+          }
+        }
+
+        // Handle height adjustment message from embed iframe
+        if (data.id && typeof data.height === 'number') {
+          var iframe = document.querySelector('iframe[src*="#' + data.id + '"]');
+          if (iframe) {
+            iframe.style.height = data.height + 'px';
+          }
+        }
+      });
+    })();
+  </script>
 </BaseLayout>
 
 <style>
