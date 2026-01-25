@@ -5,6 +5,24 @@ export interface Props {
 
 const { title } = Astro.props;
 const currentPath = Astro.url.pathname;
+
+// ユーザー情報を取得して管理者かどうかを判定
+let isAdmin = false;
+try {
+  const API_URL = import.meta.env.PUBLIC_API_URL;
+  const response = await fetch(`${API_URL}/auth/me`, {
+    credentials: 'include',
+    headers: {
+      Cookie: Astro.request.headers.get('Cookie') || '',
+    },
+  });
+  if (response.ok) {
+    const user = await response.json();
+    isAdmin = user.role === 'admin';
+  }
+} catch (error) {
+  console.error('Failed to fetch user info:', error);
+}
 ---
 
 <!DOCTYPE html>
@@ -41,9 +59,11 @@ const currentPath = Astro.url.pathname;
           <a href="/dashboard/settings" class:list={['nav-item', { active: currentPath === '/dashboard/settings' }]}>
             設定
           </a>
-          <a href="/admin/reviews" class="nav-item admin">
-            審査（管理者）
-          </a>
+          {isAdmin && (
+            <a href="/admin/reviews" class="nav-item admin">
+              審査（管理者）
+            </a>
+          )}
         </nav>
       </aside>
 
