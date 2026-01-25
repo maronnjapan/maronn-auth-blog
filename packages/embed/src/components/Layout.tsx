@@ -161,28 +161,11 @@ export const ContentLoader: FC<{ embedType: string }> = ({ embedType }) => {
             return;
           }
 
-          // Fetch embed content with URL query
-          var embedUrl = window.location.origin + '/${embedType}?url=' + encodeURIComponent(url);
-          fetch(embedUrl)
-            .then(function(res) { return res.text(); })
-            .then(function(html) {
-              // Extract body content
-              var match = html.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);
-              if (match) {
-                document.getElementById('content').innerHTML = match[1];
-              } else {
-                document.getElementById('content').innerHTML = html;
-              }
-              // Trigger height update
-              setTimeout(function() {
-                var height = document.body.scrollHeight;
-                window.parent.postMessage({ id: id, height: height }, '*');
-              }, 100);
-            })
-            .catch(function(err) {
-              console.error('Embed fetch error:', err);
-              document.getElementById('content').innerHTML = '<div class="error-message">読み込みに失敗しました</div>';
-            });
+          // Redirect to embed URL with query parameter
+          // Using location.replace instead of fetch+innerHTML because
+          // innerHTML does not execute script tags, which breaks Twitter widgets.js
+          var embedUrl = '/${embedType}?url=' + encodeURIComponent(url) + '#' + id;
+          window.location.replace(embedUrl);
         }
       });
     })();
