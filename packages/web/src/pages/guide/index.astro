@@ -1,0 +1,120 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// ガイドの一覧
+const guides = [
+  {
+    slug: 'review-prompt',
+    title: '記事審査AIプロンプトガイド',
+    description: '投稿記事の審査に使用されるAIプロンプトの判定基準を公開しています。',
+  },
+];
+---
+
+<BaseLayout title="ガイド - GitHub Blog">
+  <div class="guide-index-container">
+    <h1>ガイド</h1>
+    <p class="lead">
+      当ブログのご利用にあたって参考となるガイドを掲載しています。
+    </p>
+
+    <div class="guide-list">
+      {guides.map((guide) => (
+        <a href={`/guide/${guide.slug}`} class="guide-card">
+          <h2>{guide.title}</h2>
+          <p>{guide.description}</p>
+        </a>
+      ))}
+    </div>
+
+    <div class="back-link">
+      <a href="/">トップページに戻る</a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .guide-index-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 1rem;
+  }
+
+  .lead {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+  }
+
+  .guide-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .guide-card {
+    display: block;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .guide-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .guide-card h2 {
+    font-size: 1.25rem;
+    color: #0066cc;
+    margin-bottom: 0.5rem;
+  }
+
+  .guide-card p {
+    color: #555;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .back-link {
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .back-link a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .back-link a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .lead {
+      font-size: 1rem;
+    }
+
+    .guide-card {
+      padding: 1rem;
+    }
+
+    .guide-card h2 {
+      font-size: 1.1rem;
+    }
+  }
+</style>
