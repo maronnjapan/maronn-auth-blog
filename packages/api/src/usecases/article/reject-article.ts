@@ -29,7 +29,7 @@ export class RejectArticleUsecase {
 
     // Remove from FTS index and features (rejected articles should not be searchable)
     await this.articleRepo.removeFtsIndex(article.id);
-    await this.articleRepo.removeFeatures(article.id);
+    await this.articleRepo.removeSummary(article.id);
 
     // Create notification for the user
     const createNotification = new CreateNotificationUsecase(this.notificationRepo);
