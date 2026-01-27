@@ -58,7 +58,7 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
       <div className="container">
         <nav className="nav">
           <a href="/" className="logo">
-            GitHub Blog
+            Auth Vault
           </a>
 
           <button

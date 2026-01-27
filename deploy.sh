@@ -56,7 +56,7 @@ if ! wrangler whoami &> /dev/null; then
     exit 1
 fi
 
-print_header "GitHub Blog Platform - Deployment Script"
+print_header "Auth Vault - Deployment Script"
 
 # ============================================
 # Step 1: Collect environment variables
