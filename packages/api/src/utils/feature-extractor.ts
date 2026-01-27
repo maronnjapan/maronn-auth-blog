@@ -4,18 +4,22 @@ export interface ArticleFeatures {
   summary: string;
 }
 
-const SUMMARY_MAX_LENGTH = 200;
+/**
+ * Automatically extractable features from markdown content.
+ * Summary is excluded because it should be provided by the admin during approval.
+ */
+export type ExtractedFeatures = Omit<ArticleFeatures, 'summary'>;
 
 /**
  * Extract search-relevant features from markdown content.
  * The input `content` should be the markdown body (frontmatter already removed).
+ * Summary is NOT auto-generated — it must be provided by the admin at approval time.
  */
-export function extractFeatures(content: string): ArticleFeatures {
+export function extractFeatures(content: string): ExtractedFeatures {
   const headings = extractHeadings(content);
   const bodyText = stripMarkdown(content);
-  const summary = generateSummary(bodyText);
 
-  return { headings, bodyText, summary };
+  return { headings, bodyText };
 }
 
 /**
@@ -79,25 +83,4 @@ export function stripMarkdown(markdown: string): string {
   text = text.trim();
 
   return text;
-}
-
-/**
- * Generate a summary from the first portion of plain text body.
- */
-export function generateSummary(bodyText: string): string {
-  if (bodyText.length <= SUMMARY_MAX_LENGTH) {
-    return bodyText;
-  }
-
-  // Cut at the last whitespace within the limit to avoid mid-word truncation
-  const truncated = bodyText.slice(0, SUMMARY_MAX_LENGTH);
-  const lastSpace = truncated.lastIndexOf(' ');
-  const lastNewline = truncated.lastIndexOf('\n');
-  const breakPoint = Math.max(lastSpace, lastNewline);
-
-  if (breakPoint > 0) {
-    return truncated.slice(0, breakPoint);
-  }
-
-  return truncated;
 }

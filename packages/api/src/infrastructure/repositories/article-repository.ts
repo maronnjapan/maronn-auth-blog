@@ -2,7 +2,7 @@ import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
 import type { ArticleStatus as ArticleStatusType, TargetCategory } from '@maronn-auth-blog/shared';
-import type { ArticleFeatures } from '../../utils/feature-extractor';
+import type { ArticleFeatures, ExtractedFeatures } from '../../utils/feature-extractor';
 
 interface ArticleRow {
   id: string;
@@ -312,7 +312,7 @@ export class ArticleRepository {
     return result ? this.rowToEntity(result) : null;
   }
 
-  async syncFtsIndex(articleId: string, title: string, features?: ArticleFeatures): Promise<void> {
+  async syncFtsIndex(articleId: string, title: string, features?: ExtractedFeatures): Promise<void> {
     // Delete existing entry
     await this.db
       .prepare('DELETE FROM articles_fts WHERE id = ?')

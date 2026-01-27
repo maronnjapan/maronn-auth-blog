@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractFeatures, extractHeadings, stripMarkdown, generateSummary } from './feature-extractor';
+import { extractFeatures, extractHeadings, stripMarkdown } from './feature-extractor';
 
 describe('extractHeadings', () => {
   it('should extract all heading levels', () => {
@@ -183,41 +183,8 @@ const hello = 'world';
   });
 });
 
-describe('generateSummary', () => {
-  it('should return full text if under max length', () => {
-    const text = 'Short text';
-
-    const result = generateSummary(text);
-
-    expect(result).toBe('Short text');
-  });
-
-  it('should truncate at word boundary', () => {
-    // Build a string: "word1 word2 word3 ..." that exceeds 200 chars
-    const words = Array.from({ length: 30 }, (_, i) => `word${i}`);
-    const text = words.join(' ');
-
-    const result = generateSummary(text);
-
-    expect(result.length).toBeLessThanOrEqual(200);
-    // Should end at a word boundary (not mid-word)
-    expect(result).toMatch(/\w$/);
-    // Verify it's a clean word end (no partial "word" like "wor")
-    const lastWord = result.split(' ').pop()!;
-    expect(words).toContain(lastWord);
-  });
-
-  it('should handle text without spaces within limit', () => {
-    const text = 'A'.repeat(250);
-
-    const result = generateSummary(text);
-
-    expect(result.length).toBe(200);
-  });
-});
-
 describe('extractFeatures', () => {
-  it('should extract all features from article content', () => {
+  it('should extract headings and bodyText from article content', () => {
     const content = `# はじめに
 
 OAuth 2.0 の認証フローについて解説します。
@@ -248,9 +215,14 @@ const verifier = generateCodeVerifier();
     expect(result.bodyText).toContain('PKCE');
     expect(result.bodyText).not.toContain('generateCodeVerifier');
     expect(result.bodyText).not.toContain('flow.png');
+  });
 
-    // summary should be a prefix of bodyText
-    expect(result.bodyText.startsWith(result.summary)).toBe(true);
+  it('should not include summary (admin must provide it)', () => {
+    const content = `# Title\n\nSome content here.`;
+
+    const result = extractFeatures(content);
+
+    expect(result).not.toHaveProperty('summary');
   });
 
   it('should handle empty content', () => {
@@ -258,6 +230,5 @@ const verifier = generateCodeVerifier();
 
     expect(result.headings).toBe('');
     expect(result.bodyText).toBe('');
-    expect(result.summary).toBe('');
   });
 });
