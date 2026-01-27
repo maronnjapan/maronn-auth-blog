@@ -1,4 +1,4 @@
-# GitHub Blog Platform
+# Auth Vault
 
 GitHub リポジトリを CMS として利用するブログプラットフォーム。ユーザーは自身の GitHub リポジトリに Markdown と画像を置き、管理者の審査を経て記事を公開する。
 
