@@ -7,6 +7,7 @@ import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
 import { parseArticle } from '../../utils/markdown-parser';
+import { extractFeatures } from '../../utils/feature-extractor';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
 import { CreateNotificationUsecase } from '../notification/create-notification';
 
@@ -107,8 +108,13 @@ export class ApproveArticleUsecase {
     // Save topics
     await this.articleRepo.saveTopics(article.id, parsed.frontmatter.topics);
 
-    // Update FTS index
-    await this.articleRepo.syncFtsIndex(article.id, article.title);
+    // Extract and save search features
+    console.info(`[ApproveArticle] Extracting search features`);
+    const features = extractFeatures(parsed.content);
+    await this.articleRepo.saveFeatures(article.id, features);
+
+    // Update FTS index with features
+    await this.articleRepo.syncFtsIndex(article.id, article.title, features);
 
     // Create notification for the user
     const createNotification = new CreateNotificationUsecase(this.notificationRepo);

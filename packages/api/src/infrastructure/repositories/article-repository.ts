@@ -2,6 +2,7 @@ import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
 import type { ArticleStatus as ArticleStatusType, TargetCategory } from '@maronn-auth-blog/shared';
+import type { ArticleFeatures } from '../../utils/feature-extractor';
 
 interface ArticleRow {
   id: string;
@@ -311,23 +312,48 @@ export class ArticleRepository {
     return result ? this.rowToEntity(result) : null;
   }
 
-  async syncFtsIndex(articleId: string, title: string): Promise<void> {
+  async syncFtsIndex(articleId: string, title: string, features?: ArticleFeatures): Promise<void> {
     // Delete existing entry
     await this.db
       .prepare('DELETE FROM articles_fts WHERE id = ?')
       .bind(articleId)
       .run();
 
-    // Insert new entry
+    // Insert new entry with features
     await this.db
-      .prepare('INSERT INTO articles_fts (id, title) VALUES (?, ?)')
-      .bind(articleId, title)
+      .prepare('INSERT INTO articles_fts (id, title, headings, body_text) VALUES (?, ?, ?, ?)')
+      .bind(articleId, title, features?.headings ?? '', features?.bodyText ?? '')
       .run();
   }
 
   async removeFtsIndex(articleId: string): Promise<void> {
     await this.db
       .prepare('DELETE FROM articles_fts WHERE id = ?')
+      .bind(articleId)
+      .run();
+  }
+
+  async saveFeatures(articleId: string, features: ArticleFeatures): Promise<void> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await this.db
+      .prepare(`
+        INSERT INTO article_features (id, article_id, headings, body_text, summary, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(article_id) DO UPDATE SET
+          headings = excluded.headings,
+          body_text = excluded.body_text,
+          summary = excluded.summary,
+          updated_at = excluded.updated_at
+      `)
+      .bind(id, articleId, features.headings, features.bodyText, features.summary, now, now)
+      .run();
+  }
+
+  async removeFeatures(articleId: string): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM article_features WHERE article_id = ?')
       .bind(articleId)
       .run();
   }
