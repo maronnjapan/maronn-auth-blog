@@ -22,6 +22,11 @@ export interface Env {
   EMBED_ORIGIN: string;
   IMAGE_URL: string;
 
+  // Email
+  RESEND_API_KEY?: string;
+  NOTIFICATION_EMAIL_FROM?: string;
+  ADMIN_NOTIFICATION_EMAIL?: string;
+
   // Cookie domain for cross-subdomain sharing (e.g., '.maronn-room.com')
   COOKIE_DOMAIN?: string;
 

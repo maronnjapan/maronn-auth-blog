@@ -11,6 +11,7 @@ import { User, type UserProps } from '../../domain/entities/user';
 import { Article } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
+import type { EmailService } from '../../infrastructure/email/resend-email-service';
 
 const baseUserProps: UserProps = {
   id: 'user-1',
@@ -27,6 +28,8 @@ function createUsecase(options: {
   userInstallationId?: string;
   eventInstallationId?: number;
   markdown?: string;
+  emailService?: EmailService;
+  adminEmail?: string;
 }) {
   const user = new User({
     ...baseUserProps,
@@ -88,7 +91,9 @@ function createUsecase(options: {
     githubClient,
     kvClient,
     r2Client,
-    IMAGE_URL
+    IMAGE_URL,
+    options.emailService,
+    options.adminEmail
   );
 
   const event: GitHubPushEvent = {
@@ -171,6 +176,28 @@ describe('ProcessGitHubPushUsecase', () => {
       'user-1',
       'test',
       expect.stringContaining('title: Test Article')
+    );
+  });
+
+  it('sends an admin notification email when a new article is created', async () => {
+    const sendMock = vi.fn().mockResolvedValue(undefined);
+    const emailService: EmailService = {
+      send: sendMock,
+    };
+
+    const { usecase, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+      emailService,
+      adminEmail: 'admin@example.com',
+    });
+
+    await usecase.execute(event);
+
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'admin@example.com',
+      })
     );
   });
 
@@ -410,6 +437,112 @@ describe('ProcessGitHubPushUsecase', () => {
     expect(article.githubSha).toBe('new-sha');
     expect(article.rejectionReason).toBeUndefined();
     expect(articleRepo.save).toHaveBeenCalledWith(article);
+  });
+
+  it('sends an admin notification email when an existing article requires re-review', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Published Article',
+      category: undefined,
+      status: ArticleStatus.published(),
+      githubPath: 'articles/test.md',
+      githubSha: 'old-sha',
+      publishedSha: 'old-sha',
+      rejectionReason: undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      targetCategory: 'authentication',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({
+        content: ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content'].join('\n'),
+        sha: 'new-sha',
+      }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const sendMock = vi.fn().mockResolvedValue(undefined);
+    const emailService: EmailService = { send: sendMock };
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL,
+      emailService,
+      'admin@example.com'
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: ['articles/test.md'],
+          removed: [],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: expect.stringContaining('Article update pending review'),
+        to: 'admin@example.com',
+      })
+    );
   });
 
   it('removes cached markdown when the source file is deleted', async () => {

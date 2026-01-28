@@ -17,6 +17,7 @@ import {
   validateImageSize,
   getImageFilename,
 } from '../../utils/image-validator';
+import type { EmailService } from '../../infrastructure/email/resend-email-service';
 
 export interface GitHubPushEvent {
   ref: string;
@@ -42,7 +43,9 @@ export class ProcessGitHubPushUsecase {
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
-    private imageUrl: string
+    private imageUrl: string,
+    private emailService?: EmailService,
+    private adminNotificationEmail?: string
   ) {}
 
   async execute(event: GitHubPushEvent): Promise<void> {
@@ -104,6 +107,7 @@ export class ProcessGitHubPushUsecase {
       try {
         await this.processMarkdownFile(
           user.id,
+          user.username,
           installationId,
           owner,
           repoName,
@@ -126,12 +130,15 @@ export class ProcessGitHubPushUsecase {
 
   private async processMarkdownFile(
     userId: string,
+    username: string,
     installationId: string,
     owner: string,
     repoName: string,
     filePath: string
   ): Promise<void> {
     console.info(`[ProcessGitHubPush] Processing file: ${filePath}`);
+
+    const repoFullName = `${owner}/${repoName}`;
 
     // Fetch the markdown file
     const { content: markdown, sha } = await this.githubClient.fetchFile(
@@ -218,6 +225,16 @@ export class ProcessGitHubPushUsecase {
           message: `Update detected for "${existingArticle.title}". Your article is now pending re-review.`,
         });
 
+        await this.notifyAdmin(
+          `Article update pending review: ${existingArticle.title}`,
+          [
+            `User: ${username}`,
+            `Repository: ${repoFullName}`,
+            `File: ${filePath}`,
+            `Slug: ${existingArticle.slug.toString()}`,
+          ].join('\n')
+        );
+
         console.info(`[ProcessGitHubPush] Article ${existingArticle.id} marked for update`);
       }
     } else {
@@ -246,6 +263,16 @@ export class ProcessGitHubPushUsecase {
       await this.articleRepo.saveTopics(article.id, topics);
 
       console.info(`[ProcessGitHubPush] New article created: ${article.id}`);
+
+      await this.notifyAdmin(
+        `New article pending review: ${title}`,
+        [
+          `User: ${username}`,
+          `Repository: ${repoFullName}`,
+          `File: ${filePath}`,
+          `Slug: ${slug.toString()}`,
+        ].join('\n')
+      );
     }
   }
 
@@ -326,5 +353,22 @@ export class ProcessGitHubPushUsecase {
       return 'image/gif';
     }
     return 'image/jpeg';
+  }
+
+  private async notifyAdmin(subject: string, text: string): Promise<void> {
+    if (!this.emailService || !this.adminNotificationEmail) {
+      return;
+    }
+
+    try {
+      await this.emailService.send({
+        to: this.adminNotificationEmail,
+        subject,
+        text,
+        html: text.replace(/\n/g, '<br />'),
+      });
+    } catch (error) {
+      console.error('[ProcessGitHubPush] Failed to send admin notification email', error);
+    }
   }
 }

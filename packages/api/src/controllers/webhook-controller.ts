@@ -8,6 +8,7 @@ import { GitHubClient } from '../infrastructure/github-client';
 import { ProcessGitHubPushUsecase, type GitHubPushEvent } from '../usecases/webhook/process-github-push';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
+import { ResendEmailService } from '../infrastructure/email/resend-email-service';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -51,6 +52,11 @@ app.post('/github', async (c) => {
   const kvClient = new KVClient(c.env.KV);
   const r2Client = new R2Client(c.env.R2);
 
+  const emailService =
+    c.env.RESEND_API_KEY && c.env.NOTIFICATION_EMAIL_FROM
+      ? new ResendEmailService(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM)
+      : undefined;
+
   const usecase = new ProcessGitHubPushUsecase(
     articleRepo,
     userRepo,
@@ -59,7 +65,9 @@ app.post('/github', async (c) => {
     githubClient,
     kvClient,
     r2Client,
-    c.env.IMAGE_URL
+    c.env.IMAGE_URL,
+    emailService,
+    c.env.ADMIN_NOTIFICATION_EMAIL
   );
 
   await usecase.execute(data);
