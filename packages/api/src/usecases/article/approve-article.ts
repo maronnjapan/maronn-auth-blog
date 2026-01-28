@@ -5,10 +5,12 @@ import { NotificationRepository } from '../../infrastructure/repositories/notifi
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
+import { SendGridClient } from '../../infrastructure/sendgrid-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
 import { parseArticle } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import { SendEmailNotificationUsecase } from '../notification/send-email-notification';
 
 export class ApproveArticleUsecase {
   constructor(
@@ -19,7 +21,9 @@ export class ApproveArticleUsecase {
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
+    private sendGridClient: SendGridClient,
     private embedOrigin: string,
+    private webUrl: string,
   ) { }
 
   async execute(articleId: string): Promise<void> {
@@ -117,6 +121,20 @@ export class ApproveArticleUsecase {
       type: 'article_approved',
       articleId: article.id,
       message: `Your article "${article.title}" has been approved and published.`,
+    });
+
+    // Send email notification
+    const sendEmailNotification = new SendEmailNotificationUsecase(
+      this.userRepo,
+      this.sendGridClient
+    );
+    await sendEmailNotification.execute({
+      userId: article.userId,
+      type: 'article_approved',
+      articleTitle: article.title,
+      articleSlug: article.slug.toString(),
+      username: user.username,
+      webUrl: this.webUrl,
     });
 
     console.info(`[ApproveArticle] Article approved: ${articleId}`);

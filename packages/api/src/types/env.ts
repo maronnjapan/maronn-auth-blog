@@ -25,6 +25,10 @@ export interface Env {
   // Cookie domain for cross-subdomain sharing (e.g., '.maronn-room.com')
   COOKIE_DOMAIN?: string;
 
+  // SendGrid
+  SENDGRID_API_KEY: string;
+  SENDGRID_FROM_EMAIL: string;
+
   // Cloudflare Bindings
   DB: D1Database;
   KV: KVNamespace;
