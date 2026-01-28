@@ -4,7 +4,6 @@ interface UserRow {
   id: string;
   username: string;
   display_name: string;
-  email: string | null;
   icon_url: string | null;
   bio: string | null;
   github_user_id: string;
@@ -31,7 +30,6 @@ export class UserRepository {
       id: row.id,
       username: row.username,
       displayName: row.display_name,
-      email: row.email ?? undefined,
       iconUrl: row.icon_url ?? undefined,
       bio: row.bio ?? undefined,
       githubUserId: row.github_user_id,
@@ -78,16 +76,15 @@ export class UserRepository {
     await this.db
       .prepare(`
         INSERT INTO users (
-          id, username, display_name, email, icon_url, bio,
+          id, username, display_name, icon_url, bio,
           github_user_id, github_installation_id,
           github_url, twitter_url, website_url,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           username = excluded.username,
           display_name = excluded.display_name,
-          email = excluded.email,
           icon_url = excluded.icon_url,
           bio = excluded.bio,
           github_installation_id = excluded.github_installation_id,
@@ -100,7 +97,6 @@ export class UserRepository {
         json.id,
         json.username,
         json.displayName,
-        json.email ?? null,
         json.iconUrl ?? null,
         json.bio ?? null,
         json.githubUserId,

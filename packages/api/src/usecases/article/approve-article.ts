@@ -5,7 +5,8 @@ import { NotificationRepository } from '../../infrastructure/repositories/notifi
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
-import { SendGridClient } from '../../infrastructure/sendgrid-client';
+import { ResendClient } from '../../infrastructure/resend-client';
+import { Auth0UserInfoClient } from '../../infrastructure/auth0-userinfo-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
 import { parseArticle } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
@@ -21,7 +22,8 @@ export class ApproveArticleUsecase {
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
-    private sendGridClient: SendGridClient,
+    private resendClient: ResendClient,
+    private auth0UserInfoClient: Auth0UserInfoClient,
     private embedOrigin: string,
     private webUrl: string,
   ) { }
@@ -125,11 +127,12 @@ export class ApproveArticleUsecase {
 
     // Send email notification
     const sendEmailNotification = new SendEmailNotificationUsecase(
-      this.userRepo,
-      this.sendGridClient
+      this.auth0UserInfoClient,
+      this.resendClient
     );
     await sendEmailNotification.execute({
       userId: article.userId,
+      auth0UserId: `github|${user.githubUserId}`,
       type: 'article_approved',
       articleTitle: article.title,
       articleSlug: article.slug.toString(),

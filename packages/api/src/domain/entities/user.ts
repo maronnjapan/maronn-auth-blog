@@ -2,7 +2,6 @@ export interface UserProps {
   id: string;
   username: string;
   displayName: string;
-  email?: string;
   iconUrl?: string;
   bio?: string;
   githubUserId: string;
@@ -27,10 +26,6 @@ export class User {
 
   get displayName(): string {
     return this.props.displayName;
-  }
-
-  get email(): string | undefined {
-    return this.props.email;
   }
 
   get iconUrl(): string | undefined {
@@ -92,20 +87,11 @@ export class User {
     };
   }
 
-  setEmail(email: string): void {
-    this.props = {
-      ...this.props,
-      email,
-      updatedAt: new Date(),
-    };
-  }
-
   toJSON() {
     return {
       id: this.props.id,
       username: this.props.username,
       displayName: this.props.displayName,
-      email: this.props.email,
       iconUrl: this.props.iconUrl,
       bio: this.props.bio,
       githubUserId: this.props.githubUserId,

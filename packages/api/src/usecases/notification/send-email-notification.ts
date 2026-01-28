@@ -1,10 +1,11 @@
-import { SendGridClient } from '../../infrastructure/sendgrid-client';
-import { UserRepository } from '../../infrastructure/repositories/user-repository';
+import { Auth0UserInfoClient } from '../../infrastructure/auth0-userinfo-client';
+import { ResendClient } from '../../infrastructure/resend-client';
 
 export type EmailNotificationType = 'article_approved' | 'article_rejected';
 
 export interface SendEmailNotificationInput {
   userId: string;
+  auth0UserId: string;
   type: EmailNotificationType;
   articleTitle: string;
   articleSlug: string;
@@ -15,30 +16,42 @@ export interface SendEmailNotificationInput {
 
 export class SendEmailNotificationUsecase {
   constructor(
-    private userRepo: UserRepository,
-    private sendGridClient: SendGridClient
+    private userInfoClient: Auth0UserInfoClient,
+    private resendClient: ResendClient
   ) {}
 
   async execute(input: SendEmailNotificationInput): Promise<void> {
-    const user = await this.userRepo.findById(input.userId);
-    if (!user || !user.email) {
-      console.warn(`[SendEmailNotification] User ${input.userId} has no email address, skipping email notification`);
+    let email: string | null = null;
+    try {
+      email = await this.userInfoClient.getEmailByAuth0UserId(input.auth0UserId);
+    } catch (error) {
+      console.error(
+        `[SendEmailNotification] Failed to resolve email for user ${input.userId} (Auth0: ${input.auth0UserId})`,
+        error
+      );
+      return;
+    }
+
+    if (!email) {
+      console.warn(
+        `[SendEmailNotification] User ${input.userId} (Auth0: ${input.auth0UserId}) has no email address, skipping email notification`
+      );
       return;
     }
 
     const { subject, text, html } = this.buildEmailContent(input);
 
     try {
-      await this.sendGridClient.sendEmail({
-        to: user.email,
+      await this.resendClient.sendEmail({
+        to: email,
         subject,
         text,
         html,
       });
-      console.info(`[SendEmailNotification] Email sent to ${user.email} for ${input.type}`);
+      console.info(`[SendEmailNotification] Email sent to ${email} for ${input.type}`);
     } catch (error) {
       // Log the error but don't throw - email notification failure shouldn't block the main flow
-      console.error(`[SendEmailNotification] Failed to send email to ${user.email}:`, error);
+      console.error(`[SendEmailNotification] Failed to send email to ${email}:`, error);
     }
   }
 

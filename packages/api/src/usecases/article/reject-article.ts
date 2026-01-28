@@ -1,7 +1,8 @@
 import { ArticleRepository } from '../../infrastructure/repositories/article-repository';
 import { UserRepository } from '../../infrastructure/repositories/user-repository';
 import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
-import { SendGridClient } from '../../infrastructure/sendgrid-client';
+import { ResendClient } from '../../infrastructure/resend-client';
+import { Auth0UserInfoClient } from '../../infrastructure/auth0-userinfo-client';
 import { ArticleNotFoundError } from '../../domain/errors/domain-errors';
 import { ValidationError } from '@maronn-auth-blog/shared';
 import { CreateNotificationUsecase } from '../notification/create-notification';
@@ -12,7 +13,8 @@ export class RejectArticleUsecase {
     private articleRepo: ArticleRepository,
     private userRepo: UserRepository,
     private notificationRepo: NotificationRepository,
-    private sendGridClient: SendGridClient,
+    private resendClient: ResendClient,
+    private auth0UserInfoClient: Auth0UserInfoClient,
     private webUrl: string
   ) {}
 
@@ -50,11 +52,12 @@ export class RejectArticleUsecase {
     if (user) {
       // Send email notification
       const sendEmailNotification = new SendEmailNotificationUsecase(
-        this.userRepo,
-        this.sendGridClient
+        this.auth0UserInfoClient,
+        this.resendClient
       );
       await sendEmailNotification.execute({
         userId: article.userId,
+        auth0UserId: `github|${user.githubUserId}`,
         type: 'article_rejected',
         articleTitle: article.title,
         articleSlug: article.slug.toString(),

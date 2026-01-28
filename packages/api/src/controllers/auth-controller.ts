@@ -108,7 +108,6 @@ app.get('/callback', async (c) => {
       id: crypto.randomUUID(),
       username: userInfo.nickname,
       displayName: userInfo.name,
-      email: userInfo.email,
       iconUrl: userInfo.picture,
       githubUserId,
       createdAt: new Date(),
@@ -116,13 +115,6 @@ app.get('/callback', async (c) => {
     };
     user = new User(props);
     await userRepo.save(user);
-  } else {
-    // Update email from Auth0 UserInfo on each login
-    // This ensures we always have the latest email address
-    if (userInfo.email && userInfo.email !== user.email) {
-      user.setEmail(userInfo.email);
-      await userRepo.save(user);
-    }
   }
 
   // Create session
