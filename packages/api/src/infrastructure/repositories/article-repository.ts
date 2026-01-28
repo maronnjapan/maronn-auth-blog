@@ -311,23 +311,44 @@ export class ArticleRepository {
     return result ? this.rowToEntity(result) : null;
   }
 
-  async syncFtsIndex(articleId: string, title: string): Promise<void> {
-    // Delete existing entry
+  async syncFtsIndex(articleId: string, title: string, summary?: string): Promise<void> {
     await this.db
       .prepare('DELETE FROM articles_fts WHERE id = ?')
       .bind(articleId)
       .run();
 
-    // Insert new entry
     await this.db
-      .prepare('INSERT INTO articles_fts (id, title) VALUES (?, ?)')
-      .bind(articleId, title)
+      .prepare('INSERT INTO articles_fts (id, title, summary) VALUES (?, ?, ?)')
+      .bind(articleId, title, summary ?? '')
       .run();
   }
 
   async removeFtsIndex(articleId: string): Promise<void> {
     await this.db
       .prepare('DELETE FROM articles_fts WHERE id = ?')
+      .bind(articleId)
+      .run();
+  }
+
+  async saveSummary(articleId: string, summary: string): Promise<void> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await this.db
+      .prepare(`
+        INSERT INTO article_features (id, article_id, summary, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(article_id) DO UPDATE SET
+          summary = excluded.summary,
+          updated_at = excluded.updated_at
+      `)
+      .bind(id, articleId, summary, now, now)
+      .run();
+  }
+
+  async removeSummary(articleId: string): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM article_features WHERE article_id = ?')
       .bind(articleId)
       .run();
   }

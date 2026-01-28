@@ -39,3 +39,8 @@ coverage/
 # Temporary files
 *.tmp
 .cache/
+
+# Python
+__pycache__/
+*.egg-info/
+*.pyc

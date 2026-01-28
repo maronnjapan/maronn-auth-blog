@@ -118,32 +118,38 @@ app.get('/reviews/:id', adminOnly, async (c) => {
 });
 
 // POST /admin/reviews/:id/approve - Approve article
-app.post('/reviews/:id/approve', adminOnly, async (c) => {
-  const articleId = c.req.param('id');
+app.post(
+  '/reviews/:id/approve',
+  adminOnly,
+  zValidator('json', z.object({ summary: z.string().min(1).max(500) })),
+  async (c) => {
+    const articleId = c.req.param('id');
+    const { summary } = c.req.valid('json');
 
-  const articleRepo = new ArticleRepository(c.env.DB);
-  const userRepo = new UserRepository(c.env.DB);
-  const repoRepo = new RepositoryRepository(c.env.DB);
-  const notificationRepo = new NotificationRepository(c.env.DB);
-  const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
-  const kvClient = new KVClient(c.env.KV);
-  const r2Client = new R2Client(c.env.R2);
+    const articleRepo = new ArticleRepository(c.env.DB);
+    const userRepo = new UserRepository(c.env.DB);
+    const repoRepo = new RepositoryRepository(c.env.DB);
+    const notificationRepo = new NotificationRepository(c.env.DB);
+    const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
+    const kvClient = new KVClient(c.env.KV);
+    const r2Client = new R2Client(c.env.R2);
 
-  const usecase = new ApproveArticleUsecase(
-    articleRepo,
-    userRepo,
-    repoRepo,
-    notificationRepo,
-    githubClient,
-    kvClient,
-    r2Client,
-    c.env.EMBED_ORIGIN,
-  );
+    const usecase = new ApproveArticleUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      c.env.EMBED_ORIGIN,
+    );
 
-  await usecase.execute(articleId);
+    await usecase.execute(articleId, summary);
 
-  return c.json({ success: true });
-});
+    return c.json({ success: true });
+  }
+);
 
 // POST /admin/reviews/:id/reject - Reject article
 app.post(

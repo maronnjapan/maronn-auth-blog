@@ -22,7 +22,7 @@ export class ApproveArticleUsecase {
     private embedOrigin: string,
   ) { }
 
-  async execute(articleId: string): Promise<void> {
+  async execute(articleId: string, summary: string): Promise<void> {
     console.info(`[ApproveArticle] Starting approval for article: ${articleId}`);
 
     // Get article
@@ -107,8 +107,9 @@ export class ApproveArticleUsecase {
     // Save topics
     await this.articleRepo.saveTopics(article.id, parsed.frontmatter.topics);
 
-    // Update FTS index
-    await this.articleRepo.syncFtsIndex(article.id, article.title);
+    // Save search summary and update FTS index
+    await this.articleRepo.saveSummary(article.id, summary);
+    await this.articleRepo.syncFtsIndex(article.id, article.title, summary);
 
     // Create notification for the user
     const createNotification = new CreateNotificationUsecase(this.notificationRepo);
