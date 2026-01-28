@@ -1,13 +1,19 @@
 import { ArticleRepository } from '../../infrastructure/repositories/article-repository';
+import { UserRepository } from '../../infrastructure/repositories/user-repository';
 import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
+import { SendGridClient } from '../../infrastructure/sendgrid-client';
 import { ArticleNotFoundError } from '../../domain/errors/domain-errors';
 import { ValidationError } from '@maronn-auth-blog/shared';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import { SendEmailNotificationUsecase } from '../notification/send-email-notification';
 
 export class RejectArticleUsecase {
   constructor(
     private articleRepo: ArticleRepository,
-    private notificationRepo: NotificationRepository
+    private userRepo: UserRepository,
+    private notificationRepo: NotificationRepository,
+    private sendGridClient: SendGridClient,
+    private webUrl: string
   ) {}
 
   async execute(articleId: string, reason: string): Promise<void> {
@@ -38,6 +44,25 @@ export class RejectArticleUsecase {
       articleId: article.id,
       message: `Your article "${article.title}" has been rejected. Reason: ${reason}`,
     });
+
+    // Get user for email notification
+    const user = await this.userRepo.findById(article.userId);
+    if (user) {
+      // Send email notification
+      const sendEmailNotification = new SendEmailNotificationUsecase(
+        this.userRepo,
+        this.sendGridClient
+      );
+      await sendEmailNotification.execute({
+        userId: article.userId,
+        type: 'article_rejected',
+        articleTitle: article.title,
+        articleSlug: article.slug.toString(),
+        username: user.username,
+        rejectionReason: reason,
+        webUrl: this.webUrl,
+      });
+    }
 
     console.info(`[RejectArticle] Article rejected: ${articleId}`);
   }

@@ -9,6 +9,7 @@ import { NotificationRepository } from '../infrastructure/repositories/notificat
 import { GitHubClient } from '../infrastructure/github-client';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
+import { SendGridClient } from '../infrastructure/sendgrid-client';
 import { ApproveArticleUsecase } from '../usecases/article/approve-article';
 import { RejectArticleUsecase } from '../usecases/article/reject-article';
 import { requireAuth } from '../middleware/auth';
@@ -128,6 +129,7 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
   const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
   const kvClient = new KVClient(c.env.KV);
   const r2Client = new R2Client(c.env.R2);
+  const sendGridClient = new SendGridClient(c.env.SENDGRID_API_KEY, c.env.SENDGRID_FROM_EMAIL);
 
   const usecase = new ApproveArticleUsecase(
     articleRepo,
@@ -137,7 +139,9 @@ app.post('/reviews/:id/approve', adminOnly, async (c) => {
     githubClient,
     kvClient,
     r2Client,
+    sendGridClient,
     c.env.EMBED_ORIGIN,
+    c.env.WEB_URL,
   );
 
   await usecase.execute(articleId);
@@ -155,8 +159,17 @@ app.post(
     const { reason } = c.req.valid('json');
 
     const articleRepo = new ArticleRepository(c.env.DB);
+    const userRepo = new UserRepository(c.env.DB);
     const notificationRepo = new NotificationRepository(c.env.DB);
-    const usecase = new RejectArticleUsecase(articleRepo, notificationRepo);
+    const sendGridClient = new SendGridClient(c.env.SENDGRID_API_KEY, c.env.SENDGRID_FROM_EMAIL);
+
+    const usecase = new RejectArticleUsecase(
+      articleRepo,
+      userRepo,
+      notificationRepo,
+      sendGridClient,
+      c.env.WEB_URL
+    );
 
     await usecase.execute(articleId, reason);
 
