@@ -1,5 +1,20 @@
 import { useState, useRef } from 'react';
 
+const MAX_COMMENT_IMAGES = 5;
+const COMMENT_IMAGE_PATH = '/comment-images/';
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const countCommentImages = (markdown: string): number => {
+  if (!markdown) return 0;
+  const escapedPath = escapeRegExp(COMMENT_IMAGE_PATH);
+  const markdownRegex = new RegExp(`!\\[[^\\]]*\\]\\((?:[^)]+${escapedPath}[^)]+)\\)`, 'g');
+  const htmlRegex = new RegExp(`<img[^>]+src=["'][^"']+${escapedPath}[^"']+["'][^>]*>`, 'g');
+  const markdownMatches = markdown.match(markdownRegex) ?? [];
+  const htmlMatches = markdown.match(htmlRegex) ?? [];
+  return markdownMatches.length + htmlMatches.length;
+};
+
 interface CommentAuthor {
   id: string;
   username: string;
@@ -102,6 +117,8 @@ function CommentForm({ articleId, currentUser, apiUrl, onCommentCreated }: Comme
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const commentImageCount = countCommentImages(body);
+  const hasReachedImageLimit = commentImageCount >= MAX_COMMENT_IMAGES;
 
   const handleTabSwitch = async (tab: 'write' | 'preview') => {
     setActiveTab(tab);
@@ -163,6 +180,12 @@ function CommentForm({ articleId, currentUser, apiUrl, onCommentCreated }: Comme
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (hasReachedImageLimit) {
+      setError(`画像は最大${MAX_COMMENT_IMAGES}枚まで添付できます`);
+      e.target.value = '';
+      return;
+    }
 
     setUploading(true);
     setError(null);
@@ -264,12 +287,24 @@ function CommentForm({ articleId, currentUser, apiUrl, onCommentCreated }: Comme
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+                disabled={uploading || hasReachedImageLimit}
                 style={styles.uploadButton}
-                title="画像をアップロード"
+                title={
+                  hasReachedImageLimit
+                    ? `画像は最大${MAX_COMMENT_IMAGES}枚まで添付できます`
+                    : '画像をアップロード'
+                }
               >
                 {uploading ? 'アップロード中...' : '画像を追加'}
               </button>
+              <span
+                style={{
+                  ...styles.imageCounter,
+                  color: hasReachedImageLimit ? '#d32f2f' : '#666',
+                }}
+              >
+                画像 {commentImageCount}/{MAX_COMMENT_IMAGES}
+              </span>
             </div>
           </div>
         ) : (
@@ -524,6 +559,10 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#fff',
     cursor: 'pointer',
     color: '#555',
+  },
+  imageCounter: {
+    marginLeft: 'auto',
+    fontSize: '0.8rem',
   },
   previewArea: {
     padding: '1rem',

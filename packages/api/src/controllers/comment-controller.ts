@@ -19,6 +19,26 @@ const markdownToHtml: MarkdownToHtmlFn =
     ? (markdownToHtmlImport as MarkdownToHtmlFn)
     : ((markdownToHtmlImport as unknown as { default: MarkdownToHtmlFn }).default as MarkdownToHtmlFn);
 
+const MAX_COMMENT_IMAGES = 5;
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getCommentImageBase = (imageUrl: string): string => {
+  const normalized = imageUrl.endsWith('/') ? imageUrl.slice(0, -1) : imageUrl;
+  return `${normalized}/comment-images/`;
+};
+
+const countCommentImages = (html: string, imageUrl: string): number => {
+  if (!html) {
+    return 0;
+  }
+  const base = escapeRegExp(getCommentImageBase(imageUrl));
+  const regex = new RegExp(`src=["']${base}[^"']+["']`, 'g');
+  const matches = html.match(regex);
+  return matches ? matches.length : 0;
+};
+
 const app = new Hono<{ Bindings: Env }>();
 
 // GET /comments/articles/:articleId - Get comments for an article
@@ -55,6 +75,11 @@ app.post(
 
     // Convert markdown to HTML on the server
     const bodyHtml = markdownToHtml(bodyMarkdown, { embedOrigin: c.env.EMBED_ORIGIN });
+
+    const imageCount = countCommentImages(bodyHtml, c.env.IMAGE_URL);
+    if (imageCount > MAX_COMMENT_IMAGES) {
+      throw new ValidationError(`コメントに添付できる画像は最大${MAX_COMMENT_IMAGES}枚までです`);
+    }
 
     const commentRepo = new CommentRepository(c.env.DB);
     const articleRepo = new ArticleRepository(c.env.DB);
@@ -160,6 +185,10 @@ app.post(
   async (c) => {
     const { bodyMarkdown } = c.req.valid('json');
     const html = markdownToHtml(bodyMarkdown, { embedOrigin: c.env.EMBED_ORIGIN });
+    const imageCount = countCommentImages(html, c.env.IMAGE_URL);
+    if (imageCount > MAX_COMMENT_IMAGES) {
+      throw new ValidationError(`コメントに添付できる画像は最大${MAX_COMMENT_IMAGES}枚までです`);
+    }
     return c.json({ html });
   }
 );
