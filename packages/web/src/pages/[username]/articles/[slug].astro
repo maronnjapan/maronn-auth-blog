@@ -1,9 +1,11 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import CommentSection from '../../../islands/CommentSection';
 import 'zenn-content-css';
 
 const { username, slug } = Astro.params;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const cookie = Astro.request.headers.get('Cookie') || '';
 
 // Fetch article data
 let article = null;
@@ -22,6 +24,31 @@ try {
 
 if (error || !article) {
   return Astro.redirect('/404');
+}
+
+// Fetch current user for comment section
+let currentUser = null;
+try {
+  const userResponse = await fetch(`${API_URL}/auth/me`, {
+    credentials: 'include',
+    headers: { Cookie: cookie },
+  });
+  if (userResponse.ok) {
+    currentUser = await userResponse.json();
+  }
+} catch {
+  // Not logged in
+}
+
+// Fetch comments for this article
+let commentsData = { comments: [] as any[], total: 0 };
+try {
+  const commentsResponse = await fetch(`${API_URL}/comments/articles/${article.id}`);
+  if (commentsResponse.ok) {
+    commentsData = await commentsResponse.json();
+  }
+} catch {
+  // Failed to fetch comments
 }
 
 const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', {
@@ -53,6 +80,15 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
       </header>
 
       <div class="znc" set:html={article.html} />
+
+      <CommentSection
+        articleId={article.id}
+        initialComments={commentsData.comments}
+        initialTotal={commentsData.total}
+        currentUser={currentUser}
+        apiUrl={API_URL}
+        client:load
+      />
     </article>
   </div>
 
