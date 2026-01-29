@@ -120,41 +120,47 @@ app.get('/reviews/:id', adminOnly, async (c) => {
 });
 
 // POST /admin/reviews/:id/approve - Approve article
-app.post('/reviews/:id/approve', adminOnly, async (c) => {
-  const articleId = c.req.param('id');
+app.post(
+  '/reviews/:id/approve',
+  adminOnly,
+  zValidator('json', z.object({ summary: z.string().min(1).max(500) })),
+  async (c) => {
+    const articleId = c.req.param('id');
+    const { summary } = c.req.valid('json');
 
-  const articleRepo = new ArticleRepository(c.env.DB);
-  const userRepo = new UserRepository(c.env.DB);
-  const repoRepo = new RepositoryRepository(c.env.DB);
-  const notificationRepo = new NotificationRepository(c.env.DB);
-  const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
-  const kvClient = new KVClient(c.env.KV);
-  const r2Client = new R2Client(c.env.R2);
-  const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
-  const auth0UserInfoClient = new Auth0UserInfoClient(
-    c.env.AUTH0_DOMAIN,
-    c.env.AUTH0_CLIENT_ID,
-    c.env.AUTH0_CLIENT_SECRET
-  );
+    const articleRepo = new ArticleRepository(c.env.DB);
+    const userRepo = new UserRepository(c.env.DB);
+    const repoRepo = new RepositoryRepository(c.env.DB);
+    const notificationRepo = new NotificationRepository(c.env.DB);
+    const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
+    const kvClient = new KVClient(c.env.KV);
+    const r2Client = new R2Client(c.env.R2);
+    const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
+    const auth0UserInfoClient = new Auth0UserInfoClient(
+      c.env.AUTH0_DOMAIN,
+      c.env.AUTH0_CLIENT_ID,
+      c.env.AUTH0_CLIENT_SECRET
+    );
 
-  const usecase = new ApproveArticleUsecase(
-    articleRepo,
-    userRepo,
-    repoRepo,
-    notificationRepo,
-    githubClient,
-    kvClient,
-    r2Client,
-    resendClient,
-    auth0UserInfoClient,
-    c.env.EMBED_ORIGIN,
-    c.env.WEB_URL,
-  );
+    const usecase = new ApproveArticleUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      resendClient,
+      auth0UserInfoClient,
+      c.env.EMBED_ORIGIN,
+      c.env.WEB_URL,
+    );
 
-  await usecase.execute(articleId);
+    await usecase.execute(articleId, summary);
 
-  return c.json({ success: true });
-});
+    return c.json({ success: true });
+  }
+);
 
 // POST /admin/reviews/:id/reject - Reject article
 app.post(

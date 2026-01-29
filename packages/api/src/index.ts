@@ -13,6 +13,7 @@ import adminController from './controllers/admin-controller';
 import imageController from './controllers/image-controller';
 import webhookController from './controllers/webhook-controller';
 import avatarController from './controllers/avatar-controller';
+import commentController from './controllers/comment-controller';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -36,6 +37,7 @@ app.route('/admin', adminController);
 app.route('/images', imageController);
 app.route('/webhook', webhookController);
 app.route('/avatars', avatarController);
+app.route('/comments', commentController);
 
 // Error handling
 app.onError((err, c) => {

@@ -134,3 +134,12 @@ export class RepositoryAlreadyLinkedByOtherUserError extends AppError {
     super(`Repository ${repoFullName} is already linked by another user`);
   }
 }
+
+export class CommentNotFoundError extends AppError {
+  readonly code = 'COMMENT_NOT_FOUND';
+  readonly statusCode = 404;
+
+  constructor(commentId: string) {
+    super(`Comment not found: ${commentId}`);
+  }
+}
