@@ -25,6 +25,12 @@ export interface Env {
   // Cookie domain for cross-subdomain sharing (e.g., '.maronn-room.com')
   COOKIE_DOMAIN?: string;
 
+  // R2 S3 Compatible API (for signed URLs)
+  R2_ACCOUNT_ID: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_BUCKET_NAME: string;
+
   // Cloudflare Bindings
   DB: D1Database;
   KV: KVNamespace;
