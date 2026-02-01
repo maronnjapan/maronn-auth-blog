@@ -1,122 +1,13 @@
 import { useState } from 'react';
 
+type TargetCategory = 'authentication' | 'authorization' | 'security';
+
 interface AdminReviewDetailProps {
   articleId: string;
   apiUrl: string;
-  targetCategory?: 'authentication' | 'authorization' | 'security';
+  targetCategories?: TargetCategory[];
   markdown: string;
 }
-
-// targetCategoryごとのAIプロンプトテンプレート
-const AI_PROMPT_TEMPLATES: Record<string, string> = {
-  authentication: `あなたはブログ記事の審査担当者です。以下の記事が「認証（Authentication）」に関する内容として適切かどうかを判定してください。
-
-## 判定基準
-認証に関する記事として適切な内容の例：
-- ユーザー認証の仕組み（パスワード認証、多要素認証、生体認証など）
-- OAuth、OpenID Connect、SAML などの認証プロトコル
-- JWT、セッション管理、トークンベース認証
-- Auth0、Firebase Auth、Cognito などの認証サービス
-- パスワードレス認証、SSO（シングルサインオン）
-- 認証に関するセキュリティベストプラクティス
-
-不適切な内容の例：
-- 認可（Authorization）のみに焦点を当てた内容
-- 認証と無関係な一般的なプログラミング話題
-- 認証を装った広告や宣伝記事
-
-## 審査対象の記事
-
-\`\`\`markdown
-{{ARTICLE_CONTENT}}
-\`\`\`
-
-## 回答フォーマット
-以下の形式で回答してください：
-
-**判定結果**: 適切 / 不適切 / 要修正
-
-**理由**:
-（判定理由を3-5文で説明）
-
-**認証との関連性**:
-（記事内容が認証とどのように関連しているか）
-
-**改善提案**:（不適切または要修正の場合のみ）
-（どのような修正が必要か）`,
-
-  authorization: `あなたはブログ記事の審査担当者です。以下の記事が「認可（Authorization）」に関する内容として適切かどうかを判定してください。
-
-## 判定基準
-認可に関する記事として適切な内容の例：
-- アクセス制御（RBAC、ABAC、ACL など）
-- 権限管理、ロールベースアクセス制御
-- OAuth 2.0 のスコープとパーミッション
-- API のアクセス制御
-- リソースベースのポリシー
-- 認可に関するセキュリティベストプラクティス
-
-不適切な内容の例：
-- 認証（Authentication）のみに焦点を当てた内容
-- 認可と無関係な一般的なプログラミング話題
-- 認可を装った広告や宣伝記事
-
-## 審査対象の記事
-
-\`\`\`markdown
-{{ARTICLE_CONTENT}}
-\`\`\`
-
-## 回答フォーマット
-以下の形式で回答してください：
-
-**判定結果**: 適切 / 不適切 / 要修正
-
-**理由**:
-（判定理由を3-5文で説明）
-
-**認可との関連性**:
-（記事内容が認可とどのように関連しているか）
-
-**改善提案**:（不適切または要修正の場合のみ）
-（どのような修正が必要か）`,
-
-  security: `あなたはブログ記事の審査担当者です。以下の記事が「セキュリティ」に関する内容として適切かどうかを判定してください。
-
-## 判定基準
-セキュリティに関する記事として適切な内容の例：
-- Webセキュリティ（XSS、CSRF、SQLインジェクション対策など）
-- 暗号化、ハッシュ化、デジタル署名
-- セキュリティヘッダー、CORS、CSP
-- 脆弱性診断、ペネトレーションテスト
-- セキュアコーディングプラクティス
-- インシデント対応、セキュリティ監視
-
-不適切な内容の例：
-- セキュリティと無関係な一般的なプログラミング話題
-- 攻撃手法の詳細な説明（悪用目的と判断されるもの）
-- セキュリティを装った広告や宣伝記事
-
-## 審査対象の記事
-
-\`\`\`markdown
-{{ARTICLE_CONTENT}}
-\`\`\`
-
-## 回答フォーマット
-以下の形式で回答してください：
-
-**判定結果**: 適切 / 不適切 / 要修正
-
-**理由**:
-（判定理由を3-5文で説明）
-
-**セキュリティとの関連性**:
-（記事内容がセキュリティとどのように関連しているか）
-
-**改善提案**:（不適切または要修正の場合のみ）
-（どのような修正が必要か）`,
-};
 
 const TARGET_CATEGORY_LABELS: Record<string, string> = {
   authentication: '認証',
@@ -124,24 +15,89 @@ const TARGET_CATEGORY_LABELS: Record<string, string> = {
   security: 'セキュリティ',
 };
 
-export default function AdminReviewDetail({ articleId, apiUrl, targetCategory, markdown }: AdminReviewDetailProps) {
+// 複数カテゴリーを一度にチェックできるプロンプト
+function generateCombinedPrompt(categories: TargetCategory[], articleContent: string): string {
+  const categoryDescriptions = categories.map(cat => {
+    switch (cat) {
+      case 'authentication':
+        return `### 認証（Authentication）
+適切な内容の例：
+- ユーザー認証の仕組み（パスワード認証、多要素認証、生体認証など）
+- OAuth、OpenID Connect、SAML などの認証プロトコル
+- JWT、セッション管理、トークンベース認証
+- Auth0、Firebase Auth、Cognito などの認証サービス
+- パスワードレス認証、SSO（シングルサインオン）
+- 認証に関するセキュリティベストプラクティス`;
+      case 'authorization':
+        return `### 認可（Authorization）
+適切な内容の例：
+- アクセス制御（RBAC、ABAC、ACL など）
+- 権限管理、ロールベースアクセス制御
+- OAuth 2.0 のスコープとパーミッション
+- API のアクセス制御
+- リソースベースのポリシー
+- 認可に関するセキュリティベストプラクティス`;
+      case 'security':
+        return `### セキュリティ
+適切な内容の例：
+- Webセキュリティ（XSS、CSRF、SQLインジェクション対策など）
+- 暗号化、ハッシュ化、デジタル署名
+- セキュリティヘッダー、CORS、CSP
+- 脆弱性診断、ペネトレーションテスト
+- セキュアコーディングプラクティス
+- インシデント対応、セキュリティ監視`;
+    }
+  }).join('\n\n');
+
+  const categoryLabels = categories.map(cat => TARGET_CATEGORY_LABELS[cat]).join('、');
+
+  return `あなたはブログ記事の審査担当者です。以下の記事が指定されたカテゴリー（${categoryLabels}）に関する内容として適切かどうかを判定してください。
+
+## 判定対象カテゴリー
+
+${categoryDescriptions}
+
+## 不適切な内容の共通例
+- 指定されたカテゴリーと無関係な一般的なプログラミング話題
+- カテゴリーを装った広告や宣伝記事
+- 攻撃手法の詳細な説明（悪用目的と判断されるもの）
+
+## 審査対象の記事
+
+\`\`\`markdown
+${articleContent}
+\`\`\`
+
+## 回答フォーマット
+以下の形式で回答してください：
+
+**判定結果**: 適切 / 不適切 / 要修正
+
+**カテゴリー別評価**:
+${categories.map(cat => `- ${TARGET_CATEGORY_LABELS[cat]}: （適切/不適切/部分的に関連）`).join('\n')}
+
+**理由**:
+（判定理由を3-5文で説明）
+
+**記事内容との関連性**:
+（記事内容が各カテゴリーとどのように関連しているか）
+
+**改善提案**:（不適切または要修正の場合のみ）
+（どのような修正が必要か）`;
+}
+
+export default function AdminReviewDetail({ articleId, apiUrl, targetCategories, markdown }: AdminReviewDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [copied, setCopied] = useState(false);
 
   const handleCopyPrompt = async () => {
-    if (!targetCategory || !markdown) {
+    if (!targetCategories || targetCategories.length === 0 || !markdown) {
       alert('記事情報が不足しています');
       return;
     }
 
-    const template = AI_PROMPT_TEMPLATES[targetCategory];
-    if (!template) {
-      alert('対応するプロンプトテンプレートがありません');
-      return;
-    }
-
-    const prompt = template.replace('{{ARTICLE_CONTENT}}', markdown);
+    const prompt = generateCombinedPrompt(targetCategories, markdown);
 
     try {
       await navigator.clipboard.writeText(prompt);
@@ -209,13 +165,15 @@ export default function AdminReviewDetail({ articleId, apiUrl, targetCategory, m
     }
   };
 
+  const categoryLabels = targetCategories?.map(cat => TARGET_CATEGORY_LABELS[cat] || cat).join('、') || '';
+
   return (
     <div className="review-actions-container">
-      {targetCategory && (
+      {targetCategories && targetCategories.length > 0 && (
         <div className="ai-check-section">
           <h4>AIチェック</h4>
           <p className="category-info">
-            対象カテゴリ: <strong>{TARGET_CATEGORY_LABELS[targetCategory] || targetCategory}</strong>
+            対象カテゴリ: <strong>{categoryLabels}</strong>
           </p>
           <button onClick={handleCopyPrompt} className="btn-copy-prompt">
             {copied ? 'コピーしました!' : 'AIチェック用プロンプトをコピー'}

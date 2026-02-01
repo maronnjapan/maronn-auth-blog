@@ -10,7 +10,7 @@ import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
 import { extractFrontmatter, extractImagePaths } from '../../utils/markdown-parser';
 import { CreateNotificationUsecase } from '../notification/create-notification';
-import type { TargetCategory } from '@maronn-auth-blog/shared';
+import type { TargetCategories } from '@maronn-auth-blog/shared';
 import {
   validateImageCount,
   validateImageContentType,
@@ -159,7 +159,7 @@ export class ProcessGitHubPushUsecase {
 
     const title = (frontmatter.title as string) || '';
     const category = (frontmatter.category as string) || undefined;
-    const targetCategory = frontmatter.targetCategory as TargetCategory;
+    const targetCategories = frontmatter.targetCategories as TargetCategories;
     const topics = frontmatter.topics as string[];
 
     if (!title) {
@@ -167,8 +167,8 @@ export class ProcessGitHubPushUsecase {
       return;
     }
 
-    if (!targetCategory) {
-      console.info(`[ProcessGitHubPush] File ${filePath} has no targetCategory, skipping`);
+    if (!targetCategories || targetCategories.length === 0) {
+      console.info(`[ProcessGitHubPush] File ${filePath} has no targetCategories, skipping`);
       return;
     }
 
@@ -228,7 +228,7 @@ export class ProcessGitHubPushUsecase {
         slug,
         title,
         category,
-        targetCategory,
+        targetCategories,
         status: ArticleStatus.pendingNew(),
         githubPath: filePath,
         githubSha: sha,
