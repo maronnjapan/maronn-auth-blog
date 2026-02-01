@@ -5,10 +5,13 @@ import { NotificationRepository } from '../../infrastructure/repositories/notifi
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
+import { ResendClient } from '../../infrastructure/resend-client';
+import { Auth0UserInfoClient } from '../../infrastructure/auth0-userinfo-client';
 import { ArticleNotFoundError, RepositoryNotFoundError } from '../../domain/errors/domain-errors';
 import { parseArticle } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import { SendEmailNotificationUsecase } from '../notification/send-email-notification';
 
 export class ApproveArticleUsecase {
   constructor(
@@ -19,7 +22,10 @@ export class ApproveArticleUsecase {
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
+    private resendClient: ResendClient,
+    private auth0UserInfoClient: Auth0UserInfoClient,
     private embedOrigin: string,
+    private webUrl: string,
   ) { }
 
   async execute(articleId: string, summary: string): Promise<void> {
@@ -118,6 +124,21 @@ export class ApproveArticleUsecase {
       type: 'article_approved',
       articleId: article.id,
       message: `Your article "${article.title}" has been approved and published.`,
+    });
+
+    // Send email notification
+    const sendEmailNotification = new SendEmailNotificationUsecase(
+      this.auth0UserInfoClient,
+      this.resendClient
+    );
+    await sendEmailNotification.execute({
+      userId: article.userId,
+      auth0UserId: `github|${user.githubUserId}`,
+      type: 'article_approved',
+      articleTitle: article.title,
+      articleSlug: article.slug.toString(),
+      username: user.username,
+      webUrl: this.webUrl,
     });
 
     console.info(`[ApproveArticle] Article approved: ${articleId}`);

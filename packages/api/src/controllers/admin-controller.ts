@@ -9,6 +9,8 @@ import { NotificationRepository } from '../infrastructure/repositories/notificat
 import { GitHubClient } from '../infrastructure/github-client';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
+import { ResendClient } from '../infrastructure/resend-client';
+import { Auth0UserInfoClient } from '../infrastructure/auth0-userinfo-client';
 import { ApproveArticleUsecase } from '../usecases/article/approve-article';
 import { RejectArticleUsecase } from '../usecases/article/reject-article';
 import { requireAuth } from '../middleware/auth';
@@ -133,6 +135,12 @@ app.post(
     const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
     const kvClient = new KVClient(c.env.KV);
     const r2Client = new R2Client(c.env.R2);
+    const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
+    const auth0UserInfoClient = new Auth0UserInfoClient(
+      c.env.AUTH0_DOMAIN,
+      c.env.AUTH0_CLIENT_ID,
+      c.env.AUTH0_CLIENT_SECRET
+    );
 
     const usecase = new ApproveArticleUsecase(
       articleRepo,
@@ -142,7 +150,10 @@ app.post(
       githubClient,
       kvClient,
       r2Client,
+      resendClient,
+      auth0UserInfoClient,
       c.env.EMBED_ORIGIN,
+      c.env.WEB_URL,
     );
 
     await usecase.execute(articleId, summary);
@@ -161,8 +172,23 @@ app.post(
     const { reason } = c.req.valid('json');
 
     const articleRepo = new ArticleRepository(c.env.DB);
+    const userRepo = new UserRepository(c.env.DB);
     const notificationRepo = new NotificationRepository(c.env.DB);
-    const usecase = new RejectArticleUsecase(articleRepo, notificationRepo);
+    const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
+    const auth0UserInfoClient = new Auth0UserInfoClient(
+      c.env.AUTH0_DOMAIN,
+      c.env.AUTH0_CLIENT_ID,
+      c.env.AUTH0_CLIENT_SECRET
+    );
+
+    const usecase = new RejectArticleUsecase(
+      articleRepo,
+      userRepo,
+      notificationRepo,
+      resendClient,
+      auth0UserInfoClient,
+      c.env.WEB_URL
+    );
 
     await usecase.execute(articleId, reason);
 
