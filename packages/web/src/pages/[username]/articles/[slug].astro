@@ -56,6 +56,7 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
   month: 'long',
   day: 'numeric',
 });
+const authorName = article.author?.displayName ?? username;
 ---
 
 <BaseLayout title={`${article.title} - ${username}`}>
@@ -64,7 +65,7 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
       <header class="article-header">
         <h1>{article.title}</h1>
         <div class="article-meta">
-          <a href={`/${username}`} class="author">@{username}</a>
+          <a href={`/${username}`} class="author">{authorName}</a>
           <time datetime={article.publishedAt}>{publishedDate}</time>
           {article.category && (
             <span class="category">{article.category}</span>

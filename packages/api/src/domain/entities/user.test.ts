@@ -11,6 +11,24 @@ const baseUserProps: UserProps = {
 };
 
 describe('User entity', () => {
+  it('updates profile fields', () => {
+    const user = new User(baseUserProps);
+    const before = user.updatedAt.getTime();
+
+    user.updateProfile({
+      username: 'tester-updated',
+      displayName: 'Updated Name',
+      bio: 'Hello',
+      githubUrl: 'https://github.com/tester',
+    });
+
+    expect(user.username).toBe('tester-updated');
+    expect(user.displayName).toBe('Updated Name');
+    expect(user.bio).toBe('Hello');
+    expect(user.githubUrl).toBe('https://github.com/tester');
+    expect(user.updatedAt.getTime()).toBeGreaterThan(before);
+  });
+
   it('updates GitHub installation id', () => {
     const user = new User(baseUserProps);
     const before = user.updatedAt.getTime();

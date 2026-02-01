@@ -65,6 +65,7 @@ export class User {
   }
 
   updateProfile(updates: {
+    username?: string;
     displayName?: string;
     iconUrl?: string;
     bio?: string;

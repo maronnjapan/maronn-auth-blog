@@ -44,6 +44,7 @@ export default function SettingsForm({
   availableRepositories = [],
 }: SettingsFormProps) {
   const [displayName, setDisplayName] = useState(user.displayName || '');
+  const [username, setUsername] = useState(user.username || '');
   const [bio, setBio] = useState(user.bio || '');
   const [githubUrl, setGithubUrl] = useState(user.githubUrl || '');
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || '');
@@ -58,11 +59,23 @@ export default function SettingsForm({
     setMessage(null);
 
     try {
+      const normalizeOptional = (value: string) => {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      };
+
       const response = await fetch(`${apiUrl}/users/me`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName, bio, githubUrl, twitterUrl, websiteUrl }),
+        body: JSON.stringify({
+          username: username.trim(),
+          displayName: displayName.trim(),
+          bio: normalizeOptional(bio),
+          githubUrl: normalizeOptional(githubUrl),
+          twitterUrl: normalizeOptional(twitterUrl),
+          websiteUrl: normalizeOptional(websiteUrl),
+        }),
       });
 
       if (!response.ok) {
@@ -102,6 +115,19 @@ export default function SettingsForm({
               displayName={displayName || user.displayName}
               apiUrl={apiUrl}
               onUploadComplete={handleAvatarUploadComplete}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="username">ユーザー名</label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              maxLength={50}
+              pattern="^[a-zA-Z0-9_-]+$"
             />
           </div>
 

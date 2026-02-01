@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { uuidSchema, datetimeSchema } from './common';
 
+const optionalUrlSchema = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().url().optional()
+);
+
 export const userSchema = z.object({
   id: uuidSchema,
   username: z.string().min(1).max(50).regex(/^[a-zA-Z0-9_-]+$/),
@@ -9,9 +14,9 @@ export const userSchema = z.object({
   bio: z.string().max(500).optional(),
   githubUserId: z.string(),
   githubInstallationId: z.string().optional(),
-  githubUrl: z.string().url().optional(),
-  twitterUrl: z.string().url().optional(),
-  websiteUrl: z.string().url().optional(),
+  githubUrl: optionalUrlSchema,
+  twitterUrl: optionalUrlSchema,
+  websiteUrl: optionalUrlSchema,
   createdAt: datetimeSchema,
   updatedAt: datetimeSchema,
 });
