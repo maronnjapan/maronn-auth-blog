@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import ArticleList from '../../islands/ArticleList';
+import SearchArticleList from '../../islands/SearchArticleList';
 import SearchBar from '../../islands/SearchBar';
 import Pagination from '../../islands/Pagination';
 
@@ -10,9 +10,28 @@ const query = Astro.url.searchParams.get('q') || '';
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
 const limit = 20;
 
-let articles = [];
+type MatchType = 'and' | 'or';
+
+interface SearchArticle {
+  id: string;
+  slug: string;
+  title: string;
+  category?: string;
+  publishedAt: string;
+  matchType: MatchType;
+  author?: {
+    username: string;
+  };
+  targetCategories?: string[];
+}
+
+let articles: SearchArticle[] = [];
+let andTotal = 0;
+let orTotal = 0;
 let total = 0;
-let error = null;
+let normalizedTokens: string[] = [];
+let isMultiToken = false;
+let error: string | null = null;
 
 if (query) {
   try {
@@ -20,7 +39,11 @@ if (query) {
     if (response.ok) {
       const data = await response.json();
       articles = data.articles || [];
+      andTotal = data.andTotal || 0;
+      orTotal = data.orTotal || 0;
       total = data.total || 0;
+      normalizedTokens = data.normalizedTokens || [];
+      isMultiToken = data.isMultiToken || false;
     } else {
       error = '検索に失敗しました';
     }
@@ -32,6 +55,10 @@ if (query) {
 
 const totalPages = Math.ceil(total / limit);
 const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
+
+// AND結果とOR結果を分離
+const andArticles = articles.filter((a) => a.matchType === 'and');
+const orArticles = articles.filter((a) => a.matchType === 'or');
 ---
 
 <BaseLayout title={query ? `"${query}" の検索結果 - Auth Vault` : '記事検索 - Auth Vault'}>
@@ -45,6 +72,11 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
     {query && (
       <div class="results-info">
         <p>「{query}」の検索結果: {total}件</p>
+        {normalizedTokens.length > 0 && (
+          <p class="normalized-tokens">
+            検索キーワード: {normalizedTokens.join(', ')}
+          </p>
+        )}
       </div>
     )}
 
@@ -54,7 +86,38 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
       </div>
     ) : query ? (
       <>
-        <ArticleList articles={articles} client:load />
+        {isMultiToken && andArticles.length > 0 && (
+          <section class="search-section-group">
+            <div class="section-header high-relevance">
+              <h2>関連性の高い結果</h2>
+              <span class="badge">すべてのキーワードを含む</span>
+              <span class="count">{andTotal}件</span>
+            </div>
+            <SearchArticleList articles={andArticles} client:load />
+          </section>
+        )}
+
+        {isMultiToken && orArticles.length > 0 && (
+          <section class="search-section-group">
+            <div class="section-header other-results">
+              <h2>その他の結果</h2>
+              <span class="badge">いずれかのキーワードを含む</span>
+              <span class="count">{orTotal}件</span>
+            </div>
+            <SearchArticleList articles={orArticles} client:load />
+          </section>
+        )}
+
+        {!isMultiToken && andArticles.length > 0 && (
+          <SearchArticleList articles={andArticles} client:load />
+        )}
+
+        {articles.length === 0 && (
+          <div class="empty">
+            <p>検索結果が見つかりませんでした</p>
+          </div>
+        )}
+
         {totalPages > 1 && (
           <Pagination
             currentPage={page}
@@ -94,6 +157,66 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
     color: #666;
   }
 
+  .normalized-tokens {
+    font-size: 0.875rem;
+    color: #888;
+    margin-top: 0.25rem;
+  }
+
+  .search-section-group {
+    margin-bottom: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .section-header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #333;
+  }
+
+  .section-header.high-relevance {
+    border-bottom-color: #4CAF50;
+  }
+
+  .section-header.high-relevance h2 {
+    color: #2E7D32;
+  }
+
+  .section-header.other-results {
+    border-bottom-color: #9E9E9E;
+  }
+
+  .section-header.other-results h2 {
+    color: #616161;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+    color: #666;
+  }
+
+  .section-header.high-relevance .badge {
+    background-color: #E8F5E9;
+    color: #2E7D32;
+  }
+
+  .count {
+    font-size: 0.875rem;
+    color: #999;
+    margin-left: auto;
+  }
+
   .error {
     text-align: center;
     padding: 3rem 1rem;
@@ -129,6 +252,20 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
       font-size: 0.9rem;
     }
 
+    .section-header {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.1rem;
+      width: 100%;
+    }
+
+    .count {
+      margin-left: 0;
+    }
+
     .error,
     .empty {
       padding: 2rem 1rem;
@@ -152,6 +289,14 @@ const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
     .results-info {
       margin-bottom: 1rem;
       font-size: 0.85rem;
+    }
+
+    .section-header h2 {
+      font-size: 1rem;
+    }
+
+    .badge {
+      font-size: 0.7rem;
     }
 
     .error,
