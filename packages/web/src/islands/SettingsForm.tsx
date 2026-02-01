@@ -64,6 +64,8 @@ export default function SettingsForm({
         return trimmed.length > 0 ? trimmed : undefined;
       };
 
+      const normalizeOptionalUrl = (value: string) => value.trim();
+
       const response = await fetch(`${apiUrl}/users/me`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -72,9 +74,9 @@ export default function SettingsForm({
           username: username.trim(),
           displayName: displayName.trim(),
           bio: normalizeOptional(bio),
-          githubUrl: normalizeOptional(githubUrl),
-          twitterUrl: normalizeOptional(twitterUrl),
-          websiteUrl: normalizeOptional(websiteUrl),
+          githubUrl: normalizeOptionalUrl(githubUrl),
+          twitterUrl: normalizeOptionalUrl(twitterUrl),
+          websiteUrl: normalizeOptionalUrl(websiteUrl),
         }),
       });
 

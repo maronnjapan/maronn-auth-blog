@@ -39,4 +39,23 @@ describe('User entity', () => {
     expect(user.updatedAt.getTime()).toBeGreaterThan(before);
     expect(user.toJSON().githubInstallationId).toBe('999999');
   });
+
+  it('clears optional urls when set to blank', () => {
+    const user = new User({
+      ...baseUserProps,
+      githubUrl: 'https://github.com/tester',
+      twitterUrl: 'https://twitter.com/tester',
+      websiteUrl: 'https://example.com',
+    });
+
+    user.updateProfile({
+      githubUrl: '   ',
+      twitterUrl: '',
+      websiteUrl: '   ',
+    });
+
+    expect(user.githubUrl).toBeUndefined();
+    expect(user.twitterUrl).toBeUndefined();
+    expect(user.websiteUrl).toBeUndefined();
+  });
 });
