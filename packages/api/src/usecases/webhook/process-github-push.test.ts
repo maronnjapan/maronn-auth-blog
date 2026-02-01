@@ -58,7 +58,7 @@ function createUsecase(options: {
   } as unknown as NotificationRepository;
 
   const markdown =
-    options.markdown ?? ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content', ''].join('\n');
+    options.markdown ?? ['---', 'title: Test Article', 'published: true', 'targetCategories: [authentication]', 'topics: []', '---', 'Content', ''].join('\n');
 
   const githubClient = {
     fetchFile: vi.fn().mockResolvedValue({
@@ -179,7 +179,7 @@ describe('ProcessGitHubPushUsecase', () => {
       '---',
       'title: Test Article',
       'published: true',
-      'targetCategory: authentication',
+      'targetCategories: [authentication]',
       'topics: []',
       '---',
       '![alt](./images/sample.png)',
@@ -234,7 +234,7 @@ describe('ProcessGitHubPushUsecase', () => {
       publishedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-      targetCategory: 'authentication',
+      targetCategories: ['authentication'],
     });
 
     const articleRepo = {
@@ -263,7 +263,7 @@ describe('ProcessGitHubPushUsecase', () => {
 
     const githubClient = {
       fetchFile: vi.fn().mockResolvedValue({
-        content: ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content'].join('\n'),
+        content: ['---', 'title: Test Article', 'published: true', 'targetCategories: [authentication]', 'topics: []', '---', 'Content'].join('\n'),
         sha: 'new-sha',
       }),
       fetchImage: vi.fn(),
@@ -333,7 +333,7 @@ describe('ProcessGitHubPushUsecase', () => {
       publishedAt: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
-      targetCategory: 'authentication'
+      targetCategories: ['authentication']
     });
 
     const articleRepo = {
@@ -362,7 +362,7 @@ describe('ProcessGitHubPushUsecase', () => {
 
     const githubClient = {
       fetchFile: vi.fn().mockResolvedValue({
-        content: ['---', 'title: Test Article', 'published: true', 'targetCategory: authentication', 'topics: []', '---', 'Content'].join('\n'),
+        content: ['---', 'title: Test Article', 'published: true', 'targetCategories: [authentication]', 'topics: []', '---', 'Content'].join('\n'),
         sha: 'new-sha',
       }),
       fetchImage: vi.fn(),
@@ -432,7 +432,7 @@ describe('ProcessGitHubPushUsecase', () => {
       publishedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-      targetCategory: 'authentication'
+      targetCategories: ['authentication']
     });
 
     const articleRepo = {

@@ -6,7 +6,7 @@ describe('extractFrontmatter', () => {
     const markdown = `---
 title: "Test Article"
 published: true
-targetCategory: "security"
+targetCategories: ["security"]
 topics: ["auth0", "oauth"]
 ---
 
@@ -16,7 +16,7 @@ topics: ["auth0", "oauth"]
 
     expect(result.frontmatter.title).toBe('Test Article');
     expect(result.frontmatter.published).toBe(true);
-    expect(result.frontmatter.targetCategory).toBe('security');
+    expect(result.frontmatter.targetCategories).toEqual(['security']);
     expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
     expect(result.content).toBe('\n# Content');
   });
@@ -25,7 +25,7 @@ topics: ["auth0", "oauth"]
     const markdown = `---
 title: Test Article
 published: true
-targetCategory: authentication
+targetCategories: [authentication, security]
 topics: [auth0, oauth]
 ---
 
@@ -35,7 +35,7 @@ topics: [auth0, oauth]
 
     expect(result.frontmatter.title).toBe('Test Article');
     expect(result.frontmatter.published).toBe(true);
-    expect(result.frontmatter.targetCategory).toBe('authentication');
+    expect(result.frontmatter.targetCategories).toEqual(['authentication', 'security']);
     expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
   });
 
@@ -43,7 +43,7 @@ topics: [auth0, oauth]
     const markdown = `---
 title: 'Test Article'
 published: true
-targetCategory: 'authorization'
+targetCategories: ['authorization']
 topics: ['auth0', 'oauth']
 ---
 
@@ -52,7 +52,7 @@ topics: ['auth0', 'oauth']
     const result = extractFrontmatter(markdown);
 
     expect(result.frontmatter.title).toBe('Test Article');
-    expect(result.frontmatter.targetCategory).toBe('authorization');
+    expect(result.frontmatter.targetCategories).toEqual(['authorization']);
     expect(result.frontmatter.topics).toEqual(['auth0', 'oauth']);
   });
 
@@ -60,7 +60,7 @@ topics: ['auth0', 'oauth']
     const markdown = `---
 title: "Test Article"
 published: true
-targetCategory: "security"
+targetCategories: ["security"]
 ---
 
 # Content`;
@@ -75,7 +75,7 @@ targetCategory: "security"
 title: "Test Article"
 published: true
 category: "認証"
-targetCategory: "authentication"
+targetCategories: ["authentication"]
 topics: ["auth0"]
 ---
 
@@ -90,7 +90,7 @@ topics: ["auth0"]
     const markdown = `---
 title: "Test Article"
 published: true
-targetCategory: "security"
+targetCategories: ["security"]
 topics: []
 ---
 
@@ -148,7 +148,7 @@ describe('parseArticle', () => {
 title: "Complete Article"
 published: true
 category: "認証"
-targetCategory: "authentication"
+targetCategories: ["authentication", "security"]
 topics: ["auth0", "oauth", "security"]
 ---
 
@@ -162,7 +162,7 @@ topics: ["auth0", "oauth", "security"]
     expect(result.frontmatter.title).toBe('Complete Article');
     expect(result.frontmatter.published).toBe(true);
     expect(result.frontmatter.category).toBe('認証');
-    expect(result.frontmatter.targetCategory).toBe('authentication');
+    expect(result.frontmatter.targetCategories).toEqual(['authentication', 'security']);
     expect(result.frontmatter.topics).toEqual(['auth0', 'oauth', 'security']);
     expect(result.images).toEqual(['./images/test.png']);
     expect(result.html).toContain('<h1');
@@ -172,8 +172,21 @@ topics: ["auth0", "oauth", "security"]
     const markdown = `---
 title: ""
 published: true
-targetCategory: "invalid_category"
+targetCategories: ["invalid_category"]
 topics: ["topic"]
+---
+
+# Content`;
+
+    expect(() => parseArticle(markdown, 'https://embed.example.com')).toThrow();
+  });
+
+  it('should reject empty targetCategories array', () => {
+    const markdown = `---
+title: "Test"
+published: true
+targetCategories: []
+topics: []
 ---
 
 # Content`;
