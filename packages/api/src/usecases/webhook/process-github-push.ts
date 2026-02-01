@@ -291,7 +291,7 @@ export class ProcessGitHubPushUsecase {
     const uniquePaths = Array.from(new Set(imagePaths));
 
     for (const imagePath of uniquePaths) {
-      const imagePathInRepo = imagePath.replace('./', '');
+      const imagePathInRepo = imagePath.replace(/^\.?\//, '');
       const filename = getImageFilename(imagePath);
 
       const imageData = await this.githubClient.fetchImage(

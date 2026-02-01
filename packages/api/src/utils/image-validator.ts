@@ -28,5 +28,5 @@ export function validateImageSize(size: number): void {
 }
 
 export function getImageFilename(path: string): string {
-  return path.replace(/^\.\/images\//, '');
+  return path.replace(/^(?:\.\/|\/)images\//, '');
 }

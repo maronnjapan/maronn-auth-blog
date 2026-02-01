@@ -115,11 +115,16 @@ describe('extractImagePaths', () => {
 
 ![alt text](./images/screenshot.png)
 ![another](./images/diagram.jpg)
+![rooted](/images/rooted.webp)
 `;
 
     const result = extractImagePaths(markdown);
 
-    expect(result).toEqual(['./images/screenshot.png', './images/diagram.jpg']);
+    expect(result).toEqual([
+      './images/screenshot.png',
+      './images/diagram.jpg',
+      '/images/rooted.webp',
+    ]);
   });
 
   it('should return empty array if no images', () => {
@@ -134,11 +139,12 @@ describe('extractImagePaths', () => {
     const markdown = `
 ![external](https://example.com/image.png)
 ![local](./images/local.png)
+![rooted](/images/rooted.png)
 `;
 
     const result = extractImagePaths(markdown);
 
-    expect(result).toEqual(['./images/local.png']);
+    expect(result).toEqual(['./images/local.png', '/images/rooted.png']);
   });
 });
 

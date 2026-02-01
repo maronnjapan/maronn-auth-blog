@@ -214,6 +214,46 @@ describe('ProcessGitHubPushUsecase', () => {
     );
   });
 
+  it('supports rooted image paths when uploading and rewriting markdown', async () => {
+    const markdownWithImage = [
+      '---',
+      'title: Test Article',
+      'published: true',
+      'targetCategories: [authentication]',
+      'topics: []',
+      '---',
+      '![alt](/images/sample.png)',
+      '',
+    ].join('\n');
+
+    const { usecase, githubClient, kvClientMock, r2ClientMock, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+      markdown: markdownWithImage,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchImage).toHaveBeenCalledWith(
+      '67890',
+      'foo',
+      'bar',
+      'images/sample.png'
+    );
+    expect(r2ClientMock.putImage).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      'sample.png',
+      expect.any(ArrayBuffer),
+      'image/png'
+    );
+    expect(kvClientMock.setArticleMarkdown).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      expect.stringContaining(`${IMAGE_URL}/images/user-1/test/sample.png`)
+    );
+  });
+
   it('does not overwrite cached markdown for already published articles', async () => {
     const user = new User({
       ...baseUserProps,
