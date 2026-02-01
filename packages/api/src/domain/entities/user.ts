@@ -73,11 +73,27 @@ export class User {
     twitterUrl?: string;
     websiteUrl?: string;
   }): void {
+    const normalizedUpdates = {
+      ...updates,
+      githubUrl: this.normalizeOptionalUrl(updates.githubUrl),
+      twitterUrl: this.normalizeOptionalUrl(updates.twitterUrl),
+      websiteUrl: this.normalizeOptionalUrl(updates.websiteUrl),
+    };
+
     this.props = {
       ...this.props,
-      ...updates,
+      ...normalizedUpdates,
       updatedAt: new Date(),
     };
+  }
+
+  private normalizeOptionalUrl(value?: string): string | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
 
   setGitHubInstallation(installationId: string): void {
