@@ -5,7 +5,7 @@ import type { Env } from '../types/env';
 import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../infrastructure/repositories/repository-repository';
 import { requireAuth } from '../middleware/auth';
-import { NotFoundError, UnauthorizedError, ValidationError } from '@maronn-auth-blog/shared';
+import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '@maronn-auth-blog/shared';
 import { userInputSchema, repositoryInputSchema } from '@maronn-auth-blog/shared';
 import { GitHubClient } from '../infrastructure/github-client';
 import { ValidateRepositoryUsecase } from '../usecases/repository/validate-repository';
@@ -57,6 +57,13 @@ app.put(
     const user = await userRepo.findById(auth.userId);
     if (!user) {
       throw new NotFoundError('User', auth.userId);
+    }
+
+    if (updates.username && updates.username !== user.username) {
+      const existingUser = await userRepo.findByUsername(updates.username);
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictError('Username is already in use');
+      }
     }
 
     user.updateProfile(updates);
