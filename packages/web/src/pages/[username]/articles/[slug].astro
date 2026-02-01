@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import CommentSection from '../../../islands/CommentSection';
+import { getTargetCategoryMeta } from '../../../lib/target-categories';
+import type { TargetCategory } from '@maronn-auth-blog/shared';
 import 'zenn-content-css';
 
 const { username, slug } = Astro.params;
@@ -71,10 +73,26 @@ const authorName = article.author?.displayName ?? username;
             <span class="category">{article.category}</span>
           )}
         </div>
+        {article.targetCategories && article.targetCategories.length > 0 && (
+          <div class="target-categories">
+            <span class="target-categories-label">対象カテゴリ</span>
+            <div class="target-category-list">
+              {article.targetCategories.map((category: TargetCategory) => {
+                const { icon, label, key } = getTargetCategoryMeta(category);
+                return (
+                  <span class="target-category" key={key}>
+                    <span class="icon" aria-hidden="true">{icon}</span>
+                    <span>{label}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {article.topics && article.topics.length > 0 && (
           <div class="topics">
             {article.topics.map((topic: string) => (
-              <span class="topic">#{topic}</span>
+              <a class="topic" href={`/?topic=${encodeURIComponent(topic)}`}>#{topic}</a>
             ))}
           </div>
         )}
@@ -192,6 +210,55 @@ const authorName = article.author?.displayName ?? username;
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
     font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .topic:hover {
+    background: #e9eef4;
+    color: #333;
+  }
+
+  .target-categories {
+    margin-top: 1rem;
+  }
+
+  .target-categories-label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-right: 0.5rem;
+  }
+
+  .target-category-list {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .target-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f5f7fb;
+    border: 1px solid #e1e7f0;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    color: #445;
+  }
+
+  .target-category .icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .article :global(.znc img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
   }
 
   @media (max-width: 768px) {
@@ -217,6 +284,10 @@ const authorName = article.author?.displayName ?? username;
     }
 
     .topic {
+      font-size: 0.8rem;
+    }
+
+    .target-category {
       font-size: 0.8rem;
     }
   }
@@ -258,6 +329,11 @@ const authorName = article.author?.displayName ?? username;
     }
 
     .topic {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.75rem;
+    }
+
+    .target-category {
       padding: 0.2rem 0.6rem;
       font-size: 0.75rem;
     }

@@ -22,6 +22,9 @@ body {
   border-radius: 8px;
   margin-bottom: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
 .article-card:hover {
@@ -58,6 +61,54 @@ body {
 .article-card .meta {
   color: #666;
   font-size: 0.9rem;
+}
+
+.article-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.category-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-icon {
+  background: #f5f7fb;
+  border: 1px solid #e1e7f0;
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  min-width: 64px;
+}
+
+.category-icon .icon {
+  display: block;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.category-icon .label {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #445;
+}
+
+@media (max-width: 640px) {
+  .article-card {
+    flex-direction: column;
+  }
+
+  .category-icons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .category-icon {
+    min-width: 56px;
+  }
 }
 
 /* Loading, Error, Empty States */
