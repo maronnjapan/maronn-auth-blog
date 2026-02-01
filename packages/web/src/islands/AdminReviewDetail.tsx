@@ -7,6 +7,7 @@ interface AdminReviewDetailProps {
   apiUrl: string;
   targetCategories?: TargetCategory[];
   markdown: string;
+  articleTitle?: string;
 }
 
 const TARGET_CATEGORY_LABELS: Record<string, string> = {
@@ -86,10 +87,39 @@ ${categories.map(cat => `- ${TARGET_CATEGORY_LABELS[cat]}: （適切/不適切/�
 （どのような修正が必要か）`;
 }
 
-export default function AdminReviewDetail({ articleId, apiUrl, targetCategories, markdown }: AdminReviewDetailProps) {
+function generateSearchKeywordsPrompt(articleContent: string, title?: string): string {
+  const titleSection = title ? `## 記事タイトル\n${title}\n\n` : '';
+
+  return `あなたはブログ記事の検索改善担当者です。以下の記事本文から検索でヒットさせたい重要なキーワードを抽出してください。
+
+${titleSection}## 抽出ルール
+- 重要語・固有名詞・技術用語を中心に抽出
+- 10〜20語程度
+- 単語は短く、検索に使いやすい表現にする
+- 記事の内容と無関係な単語は含めない
+- 日本語と英語が混在していてもよい
+
+## 出力フォーマット
+- キーワードはカンマ区切り1行で出力
+
+## 記事本文
+\`\`\`markdown
+${articleContent}
+\`\`\``;
+}
+
+export default function AdminReviewDetail({
+  articleId,
+  apiUrl,
+  targetCategories,
+  markdown,
+  articleTitle,
+}: AdminReviewDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [copied, setCopied] = useState(false);
+  const [searchKeywords, setSearchKeywords] = useState('');
+  const [copiedKeywordPrompt, setCopiedKeywordPrompt] = useState(false);
 
   const handleCopyPrompt = async () => {
     if (!targetCategories || targetCategories.length === 0 || !markdown) {
@@ -108,7 +138,29 @@ export default function AdminReviewDetail({ articleId, apiUrl, targetCategories,
     }
   };
 
+  const handleCopyKeywordPrompt = async () => {
+    if (!markdown) {
+      alert('記事情報が不足しています');
+      return;
+    }
+
+    const prompt = generateSearchKeywordsPrompt(markdown, articleTitle);
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedKeywordPrompt(true);
+      setTimeout(() => setCopiedKeywordPrompt(false), 2000);
+    } catch (err) {
+      alert('クリップボードへのコピーに失敗しました');
+    }
+  };
+
   const handleApprove = async () => {
+    if (!searchKeywords.trim()) {
+      alert('検索用キーワードを入力してください');
+      return;
+    }
+
     if (!confirm('この記事を承認しますか？')) {
       return;
     }
@@ -117,7 +169,9 @@ export default function AdminReviewDetail({ articleId, apiUrl, targetCategories,
     try {
       const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/approve`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ summary: searchKeywords.trim() }),
       });
 
       if (!response.ok) {
@@ -181,8 +235,29 @@ export default function AdminReviewDetail({ articleId, apiUrl, targetCategories,
         </div>
       )}
 
+      {markdown && (
+        <div className="ai-check-section keyword-extraction">
+          <h4>検索キーワード抽出</h4>
+          <p className="category-info">
+            記事内容から検索に使うキーワードを抽出するプロンプトをコピーできます。
+          </p>
+          <button onClick={handleCopyKeywordPrompt} className="btn-copy-prompt">
+            {copiedKeywordPrompt ? 'コピーしました!' : '検索キーワード抽出プロンプトをコピー'}
+          </button>
+        </div>
+      )}
+
       <div className="review-actions">
         <div className="approve-section">
+          <label htmlFor="searchKeywords">検索用キーワード</label>
+          <textarea
+            id="searchKeywords"
+            value={searchKeywords}
+            onChange={(e) => setSearchKeywords(e.target.value)}
+            placeholder="例: OAuth 2.0, Auth0, PKCE, セッション管理, Cloudflare Workers"
+            rows={3}
+            maxLength={500}
+          />
           <button onClick={handleApprove} disabled={submitting} className="btn-approve">
             {submitting ? '処理中...' : '承認する'}
           </button>
