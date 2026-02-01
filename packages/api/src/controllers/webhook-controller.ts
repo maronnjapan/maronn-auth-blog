@@ -8,32 +8,31 @@ import { GitHubClient } from '../infrastructure/github-client';
 import { ProcessGitHubPushUsecase, type GitHubPushEvent } from '../usecases/webhook/process-github-push';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
+import { InvalidWebhookSignatureError } from '../domain/errors/domain-errors';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // POST /webhook/github - GitHub webhook endpoint
 app.post('/github', async (c) => {
-  // TODO: GitHub App の Webhook secret 設定後に署名検証を有効化する
-  // const signature = c.req.header('x-hub-signature-256');
-  // if (!signature) {
-  //   throw new InvalidWebhookSignatureError();
-  // }
+  const signature = c.req.header('x-hub-signature-256');
+  if (!signature) {
+    throw new InvalidWebhookSignatureError();
+  }
 
   const event = c.req.header('x-github-event');
 
   // Get raw body for signature verification
   const payload = await c.req.text();
 
-  // TODO: GitHub App の Webhook secret 設定後に署名検証を有効化する
   const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
-  // const isValid = await githubClient.verifyWebhookSignature(
-  //   payload,
-  //   signature,
-  //   c.env.GITHUB_WEBHOOK_SECRET
-  // );
-  // if (!isValid) {
-  //   throw new InvalidWebhookSignatureError();
-  // }
+  const isValid = await githubClient.verifyWebhookSignature(
+    payload,
+    signature,
+    c.env.GITHUB_WEBHOOK_SECRET
+  );
+  if (!isValid) {
+    throw new InvalidWebhookSignatureError();
+  }
 
   // Only handle push events
   if (event !== 'push') {
