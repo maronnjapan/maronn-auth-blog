@@ -75,7 +75,7 @@ export class ApproveArticleUsecase {
     console.info(`[ApproveArticle] Processing ${parsed.images.length} images`);
     for (const imagePath of parsed.images) {
       const filename = getImageFilename(imagePath);
-      const imagePathInRepo = imagePath.replace('./', '');
+      const imagePathInRepo = imagePath.replace(/^\.?\//, '');
 
       const imageData = await this.githubClient.fetchImage(
         user.githubInstallationId,
