@@ -18,6 +18,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.980.0",
+    "@aws-sdk/s3-request-presigner": "^3.980.0",
     "@hono/zod-validator": "^0.2.1",
     "@maronn-auth-blog/shared": "workspace:*",
     "@octokit/auth-app": "^6.0.3",

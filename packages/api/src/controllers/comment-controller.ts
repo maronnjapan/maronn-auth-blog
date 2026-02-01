@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import type { Env } from '../types/env';
 import { requireAuth } from '../middleware/auth';
@@ -10,6 +11,7 @@ import { GetCommentsUsecase } from '../usecases/comment/get-comments';
 import { DeleteCommentUsecase } from '../usecases/comment/delete-comment';
 import { ValidationError } from '@maronn-auth-blog/shared';
 import { commentInputSchema } from '@maronn-auth-blog/shared';
+import { createR2PresignedUrlClient } from '../infrastructure/storage/r2-presigned-url';
 import markdownToHtmlImport from 'zenn-markdown-html';
 
 type MarkdownToHtmlFn = (markdown: string, options: { embedOrigin: string }) => string;
@@ -40,6 +42,48 @@ const countCommentImages = (html: string, imageUrl: string): number => {
 };
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Schema for signed URL request
+const imageSignedUrlRequestSchema = z.object({
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+  contentLength: z.number().int().positive(),
+});
+
+// POST /comments/images/upload-url - Get signed URL for comment image upload
+app.post(
+  '/images/upload-url',
+  requireAuth(),
+  zValidator('json', imageSignedUrlRequestSchema),
+  async (c) => {
+    const auth = c.get('auth')!;
+    const { filename, contentType, contentLength } = c.req.valid('json');
+
+    const presignedUrlClient = createR2PresignedUrlClient(c.env);
+
+    try {
+      const result = await presignedUrlClient.generateCommentImageUploadUrl(
+        auth.userId,
+        filename,
+        contentType,
+        contentLength
+      );
+
+      // Return the signed URL and public URL
+      return c.json({
+        uploadUrl: result.uploadUrl,
+        key: result.key,
+        expiresIn: result.expiresIn,
+        publicUrl: `${c.env.IMAGE_URL}/${result.key}`,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new ValidationError(error.message);
+      }
+      throw error;
+    }
+  }
+);
 
 // GET /comments/articles/:articleId - Get comments for an article
 app.get(
