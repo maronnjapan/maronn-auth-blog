@@ -80,20 +80,37 @@ app.get(
     const usecase = new SearchArticlesUsecase(articleRepo);
     const result = await usecase.execute({ query: q, page, limit });
     const userRepo = new UserRepository(c.env.DB);
-    const articlesWithTopics = await buildArticleListResponse(
-      articleRepo,
-      userRepo,
-      result.items,
-      'public'
-    );
+
+    // AND結果とOR結果を別々にビルド
+    const [andArticlesWithTopics, orArticlesWithTopics] = await Promise.all([
+      buildArticleListResponse(articleRepo, userRepo, result.andResults, 'public'),
+      buildArticleListResponse(articleRepo, userRepo, result.orResults, 'public'),
+    ]);
+
+    // matchTypeを付与
+    const andArticles = andArticlesWithTopics.map((a) => ({
+      ...a,
+      matchType: 'and' as const,
+    }));
+    const orArticles = orArticlesWithTopics.map((a) => ({
+      ...a,
+      matchType: 'or' as const,
+    }));
+
+    // AND結果を先に、OR結果を後に結合
+    const articles = [...andArticles, ...orArticles];
 
     return c.json({
-      articles: articlesWithTopics,
+      articles,
+      andTotal: result.andTotal,
+      orTotal: result.orTotal,
       total: result.total,
       page: result.page,
       limit: result.limit,
       hasMore: result.hasMore,
       query: q,
+      normalizedTokens: result.normalizedTokens,
+      isMultiToken: result.isMultiToken,
     });
   }
 );

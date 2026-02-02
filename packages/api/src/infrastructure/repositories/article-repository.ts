@@ -275,6 +275,145 @@ export class ArticleRepository {
     return result?.count ?? 0;
   }
 
+  /**
+   * AND検索: すべてのトークンを含む記事を検索
+   * @param andQuery FTS5用のANDクエリ (例: "oauth jwt")
+   * @param limit 取得件数
+   * @param offset オフセット
+   */
+  async searchByTitleAnd(
+    andQuery: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<Article[]> {
+    if (!andQuery.trim()) {
+      return [];
+    }
+
+    const results = await this.db
+      .prepare(
+        `SELECT a.* FROM articles a
+         INNER JOIN articles_fts fts ON a.id = fts.id
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
+      )
+      .bind(andQuery, 'deleted', limit, offset)
+      .all<ArticleRow>();
+
+    return results.results.map((row) => this.rowToEntity(row));
+  }
+
+  /**
+   * AND検索の件数を取得
+   * @param andQuery FTS5用のANDクエリ
+   */
+  async countSearchResultsAnd(andQuery: string): Promise<number> {
+    if (!andQuery.trim()) {
+      return 0;
+    }
+
+    const result = await this.db
+      .prepare(
+        `SELECT COUNT(*) as count FROM articles a
+         INNER JOIN articles_fts fts ON a.id = fts.id
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+      )
+      .bind(andQuery, 'deleted')
+      .first<{ count: number }>();
+
+    return result?.count ?? 0;
+  }
+
+  /**
+   * OR検索: いずれかのトークンを含む記事を検索（AND検索結果を除外）
+   * @param orQuery FTS5用のORクエリ (例: "oauth OR jwt")
+   * @param excludeIds AND検索で取得済みの記事IDを除外
+   * @param limit 取得件数
+   * @param offset オフセット
+   */
+  async searchByTitleOrExcluding(
+    orQuery: string,
+    excludeIds: string[],
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<Article[]> {
+    if (!orQuery.trim()) {
+      return [];
+    }
+
+    // 除外IDがない場合は通常のOR検索
+    if (excludeIds.length === 0) {
+      const results = await this.db
+        .prepare(
+          `SELECT a.* FROM articles a
+           INNER JOIN articles_fts fts ON a.id = fts.id
+           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+           ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
+        )
+        .bind(orQuery, 'deleted', limit, offset)
+        .all<ArticleRow>();
+
+      return results.results.map((row) => this.rowToEntity(row));
+    }
+
+    // 除外IDがある場合はNOT INで除外
+    const placeholders = excludeIds.map(() => '?').join(', ');
+    const results = await this.db
+      .prepare(
+        `SELECT a.* FROM articles a
+         INNER JOIN articles_fts fts ON a.id = fts.id
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         AND a.id NOT IN (${placeholders})
+         ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
+      )
+      .bind(orQuery, 'deleted', ...excludeIds, limit, offset)
+      .all<ArticleRow>();
+
+    return results.results.map((row) => this.rowToEntity(row));
+  }
+
+  /**
+   * OR検索の件数を取得（AND検索結果を除外）
+   * @param orQuery FTS5用のORクエリ
+   * @param excludeIds AND検索で取得済みの記事IDを除外
+   */
+  async countSearchResultsOrExcluding(
+    orQuery: string,
+    excludeIds: string[]
+  ): Promise<number> {
+    if (!orQuery.trim()) {
+      return 0;
+    }
+
+    // 除外IDがない場合
+    if (excludeIds.length === 0) {
+      const result = await this.db
+        .prepare(
+          `SELECT COUNT(*) as count FROM articles a
+           INNER JOIN articles_fts fts ON a.id = fts.id
+           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+        )
+        .bind(orQuery, 'deleted')
+        .first<{ count: number }>();
+
+      return result?.count ?? 0;
+    }
+
+    // 除外IDがある場合
+    const placeholders = excludeIds.map(() => '?').join(', ');
+    const result = await this.db
+      .prepare(
+        `SELECT COUNT(*) as count FROM articles a
+         INNER JOIN articles_fts fts ON a.id = fts.id
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         AND a.id NOT IN (${placeholders})`
+      )
+      .bind(orQuery, 'deleted', ...excludeIds)
+      .first<{ count: number }>();
+
+    return result?.count ?? 0;
+  }
+
   async getAllCategories(): Promise<Array<{ category: string; count: number }>> {
     const results = await this.db
       .prepare(
