@@ -19,7 +19,8 @@
     "marked": "^17.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "zenn-content-css": "^0.3.1"
+    "zenn-content-css": "^0.3.1",
+    "zenn-markdown-html": "^0.1.162"
   },
   "devDependencies": {
     "@types/react": "^18.2.48",
