@@ -37,16 +37,16 @@ Auth Vaultは **1つのリポジトリのみ** の連携を想定しています
 
 ### ファイルの配置
 
-記事はリポジトリの `articles` ディレクトリに配置します。
+記事はリポジトリの `articles` ディレクトリに、画像は `images` ディレクトリに配置します。
 
 ```
 your-repository/
-└── articles/
-    ├── my-first-article.md
-    ├── authentication-guide.md
-    └── images/
-        ├── screenshot-1.png
-        └── diagram.png
+├── articles/
+│   ├── my-first-article.md
+│   └── authentication-guide.md
+└── images/
+    ├── screenshot-1.png
+    └── diagram.png
 ```
 
 ### ファイル名
@@ -68,7 +68,9 @@ your-repository/
 ---
 title: 記事のタイトル
 published: true
-category: 認証
+targetCategories:
+  - authentication
+  - security
 topics:
   - auth0
   - oauth
@@ -82,8 +84,25 @@ topics:
 |------|------|------|
 | `title` | はい | 記事のタイトル（最大200文字） |
 | `published` | はい | `true` で審査申請、`false` で下書き |
-| `category` | いいえ | 記事のカテゴリ（最大50文字） |
+| `targetCategories` | はい | 対象カテゴリ（下記参照） |
 | `topics` | いいえ | 記事のトピックタグ（最大10個） |
+
+#### targetCategories について
+
+`targetCategories` は記事の対象分野を示す必須項目です。以下の値から1つ以上を配列で指定してください。
+
+| 値 | 説明 |
+|----|------|
+| `authentication` | 認証（ログイン、多要素認証など） |
+| `authorization` | 認可（権限管理、アクセス制御など） |
+| `security` | セキュリティ全般 |
+
+```yaml
+# 例：認証と認可に関する記事
+targetCategories:
+  - authentication
+  - authorization
+```
 
 :::message
 `published: false` の記事はAuth Vaultに同期されません。下書きとしてGitHub上にのみ保存されます。`published: true` に変更してプッシュすると、審査申請が行われます。
@@ -91,7 +110,7 @@ topics:
 
 ## Markdown記法
 
-Auth VaultはMarkdown記法に対応しています。基本的なMarkdown記法に加え、いくつかの拡張記法が使用できます。
+Auth Vaultは内部で [Zenn](https://zenn.dev) の Markdown 変換ライブラリを使用しているため、**Zennと同じ記法** が使用できます。基本的なMarkdown記法に加え、Zenn独自の拡張記法にも対応しています。
 
 ### 見出し
 
@@ -186,11 +205,12 @@ function greet(name) {
 
 ### 画像ファイルの配置
 
-画像は記事ファイルと同じ `articles` ディレクトリ内の `images` フォルダに配置します。
+画像は `articles` ディレクトリと同階層の `images` フォルダに配置します。
 
 ```
-articles/
-├── my-article.md
+your-repository/
+├── articles/
+│   └── my-article.md
 └── images/
     └── screenshot.png
 ```
@@ -207,12 +227,12 @@ Markdownファイル内で相対パスを使って画像を参照します。
 
 | 項目 | 制限 |
 |------|------|
-| 対応形式 | JPEG, PNG, WebP, GIF（静止画のみ） |
+| 対応形式 | JPEG, PNG, WebP, GIF（アニメーション可） |
 | ファイルサイズ | 1ファイル最大 3MB |
 | 枚数 | 1記事あたり最大 20枚 |
 
 :::message alert
-動画ファイルには対応していません。GIFアニメーションも利用できません。静止画のみアップロード可能です。
+動画ファイルには対応していません。
 :::
 
 ## 埋め込みコンテンツ
