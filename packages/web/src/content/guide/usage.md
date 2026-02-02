@@ -392,4 +392,4 @@ Auth Vaultは1つのリポジトリのみの連携を想定しています。複
 
 ---
 
-ご不明な点がございましたら、GitHubのIssueにてお問い合わせください。
+ご不明な点がございましたら、[お問い合わせフォーム](https://docs.google.com/forms/d/e/1FAIpQLScZL0GhM_MRSRzmxU4C47sielQ2IzebUhCnPTHozLdUxNRlUA/viewform)よりお問い合わせください。
