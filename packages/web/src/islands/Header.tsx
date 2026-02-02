@@ -58,6 +58,12 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
       <div className="container">
         <nav className="nav">
           <a href="/" className="logo">
+            <svg className="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 5 L90 20 L90 50 C90 75 70 90 50 95 C30 90 10 75 10 50 L10 20 Z" fill="#0066cc"/>
+              <path d="M50 12 L82 24 L82 50 C82 70 65 82 50 86 C35 82 18 70 18 50 L18 24 Z" fill="#004499"/>
+              <circle cx="50" cy="42" r="12" fill="#ffffff"/>
+              <path d="M44 48 L44 65 L56 65 L56 48 C53 50 47 50 44 48 Z" fill="#ffffff"/>
+            </svg>
             Auth Vault
           </a>
 
@@ -123,11 +129,20 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
         }
 
         .logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
           font-size: 1.5rem;
           font-weight: bold;
           color: #333;
           text-decoration: none;
           z-index: 1001;
+        }
+
+        .logo-icon {
+          width: 32px;
+          height: 32px;
+          flex-shrink: 0;
         }
 
         .mobile-menu-button {
@@ -251,6 +266,11 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
             font-size: 1.25rem;
           }
 
+          .logo-icon {
+            width: 28px;
+            height: 28px;
+          }
+
           .mobile-menu-button {
             display: block;
           }
@@ -307,6 +327,11 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
         @media (max-width: 480px) {
           .logo {
             font-size: 1.1rem;
+          }
+
+          .logo-icon {
+            width: 24px;
+            height: 24px;
           }
 
           .container {
