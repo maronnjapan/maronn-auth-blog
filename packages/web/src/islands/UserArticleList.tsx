@@ -23,32 +23,34 @@ export default function UserArticleList({ articles, username }: UserArticleListP
         const targetUsername = username ?? article.author?.username ?? article.userId;
         const targetCategories = article.targetCategories ?? [];
         return (
-          <article key={article.id} className="article-card">
-            <div className="category-icons" aria-label="対象カテゴリ">
-              {targetCategories.map((category) => {
-                const { icon, label, key } = getTargetCategoryMeta(category);
-                return (
-                  <div key={key} className="category-icon" title={label}>
-                    <span className="icon" aria-hidden="true">{icon}</span>
-                    <span className="label">{label}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="article-card-content">
-              <h3>
-                <a href={`/${targetUsername}/articles/${article.slug}`}>
-                  {article.title}
-                </a>
-              </h3>
-              {article.category && (
-                <span className="category">{article.category}</span>
-              )}
-              <p className="meta">
-                公開日: {new Date(article.publishedAt!).toLocaleDateString('ja-JP')}
-              </p>
-            </div>
-          </article>
+          <a
+            key={article.id}
+            href={`/${targetUsername}/articles/${article.slug}`}
+            className="article-card-link"
+          >
+            <article className="article-card">
+              <div className="category-icons" aria-label="対象カテゴリ">
+                {targetCategories.map((category) => {
+                  const { icon, label, key } = getTargetCategoryMeta(category);
+                  return (
+                    <div key={key} className="category-icon" title={label}>
+                      <span className="icon" aria-hidden="true">{icon}</span>
+                      <span className="label">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="article-card-content">
+                <h3>{article.title}</h3>
+                {article.category && (
+                  <span className="category">{article.category}</span>
+                )}
+                <p className="meta">
+                  公開日: {new Date(article.publishedAt!).toLocaleDateString('ja-JP')}
+                </p>
+              </div>
+            </article>
+          </a>
         );
       })}
     </div>
