@@ -68,13 +68,8 @@ your-repository/
 ---
 title: 記事のタイトル
 published: true
-targetCategories:
-  - authentication
-  - security
-topics:
-  - auth0
-  - oauth
-  - セキュリティ
+targetCategories: [authentication, security]
+topics: [auth0, oauth, セキュリティ]
 ---
 
 ここから本文を書きます...
@@ -99,9 +94,7 @@ topics:
 
 ```yaml
 # 例：認証と認可に関する記事
-targetCategories:
-  - authentication
-  - authorization
+targetCategories: [authentication, authorization]
 ```
 
 :::message
@@ -114,23 +107,41 @@ Auth Vaultは内部で [Zenn](https://zenn.dev) の Markdown 変換ライブラ�
 
 ### 見出し
 
+**記法：**
 ```markdown
-# 見出し1
 ## 見出し2
 ### 見出し3
 #### 見出し4
 ```
 
+**表示：**
+
+## 見出し2
+### 見出し3
+#### 見出し4
+
+---
+
 ### テキストの装飾
 
+**記法：**
 ```markdown
 **太字テキスト**
 *イタリック*
 ~~打ち消し線~~
 ```
 
+**表示：**
+
+**太字テキスト**
+*イタリック*
+~~打ち消し線~~
+
+---
+
 ### リスト
 
+**記法：**
 ```markdown
 - リスト項目1
 - リスト項目2
@@ -140,25 +151,50 @@ Auth Vaultは内部で [Zenn](https://zenn.dev) の Markdown 変換ライブラ�
 2. 番号付きリスト2
 ```
 
+**表示：**
+
+- リスト項目1
+- リスト項目2
+  - ネストしたリスト
+
+1. 番号付きリスト1
+2. 番号付きリスト2
+
+---
+
 ### リンク
 
+**記法：**
 ```markdown
 [リンクテキスト](https://example.com)
 ```
 
+**表示：**
+
+[リンクテキスト](https://example.com)
+
+---
+
 ### 引用
 
+**記法：**
 ```markdown
 > これは引用文です。
 > 複数行にまたがることもできます。
 ```
 
+**表示：**
+
+> これは引用文です。
+> 複数行にまたがることもできます。
+
+---
+
 ### コードブロック
 
-インラインコードは `` `code` `` で囲みます。
+インラインコードは `` `code` `` で囲みます。表示：`code`
 
-複数行のコードブロックは、言語名を指定できます：
-
+**複数行のコードブロックの記法：**
 ````markdown
 ```javascript
 function greet(name) {
@@ -167,8 +203,18 @@ function greet(name) {
 ```
 ````
 
+**表示：**
+```javascript
+function greet(name) {
+  console.log(`Hello, ${name}!`);
+}
+```
+
+---
+
 ### テーブル
 
+**記法：**
 ```markdown
 | 列1 | 列2 | 列3 |
 |-----|-----|-----|
@@ -176,10 +222,20 @@ function greet(name) {
 | D   | E   | F   |
 ```
 
+**表示：**
+
+| 列1 | 列2 | 列3 |
+|-----|-----|-----|
+| A   | B   | C   |
+| D   | E   | F   |
+
+---
+
 ### メッセージボックス
 
 情報や警告を目立たせるためのメッセージボックスが使用できます。
 
+**記法：**
 ```markdown
 :::message
 通常のメッセージです。補足情報などに使用します。
@@ -190,16 +246,36 @@ function greet(name) {
 :::
 ```
 
+**表示：**
+
+:::message
+通常のメッセージです。補足情報などに使用します。
+:::
+
+:::message alert
+警告メッセージです。注意が必要な情報に使用します。
+:::
+
+---
+
 ### アコーディオン（トグル）
 
 クリックで展開できるセクションを作成できます。
 
+**記法：**
 ```markdown
 :::details タイトル
 ここに折りたたまれた内容を書きます。
 クリックすると展開されます。
 :::
 ```
+
+**表示：**
+
+:::details タイトル
+ここに折りたたまれた内容を書きます。
+クリックすると展開されます。
+:::
 
 ## 画像の追加
 
