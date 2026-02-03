@@ -122,6 +122,9 @@ importers:
       zenn-content-css:
         specifier: ^0.3.1
         version: 0.3.1
+      zenn-markdown-html:
+        specifier: ^0.1.162
+        version: 0.1.162(@types/markdown-it@14.1.2)
     devDependencies:
       '@types/react':
         specifier: ^18.2.48
