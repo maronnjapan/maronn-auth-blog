@@ -1,4 +1,4 @@
-import type { Article } from '@maronn-auth-blog/shared';
+import type { Article, TargetCategory } from '@maronn-auth-blog/shared';
 import { getTargetCategoryMeta } from '../lib/target-categories';
 
 type ArticleWithAuthor = Article & {
@@ -30,12 +30,17 @@ export default function UserArticleList({ articles, username }: UserArticleListP
           >
             <article className="article-card">
               <div className="category-icons" aria-label="対象カテゴリ">
-                {targetCategories.map((category) => {
-                  const { icon, label, key } = getTargetCategoryMeta(category);
+                {targetCategories.map((category: TargetCategory) => {
+                  const { icon, label, key, color, bgColor } = getTargetCategoryMeta(category);
                   return (
-                    <div key={key} className="category-icon" title={label}>
+                    <div
+                      key={key}
+                      className="category-icon"
+                      title={label}
+                      style={{ backgroundColor: bgColor, color }}
+                    >
                       <span className="icon" aria-hidden="true">{icon}</span>
-                      <span className="label">{label}</span>
+                      <span className="label" style={{ color }}>{label}</span>
                     </div>
                   );
                 })}
