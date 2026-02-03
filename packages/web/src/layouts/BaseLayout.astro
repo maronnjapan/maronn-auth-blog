@@ -55,7 +55,12 @@ try {
 
     <footer class="footer">
       <div class="container">
-        <p>&copy; 2024 Auth Vault</p>
+        <div class="footer-links">
+          <a href="/terms">利用規約</a>
+          <span class="separator">|</span>
+          <a href="/privacy">プライバシーポリシー</a>
+        </div>
+        <p class="copyright">&copy; 2024 Auth Vault</p>
       </div>
     </footer>
   </body>
@@ -141,5 +146,29 @@ try {
     padding: 2rem 0;
     text-align: center;
     color: #666;
+  }
+
+  .footer-links {
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-links a {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .footer-links a:hover {
+    color: #333;
+    text-decoration: underline;
+  }
+
+  .footer-links .separator {
+    margin: 0 0.75rem;
+    color: #ccc;
+  }
+
+  .copyright {
+    font-size: 0.875rem;
   }
 </style>

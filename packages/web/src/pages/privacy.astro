@@ -1,0 +1,70 @@
+---
+// This page is pre-rendered at build time (SSG) as it's a static legal document
+export const prerender = true;
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+import markdownToHtmlImport from "zenn-markdown-html";
+import "zenn-content-css";
+import privacyContent from "../content/legal/privacy.md?raw";
+
+type MarkdownToHtmlFn = (markdown: string, options?: { embedOrigin?: string }) => string;
+
+const markdownToHtml: MarkdownToHtmlFn =
+  typeof markdownToHtmlImport === "function"
+    ? (markdownToHtmlImport as MarkdownToHtmlFn)
+    : ((markdownToHtmlImport as { default: MarkdownToHtmlFn }).default as MarkdownToHtmlFn);
+
+let htmlContent = "";
+
+try {
+  htmlContent = markdownToHtml(privacyContent, { embedOrigin: "" });
+} catch (error) {
+  console.error("Failed to parse markdown:", error);
+  htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
+}
+---
+
+<BaseLayout title="プライバシーポリシー - Auth Vault">
+  <div class="legal-container">
+    <article class="legal-content znc" set:html={htmlContent} />
+
+    <div class="back-link">
+      <a href="/">トップページに戻る</a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .legal-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .legal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .back-link {
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  .back-link a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .back-link a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .legal-content {
+      padding: 1.5rem;
+    }
+  }
+</style>
