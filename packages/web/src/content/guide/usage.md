@@ -412,6 +412,7 @@ Auth Vaultでは、すべての記事が公開前に審査を受けます。
 ### 審査の基準
 
 以下のプロンプトに基づいた審査と、適宜管理者による審査が行われます。
+
 https://web.maronn-room.com/guide/review-prompt
 
 **承認される記事:**
