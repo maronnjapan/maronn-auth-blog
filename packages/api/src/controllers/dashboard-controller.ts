@@ -3,11 +3,14 @@ import { zValidator } from '@hono/zod-validator';
 import type { Env } from '../types/env';
 import { ArticleRepository } from '../infrastructure/repositories/article-repository';
 import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
+import { KVClient } from '../infrastructure/storage/kv-client';
+import { R2Client } from '../infrastructure/storage/r2-client';
 import { requireAuth } from '../middleware/auth';
 import { UnauthorizedError, paginationQuerySchema } from '@maronn-auth-blog/shared';
 import { GetNotificationsUsecase } from '../usecases/notification/get-notifications';
 import { MarkNotificationReadUsecase, MarkAllNotificationsReadUsecase } from '../usecases/notification/mark-notification-read';
 import { GetUnreadCountUsecase } from '../usecases/notification/get-unread-count';
+import { DeleteArticleUsecase } from '../usecases/article/delete-article';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -33,6 +36,24 @@ app.get('/articles', requireAuth(), async (c) => {
   );
 
   return c.json({ articles: articlesWithTopics });
+});
+
+// DELETE /dashboard/articles/:id - Delete an article
+app.delete('/articles/:id', requireAuth(), async (c) => {
+  const auth = c.get('auth');
+  if (!auth) {
+    throw new UnauthorizedError();
+  }
+
+  const articleId = c.req.param('id');
+  const articleRepo = new ArticleRepository(c.env.DB);
+  const kvClient = new KVClient(c.env.KV);
+  const r2Client = new R2Client(c.env.R2);
+
+  const usecase = new DeleteArticleUsecase(articleRepo, kvClient, r2Client);
+  await usecase.execute({ articleId, userId: auth.userId });
+
+  return c.json({ success: true });
 });
 
 // GET /dashboard/notifications - Get notifications (paginated)

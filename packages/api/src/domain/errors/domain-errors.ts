@@ -143,3 +143,12 @@ export class CommentNotFoundError extends AppError {
     super(`Comment not found: ${commentId}`);
   }
 }
+
+export class UnauthorizedArticleAccessError extends AppError {
+  readonly code = 'UNAUTHORIZED_ARTICLE_ACCESS';
+  readonly statusCode = 403;
+
+  constructor(articleId: string) {
+    super(`Not authorized to access article: ${articleId}`);
+  }
+}
