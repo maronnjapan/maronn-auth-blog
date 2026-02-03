@@ -80,12 +80,12 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           </button>
 
           <div className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <a href="/" onClick={closeMobileMenu}>フィード</a>
             <a href="/articles/search" onClick={closeMobileMenu}>検索</a>
             {user ? (
               <>
                 <a href="/dashboard" onClick={closeMobileMenu}>ダッシュボード</a>
                 {user.role === 'admin' && <a href="/admin/reviews" onClick={closeMobileMenu}>審査</a>}
+                <a href="/guide" onClick={closeMobileMenu}>ガイド</a>
                 <div className="notification-wrapper">
                   <NotificationBell initialCount={unreadCount} apiUrl={apiUrl} />
                 </div>
@@ -100,9 +100,12 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
                 </button>
               </>
             ) : (
-              <a href={`${apiUrl}/auth/login`} className="btn-primary">
-                ログイン
-              </a>
+              <>
+                <a href="/guide" onClick={closeMobileMenu}>ガイド</a>
+                <a href={`${apiUrl}/auth/login`} className="btn-primary">
+                  ログイン
+                </a>
+              </>
             )}
           </div>
         </nav>
