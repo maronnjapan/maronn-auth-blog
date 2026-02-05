@@ -5,6 +5,7 @@ import {
   buildFtsAndQuery,
   buildFtsOrQuery,
   processSearchQuery,
+  detectHashtagSearch,
 } from './search-normalizer';
 
 describe('search-normalizer', () => {
@@ -131,6 +132,7 @@ describe('search-normalizer', () => {
         andQuery: 'oauth',
         orQuery: 'oauth',
         isMultiToken: false,
+        hashtagSearch: { isHashtagSearch: false, topics: [] },
       });
     });
 
@@ -142,6 +144,7 @@ describe('search-normalizer', () => {
         andQuery: 'oauth 認証',
         orQuery: 'oauth OR 認証',
         isMultiToken: true,
+        hashtagSearch: { isHashtagSearch: false, topics: [] },
       });
     });
 
@@ -153,6 +156,7 @@ describe('search-normalizer', () => {
         andQuery: '認証 認可',
         orQuery: '認証 OR 認可',
         isMultiToken: true,
+        hashtagSearch: { isHashtagSearch: false, topics: [] },
       });
     });
 
@@ -164,6 +168,81 @@ describe('search-normalizer', () => {
         andQuery: 'xss csrf 対策',
         orQuery: 'xss OR csrf OR 対策',
         isMultiToken: true,
+        hashtagSearch: { isHashtagSearch: false, topics: [] },
+      });
+    });
+
+    it('should detect hashtag search', () => {
+      const result = processSearchQuery('#oauth');
+      expect(result.hashtagSearch).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth'],
+      });
+    });
+
+    it('should detect multiple hashtag search', () => {
+      const result = processSearchQuery('#oauth #jwt');
+      expect(result.hashtagSearch).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth', 'jwt'],
+      });
+    });
+  });
+
+  describe('detectHashtagSearch', () => {
+    it('should detect single hashtag', () => {
+      const result = detectHashtagSearch('#oauth');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth'],
+      });
+    });
+
+    it('should detect multiple hashtags', () => {
+      const result = detectHashtagSearch('#oauth #jwt #pkce');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth', 'jwt', 'pkce'],
+      });
+    });
+
+    it('should handle full-width spaces', () => {
+      const result = detectHashtagSearch('#oauth　#jwt');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth', 'jwt'],
+      });
+    });
+
+    it('should return false for non-hashtag query', () => {
+      const result = detectHashtagSearch('oauth jwt');
+      expect(result).toEqual({
+        isHashtagSearch: false,
+        topics: [],
+      });
+    });
+
+    it('should lowercase topic names', () => {
+      const result = detectHashtagSearch('#OAuth #JWT');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth', 'jwt'],
+      });
+    });
+
+    it('should filter empty topics (just # without text)', () => {
+      const result = detectHashtagSearch('#oauth # #jwt');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth', 'jwt'],
+      });
+    });
+
+    it('should handle mixed query with hashtag and regular text', () => {
+      const result = detectHashtagSearch('#oauth some text');
+      expect(result).toEqual({
+        isHashtagSearch: true,
+        topics: ['oauth'],
       });
     });
   });

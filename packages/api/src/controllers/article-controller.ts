@@ -65,7 +65,7 @@ app.get('/', async (c) => {
   });
 });
 
-// GET /articles/search - Search articles by title
+// GET /articles/search - Search articles by title or topics (with #hashtag)
 app.get(
   '/search',
   zValidator('query', z.object({
@@ -80,6 +80,37 @@ app.get(
     const usecase = new SearchArticlesUsecase(articleRepo);
     const result = await usecase.execute({ query: q, page, limit });
     const userRepo = new UserRepository(c.env.DB);
+
+    // ハッシュタグ検索の場合
+    if (result.isHashtagSearch) {
+      const topicArticlesWithTopics = await buildArticleListResponse(
+        articleRepo,
+        userRepo,
+        result.topicResults,
+        'public'
+      );
+
+      const articles = topicArticlesWithTopics.map((a) => ({
+        ...a,
+        matchType: 'topic' as const,
+      }));
+
+      return c.json({
+        articles,
+        andTotal: 0,
+        orTotal: 0,
+        topicTotal: result.topicTotal,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        hasMore: result.hasMore,
+        query: q,
+        normalizedTokens: result.normalizedTokens,
+        isMultiToken: result.isMultiToken,
+        isHashtagSearch: true,
+        searchedTopics: result.searchedTopics,
+      });
+    }
 
     // AND結果とOR結果を別々にビルド
     const [andArticlesWithTopics, orArticlesWithTopics] = await Promise.all([
@@ -104,6 +135,7 @@ app.get(
       articles,
       andTotal: result.andTotal,
       orTotal: result.orTotal,
+      topicTotal: 0,
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -111,6 +143,8 @@ app.get(
       query: q,
       normalizedTokens: result.normalizedTokens,
       isMultiToken: result.isMultiToken,
+      isHashtagSearch: false,
+      searchedTopics: [],
     });
   }
 );
