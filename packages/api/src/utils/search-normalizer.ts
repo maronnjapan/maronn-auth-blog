@@ -135,6 +135,43 @@ export function buildFtsOrQuery(tokens: string[]): string {
 }
 
 /**
+ * ハッシュタグ検索の情報
+ */
+export interface HashtagSearchInfo {
+  isHashtagSearch: boolean;
+  topics: string[];
+}
+
+/**
+ * クエリがハッシュタグ検索かどうかを判定する
+ * #で始まるトークンがある場合、ハッシュタグ検索とみなす
+ * @param query 検索クエリ
+ * @returns ハッシュタグ検索の情報
+ */
+export function detectHashtagSearch(query: string): HashtagSearchInfo {
+  // 全角スペースを半角に変換してからスペースで分割
+  const tokens = query
+    .replace(/　/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+
+  // #で始まるトークンを抽出
+  const hashtagTokens = tokens.filter((token) => token.startsWith('#'));
+
+  if (hashtagTokens.length === 0) {
+    return { isHashtagSearch: false, topics: [] };
+  }
+
+  // #を除去してトピック名を取得
+  const topics = hashtagTokens.map((token) => token.slice(1).toLowerCase());
+
+  return {
+    isHashtagSearch: true,
+    topics: topics.filter((topic) => topic.length > 0),
+  };
+}
+
+/**
  * 検索クエリを処理して正規化されたAND/ORクエリを返す
  * @param query 元の検索クエリ
  * @returns AND/ORクエリの情報
@@ -145,9 +182,11 @@ export interface NormalizedSearchQuery {
   andQuery: string;
   orQuery: string;
   isMultiToken: boolean;
+  hashtagSearch: HashtagSearchInfo;
 }
 
 export function processSearchQuery(query: string): NormalizedSearchQuery {
+  const hashtagSearch = detectHashtagSearch(query);
   const normalizedTokens = tokenizeAndNormalizeQuery(query);
 
   return {
@@ -156,5 +195,6 @@ export function processSearchQuery(query: string): NormalizedSearchQuery {
     andQuery: buildFtsAndQuery(normalizedTokens),
     orQuery: buildFtsOrQuery(normalizedTokens),
     isMultiToken: normalizedTokens.length > 1,
+    hashtagSearch,
   };
 }

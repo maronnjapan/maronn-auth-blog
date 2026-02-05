@@ -8,7 +8,7 @@ export interface SearchArticlesInput {
   limit: number;
 }
 
-export type MatchType = 'and' | 'or';
+export type MatchType = 'and' | 'or' | 'topic';
 
 export interface SearchResultItem {
   article: Article;
@@ -18,14 +18,18 @@ export interface SearchResultItem {
 export interface SearchArticlesResult {
   andResults: Article[];
   orResults: Article[];
+  topicResults: Article[];
   andTotal: number;
   orTotal: number;
+  topicTotal: number;
   total: number;
   page: number;
   limit: number;
   hasMore: boolean;
   normalizedTokens: string[];
   isMultiToken: boolean;
+  isHashtagSearch: boolean;
+  searchedTopics: string[];
 }
 
 export class SearchArticlesUsecase {
@@ -38,23 +42,17 @@ export class SearchArticlesUsecase {
     // クエリを正規化してAND/ORクエリを生成
     const processed = processSearchQuery(query);
 
+    // ハッシュタグ検索の場合はトピック検索を実行
+    if (processed.hashtagSearch.isHashtagSearch && processed.hashtagSearch.topics.length > 0) {
+      return this.executeTopicSearch(processed.hashtagSearch.topics, page, limit, offset);
+    }
+
     // Escape special FTS5 characters for safety
     const safeAndQuery = this.escapeFtsQuery(processed.andQuery);
     const safeOrQuery = this.escapeFtsQuery(processed.orQuery);
 
     if (!safeAndQuery.trim()) {
-      return {
-        andResults: [],
-        orResults: [],
-        andTotal: 0,
-        orTotal: 0,
-        total: 0,
-        page,
-        limit,
-        hasMore: false,
-        normalizedTokens: processed.normalizedTokens,
-        isMultiToken: processed.isMultiToken,
-      };
+      return this.emptyResult(page, limit, processed.normalizedTokens, processed.isMultiToken);
     }
 
     // 単一トークンの場合はAND検索のみ（OR検索は意味がない）
@@ -67,14 +65,18 @@ export class SearchArticlesUsecase {
       return {
         andResults,
         orResults: [],
+        topicResults: [],
         andTotal,
         orTotal: 0,
+        topicTotal: 0,
         total: andTotal,
         page,
         limit,
         hasMore: offset + andResults.length < andTotal,
         normalizedTokens: processed.normalizedTokens,
         isMultiToken: false,
+        isHashtagSearch: false,
+        searchedTopics: [],
       };
     }
 
@@ -117,14 +119,113 @@ export class SearchArticlesUsecase {
     return {
       andResults,
       orResults,
+      topicResults: [],
       andTotal,
       orTotal,
+      topicTotal: 0,
       total,
       page,
       limit,
       hasMore,
       normalizedTokens: processed.normalizedTokens,
       isMultiToken: true,
+      isHashtagSearch: false,
+      searchedTopics: [],
+    };
+  }
+
+  private emptyResult(
+    page: number,
+    limit: number,
+    normalizedTokens: string[],
+    isMultiToken: boolean
+  ): SearchArticlesResult {
+    return {
+      andResults: [],
+      orResults: [],
+      topicResults: [],
+      andTotal: 0,
+      orTotal: 0,
+      topicTotal: 0,
+      total: 0,
+      page,
+      limit,
+      hasMore: false,
+      normalizedTokens,
+      isMultiToken,
+      isHashtagSearch: false,
+      searchedTopics: [],
+    };
+  }
+
+  private async executeTopicSearch(
+    topics: string[],
+    page: number,
+    limit: number,
+    offset: number
+  ): Promise<SearchArticlesResult> {
+    // 複数トピックの場合、各トピックの記事を取得してマージ
+    // 重複を排除しつつ、すべてのトピックに該当する記事を取得
+    if (topics.length === 1) {
+      const topic = topics[0];
+      const [topicResults, topicTotal] = await Promise.all([
+        this.articleRepo.findPublishedByTopic(topic, limit, offset),
+        this.articleRepo.countPublishedByTopic(topic),
+      ]);
+
+      return {
+        andResults: [],
+        orResults: [],
+        topicResults,
+        andTotal: 0,
+        orTotal: 0,
+        topicTotal,
+        total: topicTotal,
+        page,
+        limit,
+        hasMore: offset + topicResults.length < topicTotal,
+        normalizedTokens: topics,
+        isMultiToken: false,
+        isHashtagSearch: true,
+        searchedTopics: topics,
+      };
+    }
+
+    // 複数トピック: 各トピックに該当する記事を取得し、重複を排除
+    const topicResultsMap = new Map<string, Article>();
+
+    for (const topic of topics) {
+      const results = await this.articleRepo.findPublishedByTopic(topic, 1000, 0);
+      for (const article of results) {
+        if (!topicResultsMap.has(article.id)) {
+          topicResultsMap.set(article.id, article);
+        }
+      }
+    }
+
+    const allResults = Array.from(topicResultsMap.values()).sort(
+      (a, b) =>
+        new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
+    );
+
+    const topicTotal = allResults.length;
+    const topicResults = allResults.slice(offset, offset + limit);
+
+    return {
+      andResults: [],
+      orResults: [],
+      topicResults,
+      andTotal: 0,
+      orTotal: 0,
+      topicTotal,
+      total: topicTotal,
+      page,
+      limit,
+      hasMore: offset + topicResults.length < topicTotal,
+      normalizedTokens: topics,
+      isMultiToken: topics.length > 1,
+      isHashtagSearch: true,
+      searchedTopics: topics,
     };
   }
 

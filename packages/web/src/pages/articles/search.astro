@@ -10,7 +10,7 @@ const query = Astro.url.searchParams.get('q') || '';
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
 const limit = 20;
 
-type MatchType = 'and' | 'or';
+type MatchType = 'and' | 'or' | 'topic';
 
 interface SearchArticle {
   id: string;
@@ -28,9 +28,12 @@ interface SearchArticle {
 let articles: SearchArticle[] = [];
 let andTotal = 0;
 let orTotal = 0;
+let topicTotal = 0;
 let total = 0;
 let normalizedTokens: string[] = [];
 let isMultiToken = false;
+let isHashtagSearch = false;
+let searchedTopics: string[] = [];
 let error: string | null = null;
 
 if (query) {
@@ -41,9 +44,12 @@ if (query) {
       articles = data.articles || [];
       andTotal = data.andTotal || 0;
       orTotal = data.orTotal || 0;
+      topicTotal = data.topicTotal || 0;
       total = data.total || 0;
       normalizedTokens = data.normalizedTokens || [];
       isMultiToken = data.isMultiToken || false;
+      isHashtagSearch = data.isHashtagSearch || false;
+      searchedTopics = data.searchedTopics || [];
     } else {
       error = '検索に失敗しました';
     }
@@ -56,9 +62,10 @@ if (query) {
 const totalPages = Math.ceil(total / limit);
 const currentUrl = `/articles/search?q=${encodeURIComponent(query)}`;
 
-// AND結果とOR結果を分離
+// AND結果、OR結果、Topic結果を分離
 const andArticles = articles.filter((a) => a.matchType === 'and');
 const orArticles = articles.filter((a) => a.matchType === 'or');
+const topicArticles = articles.filter((a) => a.matchType === 'topic');
 ---
 
 <BaseLayout title={query ? `"${query}" の検索結果 - Auth Vault` : '記事検索 - Auth Vault'}>
@@ -71,11 +78,19 @@ const orArticles = articles.filter((a) => a.matchType === 'or');
 
     {query && (
       <div class="results-info">
-        <p>「{query}」の検索結果: {total}件</p>
-        {normalizedTokens.length > 0 && (
-          <p class="normalized-tokens">
-            検索キーワード: {normalizedTokens.join(', ')}
-          </p>
+        {isHashtagSearch ? (
+          <>
+            <p>タグ「{searchedTopics.map((t) => `#${t}`).join(', ')}」の検索結果: {total}件</p>
+          </>
+        ) : (
+          <>
+            <p>「{query}」の検索結果: {total}件</p>
+            {normalizedTokens.length > 0 && (
+              <p class="normalized-tokens">
+                検索キーワード: {normalizedTokens.join(', ')}
+              </p>
+            )}
+          </>
         )}
       </div>
     )}
@@ -86,7 +101,18 @@ const orArticles = articles.filter((a) => a.matchType === 'or');
       </div>
     ) : query ? (
       <>
-        {isMultiToken && andArticles.length > 0 && (
+        {isHashtagSearch && topicArticles.length > 0 && (
+          <section class="search-section-group">
+            <div class="section-header topic-results">
+              <h2>タグ検索結果</h2>
+              <span class="badge">{searchedTopics.map((t) => `#${t}`).join(', ')}</span>
+              <span class="count">{topicTotal}件</span>
+            </div>
+            <SearchArticleList articles={topicArticles} client:load />
+          </section>
+        )}
+
+        {!isHashtagSearch && isMultiToken && andArticles.length > 0 && (
           <section class="search-section-group">
             <div class="section-header high-relevance">
               <h2>関連性の高い結果</h2>
@@ -97,7 +123,7 @@ const orArticles = articles.filter((a) => a.matchType === 'or');
           </section>
         )}
 
-        {isMultiToken && orArticles.length > 0 && (
+        {!isHashtagSearch && isMultiToken && orArticles.length > 0 && (
           <section class="search-section-group">
             <div class="section-header other-results">
               <h2>その他の結果</h2>
@@ -108,13 +134,17 @@ const orArticles = articles.filter((a) => a.matchType === 'or');
           </section>
         )}
 
-        {!isMultiToken && andArticles.length > 0 && (
+        {!isHashtagSearch && !isMultiToken && andArticles.length > 0 && (
           <SearchArticleList articles={andArticles} client:load />
         )}
 
         {articles.length === 0 && (
           <div class="empty">
-            <p>検索結果が見つかりませんでした</p>
+            {isHashtagSearch ? (
+              <p>タグ「{searchedTopics.map((t) => `#${t}`).join(', ')}」の記事が見つかりませんでした</p>
+            ) : (
+              <p>検索結果が見つかりませんでした</p>
+            )}
           </div>
         )}
 
@@ -196,6 +226,19 @@ const orArticles = articles.filter((a) => a.matchType === 'or');
 
   .section-header.other-results h2 {
     color: #616161;
+  }
+
+  .section-header.topic-results {
+    border-bottom-color: #2196F3;
+  }
+
+  .section-header.topic-results h2 {
+    color: #1565C0;
+  }
+
+  .section-header.topic-results .badge {
+    background-color: #E3F2FD;
+    color: #1565C0;
   }
 
   .badge {
