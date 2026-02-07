@@ -29,11 +29,25 @@ const cardStyles = `
     height: 120px;
     overflow: hidden;
     background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .card-image::before {
+    content: 'No Image';
+    position: absolute;
+    font-size: 13px;
+    color: #8899a6;
+    font-weight: 500;
+    z-index: 0;
   }
   .card-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    position: relative;
+    z-index: 1;
   }
   .card-content {
     flex: 1;
@@ -155,6 +169,9 @@ const cardStyles = `
       aspect-ratio: 1.91 / 1;
       max-height: 180px;
     }
+    .card-image::before {
+      font-size: 14px;
+    }
     .card-content {
       padding: 12px;
     }
@@ -219,7 +236,7 @@ export const LinkCard: FC<LinkCardProps> = ({ ogp, originalUrl }) => {
               src={ogp.image}
               alt=""
               loading="lazy"
-              onError="this.parentElement.style.display='none'"
+              onError="this.style.display='none'"
             />
           </div>
         )}
