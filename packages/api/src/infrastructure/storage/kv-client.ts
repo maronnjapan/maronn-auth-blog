@@ -45,13 +45,17 @@ export class KVClient {
 
   async listArticleKeys(): Promise<string[]> {
     const keys: string[] = [];
+    let listComplete = false;
     let cursor: string | undefined;
 
-    do {
+    while (!listComplete) {
       const result = await this.kv.list({ prefix: 'article:', cursor });
       keys.push(...result.keys.map((k) => k.name));
-      cursor = result.list_complete ? undefined : result.cursor;
-    } while (cursor);
+      listComplete = result.list_complete;
+      if (!result.list_complete) {
+        cursor = result.cursor;
+      }
+    }
 
     return keys;
   }

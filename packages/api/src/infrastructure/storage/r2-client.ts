@@ -102,9 +102,10 @@ export class R2Client {
 
   async listAllImagePrefixes(): Promise<Array<{ userId: string; slug: string }>> {
     const prefixes = new Set<string>();
+    let truncated = true;
     let cursor: string | undefined;
 
-    do {
+    while (truncated) {
       const result = await this.r2.list({
         prefix: 'images/',
         cursor,
@@ -118,8 +119,11 @@ export class R2Client {
         }
       }
 
-      cursor = result.truncated ? result.cursor : undefined;
-    } while (cursor);
+      truncated = result.truncated;
+      if (result.truncated) {
+        cursor = result.cursor;
+      }
+    }
 
     return Array.from(prefixes).map((p) => {
       const [userId, slug] = p.split('/');
