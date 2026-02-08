@@ -119,6 +119,39 @@ fi
 print_success "Environment variables collected"
 
 # ============================================
+# Step 1.5: Setup Auth0 M2M Application
+# ============================================
+print_header "Step 1.5: Setting up Auth0 M2M Application"
+
+print_info "Creating Auth0 Machine-to-Machine application for Management API access..."
+print_info "This requires an existing Auth0 app with Management API permissions."
+print_info "You can use the 'Auth0 Management API (Test Application)' auto-created by Auth0."
+echo ""
+read -p "Auth0 Management API Client ID (for M2M setup): " AUTH0_MGMT_SETUP_CLIENT_ID
+read -sp "Auth0 Management API Client Secret (for M2M setup): " AUTH0_MGMT_SETUP_CLIENT_SECRET
+echo ""
+
+M2M_OUTPUT=$(bash scripts/setup-auth0-m2m.sh "$AUTH0_DOMAIN" "$AUTH0_MGMT_SETUP_CLIENT_ID" "$AUTH0_MGMT_SETUP_CLIENT_SECRET" 2>&1)
+M2M_EXIT_CODE=$?
+
+echo "$M2M_OUTPUT"
+
+if [ $M2M_EXIT_CODE -ne 0 ]; then
+    print_error "Failed to setup Auth0 M2M application"
+    exit 1
+fi
+
+AUTH0_M2M_CLIENT_ID=$(echo "$M2M_OUTPUT" | grep "^AUTH0_M2M_CLIENT_ID=" | cut -d'=' -f2)
+AUTH0_M2M_CLIENT_SECRET=$(echo "$M2M_OUTPUT" | grep "^AUTH0_M2M_CLIENT_SECRET=" | cut -d'=' -f2)
+
+if [ -z "$AUTH0_M2M_CLIENT_ID" ] || [ -z "$AUTH0_M2M_CLIENT_SECRET" ]; then
+    print_error "Failed to parse M2M credentials from setup script output"
+    exit 1
+fi
+
+print_success "Auth0 M2M application configured"
+
+# ============================================
 # Step 2: Install dependencies
 # ============================================
 print_header "Step 2: Installing Dependencies"
@@ -364,6 +397,8 @@ echo "$AUTH0_CLIENT_SECRET" | wrangler secret put AUTH0_CLIENT_SECRET --env prod
 echo "$GITHUB_APP_ID" | wrangler secret put GITHUB_APP_ID --env production
 echo "$GITHUB_APP_PRIVATE_KEY" | wrangler secret put GITHUB_APP_PRIVATE_KEY --env production
 echo "$SESSION_SECRET" | wrangler secret put SESSION_SECRET --env production
+echo "$AUTH0_M2M_CLIENT_ID" | wrangler secret put AUTH0_M2M_CLIENT_ID --env production
+echo "$AUTH0_M2M_CLIENT_SECRET" | wrangler secret put AUTH0_M2M_CLIENT_SECRET --env production
 
 # Set COOKIE_DOMAIN if custom domain is configured
 if [ -n "$COOKIE_DOMAIN" ]; then

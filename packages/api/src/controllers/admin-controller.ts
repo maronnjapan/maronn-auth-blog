@@ -138,8 +138,8 @@ app.post(
     const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
     const auth0UserInfoClient = new Auth0UserInfoClient(
       c.env.AUTH0_DOMAIN,
-      c.env.AUTH0_CLIENT_ID,
-      c.env.AUTH0_CLIENT_SECRET
+      c.env.AUTH0_M2M_CLIENT_ID,
+      c.env.AUTH0_M2M_CLIENT_SECRET
     );
 
     const usecase = new ApproveArticleUsecase(
@@ -177,8 +177,8 @@ app.post(
     const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
     const auth0UserInfoClient = new Auth0UserInfoClient(
       c.env.AUTH0_DOMAIN,
-      c.env.AUTH0_CLIENT_ID,
-      c.env.AUTH0_CLIENT_SECRET
+      c.env.AUTH0_M2M_CLIENT_ID,
+      c.env.AUTH0_M2M_CLIENT_SECRET
     );
 
     const usecase = new RejectArticleUsecase(
