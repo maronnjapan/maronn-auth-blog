@@ -19,7 +19,7 @@ let htmlContent = "";
 
 try {
   // Convert Markdown to HTML using zenn-markdown-html
-  htmlContent = markdownToHtml(guideContent, { embedOrigin: "" });
+  htmlContent = markdownToHtml(guideContent, { embedOrigin: import.meta.env.PUBLIC_EMBED_ORIGIN || "" });
 } catch (error) {
   console.error("Failed to parse markdown:", error);
   htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
