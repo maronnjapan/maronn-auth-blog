@@ -25,6 +25,7 @@ jobs:
       PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
       PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
       PUBLIC_GITHUB_APP_INSTALL_URL: ${{ vars.PUBLIC_GITHUB_APP_INSTALL_URL }}
+      PUBLIC_EMBED_ORIGIN: ${{ vars.PUBLIC_EMBED_ORIGIN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,6 +48,7 @@ jobs:
           PUBLIC_API_URL=${PUBLIC_API_URL}
           PUBLIC_APP_URL=${PUBLIC_APP_URL}
           PUBLIC_GITHUB_APP_INSTALL_URL=${PUBLIC_GITHUB_APP_INSTALL_URL}
+          PUBLIC_EMBED_ORIGIN=${PUBLIC_EMBED_ORIGIN}
           ENVEOF
 
       - name: Deploy web worker
