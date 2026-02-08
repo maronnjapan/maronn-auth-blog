@@ -8,6 +8,10 @@ export interface Env {
   AUTH0_CLIENT_SECRET: string;
   AUTH0_CALLBACK_URL: string;
 
+  // Auth0 Machine-to-Machine (Management API)
+  AUTH0_M2M_CLIENT_ID: string;
+  AUTH0_M2M_CLIENT_SECRET: string;
+
   // GitHub App
   GITHUB_APP_ID: string;
   GITHUB_APP_PRIVATE_KEY: string;

@@ -49,6 +49,15 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
+# Check if auth0 CLI is installed
+if ! command -v auth0 &> /dev/null; then
+    print_error "Auth0 CLI is not installed"
+    echo "Please install it:"
+    echo "  macOS: brew install auth0/auth0-cli/auth0"
+    echo "  Linux: curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b /usr/local/bin"
+    exit 1
+fi
+
 # Check if logged in to Cloudflare
 if ! wrangler whoami &> /dev/null; then
     print_error "Not logged in to Cloudflare"
@@ -117,6 +126,35 @@ if [ -z "$ZONE_ID" ]; then
 fi
 
 print_success "Environment variables collected"
+
+# ============================================
+# Step 1.5: Setup Auth0 M2M Application
+# ============================================
+print_header "Step 1.5: Setting up Auth0 M2M Application"
+
+print_info "Creating Auth0 Machine-to-Machine application for Management API access..."
+print_info "Auth0 CLI (auth0) is required. You will be prompted to login if not already authenticated."
+echo ""
+
+M2M_OUTPUT=$(bash scripts/setup-auth0-m2m.sh "$AUTH0_DOMAIN" 2>&1)
+M2M_EXIT_CODE=$?
+
+echo "$M2M_OUTPUT"
+
+if [ $M2M_EXIT_CODE -ne 0 ]; then
+    print_error "Failed to setup Auth0 M2M application"
+    exit 1
+fi
+
+AUTH0_M2M_CLIENT_ID=$(echo "$M2M_OUTPUT" | grep "^AUTH0_M2M_CLIENT_ID=" | cut -d'=' -f2)
+AUTH0_M2M_CLIENT_SECRET=$(echo "$M2M_OUTPUT" | grep "^AUTH0_M2M_CLIENT_SECRET=" | cut -d'=' -f2)
+
+if [ -z "$AUTH0_M2M_CLIENT_ID" ] || [ -z "$AUTH0_M2M_CLIENT_SECRET" ]; then
+    print_error "Failed to parse M2M credentials from setup script output"
+    exit 1
+fi
+
+print_success "Auth0 M2M application configured"
 
 # ============================================
 # Step 2: Install dependencies
@@ -355,17 +393,38 @@ print_success "Web wrangler.toml updated"
 # ============================================
 print_header "Step 6: Setting Secrets for Production Environment"
 
+# Compute URLs for secrets
+API_URL="https://${API_DOMAIN}"
+WEB_URL="https://${WEB_DOMAIN}"
+EMBED_URL="https://${EMBED_DOMAIN}"
+AUTH0_CALLBACK_URL="${API_URL}/auth/callback"
+
 print_info "Setting API secrets for production..."
 cd packages/api
 
+# Auth0 (login app)
 echo "$AUTH0_DOMAIN" | wrangler secret put AUTH0_DOMAIN --env production
 echo "$AUTH0_CLIENT_ID" | wrangler secret put AUTH0_CLIENT_ID --env production
 echo "$AUTH0_CLIENT_SECRET" | wrangler secret put AUTH0_CLIENT_SECRET --env production
+echo "$AUTH0_CALLBACK_URL" | wrangler secret put AUTH0_CALLBACK_URL --env production
+
+# Auth0 M2M (Management API)
+echo "$AUTH0_M2M_CLIENT_ID" | wrangler secret put AUTH0_M2M_CLIENT_ID --env production
+echo "$AUTH0_M2M_CLIENT_SECRET" | wrangler secret put AUTH0_M2M_CLIENT_SECRET --env production
+
+# GitHub App
 echo "$GITHUB_APP_ID" | wrangler secret put GITHUB_APP_ID --env production
 echo "$GITHUB_APP_PRIVATE_KEY" | wrangler secret put GITHUB_APP_PRIVATE_KEY --env production
+
+# Session
 echo "$SESSION_SECRET" | wrangler secret put SESSION_SECRET --env production
 
-# Set COOKIE_DOMAIN if custom domain is configured
+# URLs
+echo "$API_URL" | wrangler secret put API_URL --env production
+echo "$WEB_URL" | wrangler secret put WEB_URL --env production
+echo "$EMBED_URL" | wrangler secret put EMBED_ORIGIN --env production
+
+# Cookie domain
 if [ -n "$COOKIE_DOMAIN" ]; then
     echo "$COOKIE_DOMAIN" | wrangler secret put COOKIE_DOMAIN --env production
 fi
@@ -387,11 +446,6 @@ print_success "Build completed"
 # ============================================
 print_header "Step 8: Deploying to Cloudflare"
 
-# Set URLs with custom domain
-API_URL="https://${API_DOMAIN}"
-WEB_URL="https://${WEB_DOMAIN}"
-EMBED_URL="https://${EMBED_DOMAIN}"
-
 # Deploy API (Workers)
 print_info "Deploying API to Cloudflare Workers..."
 cd packages/api
@@ -405,12 +459,6 @@ cd packages/embed
 wrangler deploy --env production
 cd ../..
 print_success "Embed deployed: $EMBED_URL"
-
-# Update API with correct EMBED_ORIGIN
-print_info "Updating API with embed URL..."
-cd packages/api
-echo "$EMBED_URL" | wrangler secret put EMBED_ORIGIN --env production
-cd ../..
 
 # Deploy Web (Cloudflare Workers)
 print_info "Deploying Web to Cloudflare Workers..."
@@ -428,27 +476,6 @@ EOF
 wrangler deploy --env production
 cd ../..
 print_success "Web deployed: $WEB_URL"
-
-# ============================================
-# Step 9: Final Configuration
-# ============================================
-print_header "Step 9: Final Configuration"
-
-# Set AUTH0_CALLBACK_URL secret (uses API domain directly with custom domain)
-AUTH0_CALLBACK_URL="${API_URL}/auth/callback"
-print_info "Setting AUTH0_CALLBACK_URL secret..."
-cd packages/api
-echo "$AUTH0_CALLBACK_URL" | wrangler secret put AUTH0_CALLBACK_URL --env production
-cd ../..
-print_success "AUTH0_CALLBACK_URL configured"
-
-# Set WEB_URL and API_URL secrets for API
-print_info "Setting WEB_URL and API_URL secrets..."
-cd packages/api
-echo "$WEB_URL" | wrangler secret put WEB_URL --env production
-echo "$API_URL" | wrangler secret put API_URL --env production
-cd ../..
-print_success "URL secrets configured"
 
 # ============================================
 # Deployment Summary
