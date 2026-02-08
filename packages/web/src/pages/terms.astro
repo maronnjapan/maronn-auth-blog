@@ -39,6 +39,7 @@ try {
     max-width: 900px;
     margin: 0 auto;
     padding: 0 1rem;
+    overflow-x: hidden;
   }
 
   .legal-content {
@@ -46,6 +47,40 @@ try {
     padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .legal-content :global(.znc) {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .legal-content :global(.znc img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .legal-content :global(.znc table) {
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+  }
+
+  .legal-content :global(.znc pre) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .legal-content :global(.znc iframe) {
+    max-width: 100%;
+  }
+
+  .legal-content :global(.znc code) {
+    word-break: break-all;
   }
 
   .back-link {

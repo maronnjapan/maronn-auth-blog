@@ -150,12 +150,15 @@ const authorName = article.author?.displayName ?? username;
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
+    overflow-x: hidden;
   }
 
   .article {
     background: white;
     padding: 2rem;
     border-radius: 8px;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .article-header {
@@ -259,10 +262,36 @@ const authorName = article.author?.displayName ?? username;
     line-height: 1;
   }
 
+  .article :global(.znc) {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
   .article :global(.znc img) {
     max-width: 100%;
     height: auto;
     display: block;
+  }
+
+  .article :global(.znc table) {
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+  }
+
+  .article :global(.znc pre) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .article :global(.znc iframe) {
+    max-width: 100%;
+  }
+
+  .article :global(.znc code) {
+    word-break: break-all;
   }
 
   @media (max-width: 768px) {
