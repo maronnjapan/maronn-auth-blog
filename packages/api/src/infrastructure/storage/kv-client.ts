@@ -42,4 +42,21 @@ export class KVClient {
   async deleteArticleMarkdown(userId: string, slug: string): Promise<void> {
     await this.kv.delete(`article:${userId}:${slug}`);
   }
+
+  async listArticleKeys(): Promise<string[]> {
+    const keys: string[] = [];
+    let listComplete = false;
+    let cursor: string | undefined;
+
+    while (!listComplete) {
+      const result = await this.kv.list({ prefix: 'article:', cursor });
+      keys.push(...result.keys.map((k) => k.name));
+      listComplete = result.list_complete;
+      if (!result.list_complete) {
+        cursor = result.cursor;
+      }
+    }
+
+    return keys;
+  }
 }

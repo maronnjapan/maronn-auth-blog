@@ -3,6 +3,10 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import type { Env } from './types/env';
 import { AppError } from '@maronn-auth-blog/shared';
+import { CleanupOrphanedDataUsecase } from './usecases/batch/cleanup-orphaned-data';
+import { ArticleRepository } from './infrastructure/repositories/article-repository';
+import { KVClient } from './infrastructure/storage/kv-client';
+import { R2Client } from './infrastructure/storage/r2-client';
 
 // Import controllers
 import authController from './controllers/auth-controller';
@@ -65,5 +69,19 @@ app.notFound((c) => {
   }, 404);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    const articleRepo = new ArticleRepository(env.DB);
+    const kvClient = new KVClient(env.KV);
+    const r2Client = new R2Client(env.R2);
+
+    const usecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
+    ctx.waitUntil(
+      usecase.execute().catch((err) => {
+        console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
+      })
+    );
+  },
+};
 export type AppType = typeof app;
