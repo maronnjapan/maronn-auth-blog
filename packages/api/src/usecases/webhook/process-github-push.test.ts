@@ -7,6 +7,7 @@ import type { NotificationRepository } from '../../infrastructure/repositories/n
 import type { GitHubClient } from '../../infrastructure/github-client';
 import type { KVClient } from '../../infrastructure/storage/kv-client';
 import type { R2Client } from '../../infrastructure/storage/r2-client';
+import type { ResendClient } from '../../infrastructure/resend-client';
 import { User, type UserProps } from '../../domain/entities/user';
 import { Article } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
@@ -22,6 +23,8 @@ const baseUserProps: UserProps = {
 };
 
 const IMAGE_URL = 'https://images.example.com';
+const ADMIN_EMAIL = 'admin@example.com';
+const WEB_URL = 'https://example.com';
 
 function createUsecase(options: {
   userInstallationId?: string;
@@ -80,6 +83,11 @@ function createUsecase(options: {
   };
   const r2Client = r2ClientMock as unknown as R2Client;
 
+  const resendClientMock = {
+    sendEmail: vi.fn().mockResolvedValue(undefined),
+  };
+  const resendClient = resendClientMock as unknown as ResendClient;
+
   const usecase = new ProcessGitHubPushUsecase(
     articleRepo,
     userRepo,
@@ -88,7 +96,10 @@ function createUsecase(options: {
     githubClient,
     kvClient,
     r2Client,
-    IMAGE_URL
+    IMAGE_URL,
+    resendClient,
+    ADMIN_EMAIL,
+    WEB_URL
   );
 
   const event: GitHubPushEvent = {
@@ -108,7 +119,7 @@ function createUsecase(options: {
       : undefined,
   };
 
-  return { usecase, githubClient, kvClientMock, r2ClientMock, event };
+  return { usecase, githubClient, kvClientMock, r2ClientMock, resendClientMock, event };
 }
 
 describe('ProcessGitHubPushUsecase', () => {
@@ -254,6 +265,131 @@ describe('ProcessGitHubPushUsecase', () => {
     );
   });
 
+  it('sends admin email when a new article is created', async () => {
+    const { usecase, resendClientMock, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+    });
+
+    await usecase.execute(event);
+
+    expect(resendClientMock.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ADMIN_EMAIL,
+        subject: expect.stringContaining('Test Article'),
+      })
+    );
+  });
+
+  it('sends admin email when an existing article is marked for re-review', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Published Article',
+      category: undefined,
+      status: ArticleStatus.published(),
+      githubPath: 'articles/test.md',
+      githubSha: 'old-sha',
+      publishedSha: 'old-sha',
+      rejectionReason: undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      targetCategories: ['authentication'],
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({
+        content: ['---', 'title: Test Article', 'published: true', 'targetCategories: [authentication]', 'topics: []', '---', 'Content'].join('\n'),
+        sha: 'new-sha',
+      }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClientMock = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    };
+    const resendClient = resendClientMock as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: ['articles/test.md'],
+          removed: [],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(resendClientMock.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ADMIN_EMAIL,
+        subject: expect.stringContaining('再審査'),
+      })
+    );
+  });
+
   it('does not overwrite cached markdown for already published articles', async () => {
     const user = new User({
       ...baseUserProps,
@@ -321,6 +457,10 @@ describe('ProcessGitHubPushUsecase', () => {
     };
     const r2Client = r2ClientMock as unknown as R2Client;
 
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
     const usecase = new ProcessGitHubPushUsecase(
       articleRepo,
       userRepo,
@@ -329,7 +469,10 @@ describe('ProcessGitHubPushUsecase', () => {
       githubClient,
       kvClient,
       r2Client,
-      IMAGE_URL
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
     );
 
     const event: GitHubPushEvent = {
@@ -418,6 +561,10 @@ describe('ProcessGitHubPushUsecase', () => {
       deleteImages: vi.fn(),
     } as unknown as R2Client;
 
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
     const usecase = new ProcessGitHubPushUsecase(
       articleRepo,
       userRepo,
@@ -426,7 +573,10 @@ describe('ProcessGitHubPushUsecase', () => {
       githubClient,
       kvClient,
       r2Client,
-      IMAGE_URL
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
     );
 
     const event: GitHubPushEvent = {
@@ -517,6 +667,10 @@ describe('ProcessGitHubPushUsecase', () => {
     };
     const r2Client = r2ClientMock as unknown as R2Client;
 
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
     const usecase = new ProcessGitHubPushUsecase(
       articleRepo,
       userRepo,
@@ -525,7 +679,10 @@ describe('ProcessGitHubPushUsecase', () => {
       githubClient,
       kvClient,
       r2Client,
-      IMAGE_URL
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
     );
 
     const event: GitHubPushEvent = {
