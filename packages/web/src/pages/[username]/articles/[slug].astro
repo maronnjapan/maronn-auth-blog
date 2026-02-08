@@ -202,6 +202,8 @@ const authorName = article.author?.displayName ?? username;
     gap: 0.5rem;
     margin-top: 1rem;
     flex-wrap: wrap;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .topic {
@@ -211,9 +213,11 @@ const authorName = article.author?.displayName ?? username;
     border-radius: 4px;
     font-size: 0.85rem;
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .topic:hover {
