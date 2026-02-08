@@ -99,4 +99,31 @@ export class R2Client {
       await this.r2.delete(object.key);
     }
   }
+
+  async listAllImagePrefixes(): Promise<Array<{ userId: string; slug: string }>> {
+    const prefixes = new Set<string>();
+    let cursor: string | undefined;
+
+    do {
+      const result = await this.r2.list({
+        prefix: 'images/',
+        cursor,
+      });
+
+      for (const obj of result.objects) {
+        // key format: images/{userId}/{slug}/{filename}
+        const parts = obj.key.split('/');
+        if (parts.length >= 4) {
+          prefixes.add(`${parts[1]}/${parts[2]}`);
+        }
+      }
+
+      cursor = result.truncated ? result.cursor : undefined;
+    } while (cursor);
+
+    return Array.from(prefixes).map((p) => {
+      const [userId, slug] = p.split('/');
+      return { userId, slug };
+    });
+  }
 }

@@ -21,6 +21,10 @@ id = "0e8b5a0452cf4da28925f65d5f344779"
 binding = "R2"
 bucket_name = "maronn-auth-blog-images"
 
+# Cron trigger for orphaned data cleanup (daily at 3:00 AM UTC)
+[triggers]
+crons = ["0 3 * * *"]
+
 # Production environment bindings (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-api-production"
@@ -44,3 +48,6 @@ ENVIRONMENT = "production"
 [[env.production.routes]]
 pattern = "api.maronn-room.com"
 custom_domain = true
+
+[env.production.triggers]
+crons = ["0 3 * * *"]
