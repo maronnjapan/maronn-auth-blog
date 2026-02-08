@@ -28,6 +28,7 @@ export interface Env {
   // Resend
   RESEND_API_KEY: string;
   NOTIFICATION_EMAIL_FROM: string;
+  ADMIN_NOTIFICATION_EMAIL: string;
 
   // Cloudflare Bindings
   DB: D1Database;

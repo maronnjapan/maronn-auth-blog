@@ -5,11 +5,13 @@ import { NotificationRepository } from '../../infrastructure/repositories/notifi
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
+import { ResendClient } from '../../infrastructure/resend-client';
 import { Article, type ArticleProps } from '../../domain/entities/article';
 import { ArticleStatus } from '../../domain/value-objects/article-status';
 import { Slug } from '../../domain/value-objects/slug';
 import { extractFrontmatter, extractImagePaths } from '../../utils/markdown-parser';
 import { CreateNotificationUsecase } from '../notification/create-notification';
+import { SendAdminReviewEmailUsecase } from '../notification/send-admin-review-email';
 import type { TargetCategories } from '@maronn-auth-blog/shared';
 import {
   validateImageCount,
@@ -42,7 +44,10 @@ export class ProcessGitHubPushUsecase {
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
-    private imageUrl: string
+    private imageUrl: string,
+    private resendClient: ResendClient,
+    private adminEmail: string,
+    private webUrl: string
   ) {}
 
   async execute(event: GitHubPushEvent): Promise<void> {
@@ -104,6 +109,7 @@ export class ProcessGitHubPushUsecase {
       try {
         await this.processMarkdownFile(
           user.id,
+          user.username,
           installationId,
           owner,
           repoName,
@@ -126,6 +132,7 @@ export class ProcessGitHubPushUsecase {
 
   private async processMarkdownFile(
     userId: string,
+    username: string,
     installationId: string,
     owner: string,
     repoName: string,
@@ -209,13 +216,23 @@ export class ProcessGitHubPushUsecase {
         // Save topics
         await this.articleRepo.saveTopics(existingArticle.id, topics);
 
-        // Create notification
+        // Create notification for the author
         const createNotification = new CreateNotificationUsecase(this.notificationRepo);
         await createNotification.execute({
           userId,
           type: 'article_update_detected',
           articleId: existingArticle.id,
           message: `Update detected for "${existingArticle.title}". Your article is now pending re-review.`,
+        });
+
+        // Send email to admin for re-review
+        const sendAdminEmail = new SendAdminReviewEmailUsecase(this.resendClient);
+        await sendAdminEmail.execute({
+          adminEmail: this.adminEmail,
+          type: 'updated_article',
+          articleTitle: existingArticle.title,
+          authorUsername: username,
+          webUrl: this.webUrl,
         });
 
         console.info(`[ProcessGitHubPush] Article ${existingArticle.id} marked for update`);
@@ -244,6 +261,16 @@ export class ProcessGitHubPushUsecase {
 
       // Save topics
       await this.articleRepo.saveTopics(article.id, topics);
+
+      // Send email to admin for review
+      const sendAdminEmail = new SendAdminReviewEmailUsecase(this.resendClient);
+      await sendAdminEmail.execute({
+        adminEmail: this.adminEmail,
+        type: 'new_article',
+        articleTitle: title,
+        authorUsername: username,
+        webUrl: this.webUrl,
+      });
 
       console.info(`[ProcessGitHubPush] New article created: ${article.id}`);
     }

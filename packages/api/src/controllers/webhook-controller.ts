@@ -8,6 +8,7 @@ import { GitHubClient } from '../infrastructure/github-client';
 import { ProcessGitHubPushUsecase, type GitHubPushEvent } from '../usecases/webhook/process-github-push';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
+import { ResendClient } from '../infrastructure/resend-client';
 import { InvalidWebhookSignatureError } from '../domain/errors/domain-errors';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -50,6 +51,8 @@ app.post('/github', async (c) => {
   const kvClient = new KVClient(c.env.KV);
   const r2Client = new R2Client(c.env.R2);
 
+  const resendClient = new ResendClient(c.env.RESEND_API_KEY, c.env.NOTIFICATION_EMAIL_FROM);
+
   const usecase = new ProcessGitHubPushUsecase(
     articleRepo,
     userRepo,
@@ -58,7 +61,10 @@ app.post('/github', async (c) => {
     githubClient,
     kvClient,
     r2Client,
-    c.env.IMAGE_URL
+    c.env.IMAGE_URL,
+    resendClient,
+    c.env.ADMIN_NOTIFICATION_EMAIL,
+    c.env.WEB_URL
   );
 
   await usecase.execute(data);
