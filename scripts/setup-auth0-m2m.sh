@@ -69,7 +69,7 @@ fi
 # Check if logged in by trying to list tenants
 if ! auth0 tenants list --json &> /dev/null; then
     print_warning "Not logged in to Auth0 CLI. Starting login..."
-    auth0 login
+    auth0 login --scopes create:client_grants
 fi
 
 print_success "Auth0 CLI authenticated"
