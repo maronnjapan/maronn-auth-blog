@@ -5,6 +5,7 @@ export interface UserProps {
   iconUrl?: string;
   bio?: string;
   githubUserId: string;
+  auth0UserId?: string;
   githubInstallationId?: string;
   githubUrl?: string;
   twitterUrl?: string;
@@ -38,6 +39,10 @@ export class User {
 
   get githubUserId(): string {
     return this.props.githubUserId;
+  }
+
+  get auth0UserId(): string | undefined {
+    return this.props.auth0UserId;
   }
 
   get githubInstallationId(): string | undefined {
@@ -96,6 +101,14 @@ export class User {
     return trimmed.length > 0 ? trimmed : undefined;
   }
 
+  setAuth0UserId(auth0UserId: string): void {
+    this.props = {
+      ...this.props,
+      auth0UserId,
+      updatedAt: new Date(),
+    };
+  }
+
   setGitHubInstallation(installationId: string): void {
     this.props = {
       ...this.props,
@@ -112,6 +125,7 @@ export class User {
       iconUrl: this.props.iconUrl,
       bio: this.props.bio,
       githubUserId: this.props.githubUserId,
+      auth0UserId: this.props.auth0UserId,
       githubInstallationId: this.props.githubInstallationId,
       githubUrl: this.props.githubUrl,
       twitterUrl: this.props.twitterUrl,

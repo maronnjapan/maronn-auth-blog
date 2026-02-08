@@ -58,7 +58,7 @@ export class RejectArticleUsecase {
       );
       await sendEmailNotification.execute({
         userId: article.userId,
-        auth0UserId: `github|${user.githubUserId}`,
+        auth0UserId: user.auth0UserId ?? `github|${user.githubUserId}`,
         type: 'article_rejected',
         articleTitle: article.title,
         articleSlug: article.slug.toString(),

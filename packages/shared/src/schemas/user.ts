@@ -13,6 +13,7 @@ export const userSchema = z.object({
   iconUrl: z.string().url().optional(),
   bio: z.string().max(500).optional(),
   githubUserId: z.string(),
+  auth0UserId: z.string().optional(),
   githubInstallationId: z.string().optional(),
   githubUrl: optionalUrlSchema,
   twitterUrl: optionalUrlSchema,

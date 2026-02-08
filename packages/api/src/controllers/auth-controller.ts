@@ -95,8 +95,10 @@ app.get('/callback', async (c) => {
   // Get user info from Auth0
   const userInfo = await auth0.getUserInfo(tokens.access_token);
 
-  // Extract GitHub user ID from sub (format: github|123456)
-  const githubUserId = userInfo.sub.replace('github|', '');
+  // Auth0 sub is the full Auth0 user ID (e.g., "github|123456", "google-oauth2|123456")
+  const auth0UserId = userInfo.sub;
+  // Extract provider-specific user ID by removing the provider prefix
+  const githubUserId = auth0UserId.replace(/^[^|]+\|/, '');
 
   // Find or create user
   const userRepo = new UserRepository(c.env.DB);
@@ -110,10 +112,15 @@ app.get('/callback', async (c) => {
       displayName: userInfo.name,
       iconUrl: userInfo.picture,
       githubUserId,
+      auth0UserId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     user = new User(props);
+    await userRepo.save(user);
+  } else if (!user.auth0UserId) {
+    // Backfill auth0UserId for existing users who don't have it yet
+    user.setAuth0UserId(auth0UserId);
     await userRepo.save(user);
   }
 
