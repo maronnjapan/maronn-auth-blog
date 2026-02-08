@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractFrontmatter, extractImagePaths, parseArticle } from './markdown-parser';
+import { extractFrontmatter, extractImagePaths, convertImagePaths, parseArticle } from './markdown-parser';
 
 describe('extractFrontmatter', () => {
   it('should parse frontmatter with quoted strings', () => {
@@ -135,6 +135,22 @@ describe('extractImagePaths', () => {
     expect(result).toEqual([]);
   });
 
+  it('should extract image paths from subdirectories', () => {
+    const markdown = `
+# Title
+
+![alt text](./images/subdir/screenshot.png)
+![another](/images/deep/nested/diagram.jpg)
+`;
+
+    const result = extractImagePaths(markdown);
+
+    expect(result).toEqual([
+      './images/subdir/screenshot.png',
+      '/images/deep/nested/diagram.jpg',
+    ]);
+  });
+
   it('should not match external URLs', () => {
     const markdown = `
 ![external](https://example.com/image.png)
@@ -198,5 +214,35 @@ topics: []
 # Content`;
 
     expect(() => parseArticle(markdown, 'https://embed.example.com')).toThrow();
+  });
+});
+
+describe('convertImagePaths', () => {
+  it('should convert flat image paths to R2 URLs', () => {
+    const html = '<img src="./images/screenshot.png" alt="test">';
+    const result = convertImagePaths(html, 'user-1', 'my-article', 'https://images.example.com');
+
+    expect(result).toBe('<img src="https://images.example.com/images/user-1/my-article/screenshot.png" alt="test">');
+  });
+
+  it('should convert subdirectory image paths using only the base filename', () => {
+    const html = '<img src="./images/subdir/screenshot.png" alt="test">';
+    const result = convertImagePaths(html, 'user-1', 'subdir', 'https://images.example.com');
+
+    expect(result).toBe('<img src="https://images.example.com/images/user-1/subdir/screenshot.png" alt="test">');
+  });
+
+  it('should handle deeply nested image paths', () => {
+    const html = '<img src="./images/a/b/c/screenshot.png" alt="test">';
+    const result = convertImagePaths(html, 'user-1', 'my-article', 'https://images.example.com');
+
+    expect(result).toBe('<img src="https://images.example.com/images/user-1/my-article/screenshot.png" alt="test">');
+  });
+
+  it('should convert rooted image paths with subdirectories', () => {
+    const html = '<img src="/images/subdir/screenshot.png" alt="test">';
+    const result = convertImagePaths(html, 'user-1', 'subdir', 'https://images.example.com');
+
+    expect(result).toBe('<img src="https://images.example.com/images/user-1/subdir/screenshot.png" alt="test">');
   });
 });

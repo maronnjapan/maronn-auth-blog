@@ -100,7 +100,7 @@ export function convertImagePaths(
   imageUrl: string
 ): string {
   return html.replace(
-    /src="(?:\.\/|\/)images\/([^"]+)"/g,
+    /src="(?:\.\/|\/)images\/(?:[^"]*\/)?([^"\/]+)"/g,
     `src="${imageUrl}/images/${userId}/${slug}/$1"`
   );
 }

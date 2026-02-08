@@ -265,6 +265,46 @@ describe('ProcessGitHubPushUsecase', () => {
     );
   });
 
+  it('uploads images in subdirectories without duplicating the path', async () => {
+    const markdownWithImage = [
+      '---',
+      'title: Test Article',
+      'published: true',
+      'targetCategories: [authentication]',
+      'topics: []',
+      '---',
+      '![alt](./images/tests/test.png)',
+      '',
+    ].join('\n');
+
+    const { usecase, githubClient, kvClientMock, r2ClientMock, event } = createUsecase({
+      userInstallationId: '67890',
+      eventInstallationId: undefined,
+      markdown: markdownWithImage,
+    });
+
+    await usecase.execute(event);
+
+    expect(githubClient.fetchImage).toHaveBeenCalledWith(
+      '67890',
+      'foo',
+      'bar',
+      'images/tests/test.png'
+    );
+    expect(r2ClientMock.putImage).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      'test.png',
+      expect.any(ArrayBuffer),
+      'image/png'
+    );
+    expect(kvClientMock.setArticleMarkdown).toHaveBeenCalledWith(
+      'user-1',
+      'test',
+      expect.stringContaining(`${IMAGE_URL}/images/user-1/test/test.png`)
+    );
+  });
+
   it('sends admin email when a new article is created', async () => {
     const { usecase, resendClientMock, event } = createUsecase({
       userInstallationId: '67890',
