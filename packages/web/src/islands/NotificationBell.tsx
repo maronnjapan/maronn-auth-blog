@@ -59,6 +59,10 @@ export default function NotificationBell({ initialCount, apiUrl }: NotificationB
           color: #333;
         }
 
+        .notification-bell svg {
+          flex-shrink: 0;
+        }
+
         .badge {
           position: absolute;
           top: 2px;
@@ -74,6 +78,13 @@ export default function NotificationBell({ initialCount, apiUrl }: NotificationB
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+          .badge {
+            position: static;
+            margin-left: auto;
+          }
         }
       `}</style>
     </a>

@@ -301,7 +301,6 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
           }
 
           .nav-links a,
-          .nav-links .notification-wrapper,
           .nav-links .user-link,
           .nav-links button {
             width: 100%;
@@ -312,6 +311,26 @@ export default function Header({ user: initialUser, apiUrl, unreadCount = 0 }: H
 
           .nav-links a {
             border-bottom: 1px solid #f0f0f0;
+          }
+
+          .nav-links .notification-wrapper {
+            width: 100%;
+            padding: 0;
+            border-bottom: 1px solid #f0f0f0;
+          }
+
+          .nav-links .notification-wrapper .notification-bell {
+            width: 100%;
+            height: auto;
+            padding: 0.75rem 1rem;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            border-bottom: none;
+          }
+
+          .nav-links .notification-wrapper .notification-bell::after {
+            content: '通知';
+            font-size: 1rem;
           }
 
           .user-link {
