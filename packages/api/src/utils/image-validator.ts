@@ -28,5 +28,7 @@ export function validateImageSize(size: number): void {
 }
 
 export function getImageFilename(path: string): string {
-  return path.replace(/^(?:\.\/|\/)images\//, '');
+  const withoutPrefix = path.replace(/^(?:\.\/|\/)images\//, '');
+  const segments = withoutPrefix.split('/');
+  return segments[segments.length - 1];
 }
