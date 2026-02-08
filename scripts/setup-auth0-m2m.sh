@@ -28,130 +28,103 @@ print_info() {
 # ============================================
 # Validate required arguments
 # ============================================
-# Usage: ./setup-auth0-m2m.sh <AUTH0_DOMAIN> <AUTH0_CLIENT_ID> <AUTH0_CLIENT_SECRET>
+# Usage: ./setup-auth0-m2m.sh <AUTH0_DOMAIN>
 #
-# AUTH0_DOMAIN:        Auth0 tenant domain (e.g., your-tenant.auth0.com)
-# AUTH0_CLIENT_ID:     Client ID of an existing Auth0 app with Management API access
-# AUTH0_CLIENT_SECRET: Client Secret of that app
+# AUTH0_DOMAIN: Auth0 tenant domain (e.g., your-tenant.auth0.com)
 #
-# The existing app needs at minimum the following Management API scopes:
-#   - create:clients
-#   - create:client_grants
-#   - read:resource_servers
-#
-# Alternatively, you can use the "Auth0 Management API (Test Application)"
-# that Auth0 auto-creates when you enable the Management API explorer.
+# Prerequisites:
+#   - Auth0 CLI (auth0) must be installed
+#   - Must be logged in via `auth0 login`
 
-if [ $# -lt 3 ]; then
-    echo "Usage: $0 <AUTH0_DOMAIN> <AUTH0_CLIENT_ID> <AUTH0_CLIENT_SECRET>"
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <AUTH0_DOMAIN>"
     echo ""
     echo "Creates an Auth0 Machine-to-Machine application for Management API access."
     echo "The created app will have read:users scope to look up user emails."
     echo ""
     echo "Arguments:"
-    echo "  AUTH0_DOMAIN        Auth0 tenant domain (e.g., your-tenant.auth0.com)"
-    echo "  AUTH0_CLIENT_ID     Client ID of an existing app with Management API access"
-    echo "  AUTH0_CLIENT_SECRET Client Secret of that app"
+    echo "  AUTH0_DOMAIN  Auth0 tenant domain (e.g., your-tenant.auth0.com)"
+    echo ""
+    echo "Prerequisites:"
+    echo "  - Auth0 CLI must be installed: https://github.com/auth0/auth0-cli"
+    echo "  - Must be logged in: auth0 login"
     exit 1
 fi
 
 AUTH0_DOMAIN="$1"
-AUTH0_CLIENT_ID="$2"
-AUTH0_CLIENT_SECRET="$3"
-
 M2M_APP_NAME="Auth Vault M2M (Management API)"
 
 # ============================================
-# Step 1: Get Management API token
+# Step 1: Check Auth0 CLI is installed and logged in
 # ============================================
-print_info "Obtaining Management API access token..."
-
-TOKEN_RESPONSE=$(curl -s --request POST \
-    "https://${AUTH0_DOMAIN}/oauth/token" \
-    --header 'content-type: application/json' \
-    --data "{
-        \"client_id\": \"${AUTH0_CLIENT_ID}\",
-        \"client_secret\": \"${AUTH0_CLIENT_SECRET}\",
-        \"audience\": \"https://${AUTH0_DOMAIN}/api/v2/\",
-        \"grant_type\": \"client_credentials\"
-    }")
-
-MGMT_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token // empty')
-
-if [ -z "$MGMT_TOKEN" ]; then
-    print_error "Failed to obtain Management API token"
-    echo "Response: $TOKEN_RESPONSE"
+if ! command -v auth0 &> /dev/null; then
+    print_error "Auth0 CLI is not installed"
+    echo "Install it from: https://github.com/auth0/auth0-cli"
+    echo ""
+    echo "  macOS:   brew install auth0/auth0-cli/auth0"
+    echo "  Linux:   curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b /usr/local/bin"
     exit 1
 fi
 
-print_success "Management API token obtained"
+# Check if logged in by trying to list tenants
+if ! auth0 tenants list --json &> /dev/null; then
+    print_warning "Not logged in to Auth0 CLI. Starting login..."
+    auth0 login
+fi
+
+print_success "Auth0 CLI authenticated"
 
 # ============================================
 # Step 2: Check if M2M app already exists
 # ============================================
 print_info "Checking if M2M application already exists..."
 
-EXISTING_CLIENTS=$(curl -s --request GET \
-    "https://${AUTH0_DOMAIN}/api/v2/clients?app_type=non_interactive&fields=client_id,name,client_secret" \
-    --header "authorization: Bearer ${MGMT_TOKEN}" \
-    --header 'content-type: application/json')
+EXISTING_APP=$(auth0 apps list --json 2>/dev/null | jq -r --arg name "$M2M_APP_NAME" '[.[] | select(.name == $name and .app_type == "non_interactive")] | first // empty')
 
-EXISTING_M2M_ID=$(echo "$EXISTING_CLIENTS" | jq -r --arg name "$M2M_APP_NAME" '.[] | select(.name == $name) | .client_id // empty')
-
-if [ -n "$EXISTING_M2M_ID" ]; then
-    EXISTING_M2M_SECRET=$(echo "$EXISTING_CLIENTS" | jq -r --arg name "$M2M_APP_NAME" '.[] | select(.name == $name) | .client_secret // empty')
+if [ -n "$EXISTING_APP" ] && [ "$EXISTING_APP" != "null" ]; then
+    EXISTING_M2M_ID=$(echo "$EXISTING_APP" | jq -r '.client_id')
     print_warning "M2M application already exists: ${EXISTING_M2M_ID}"
-    M2M_CLIENT_ID="$EXISTING_M2M_ID"
-    M2M_CLIENT_SECRET="$EXISTING_M2M_SECRET"
+
+    # Fetch full app details with secrets
+    APP_DETAILS=$(auth0 apps show "$EXISTING_M2M_ID" --reveal-secrets --json 2>/dev/null)
+    M2M_CLIENT_ID=$(echo "$APP_DETAILS" | jq -r '.client_id')
+    M2M_CLIENT_SECRET=$(echo "$APP_DETAILS" | jq -r '.client_secret')
 else
     # ============================================
     # Step 3: Create Machine-to-Machine application
     # ============================================
     print_info "Creating Machine-to-Machine application..."
 
-    CREATE_RESPONSE=$(curl -s --request POST \
-        "https://${AUTH0_DOMAIN}/api/v2/clients" \
-        --header "authorization: Bearer ${MGMT_TOKEN}" \
-        --header 'content-type: application/json' \
-        --data "{
-            \"name\": \"${M2M_APP_NAME}\",
-            \"app_type\": \"non_interactive\",
-            \"grant_types\": [\"client_credentials\"],
-            \"token_endpoint_auth_method\": \"client_secret_post\"
-        }")
+    CREATE_OUTPUT=$(auth0 apps create \
+        --name "$M2M_APP_NAME" \
+        --type m2m \
+        --description "Management API client for looking up user emails during article review" \
+        --reveal-secrets \
+        --json 2>/dev/null)
 
-    M2M_CLIENT_ID=$(echo "$CREATE_RESPONSE" | jq -r '.client_id // empty')
-    M2M_CLIENT_SECRET=$(echo "$CREATE_RESPONSE" | jq -r '.client_secret // empty')
+    M2M_CLIENT_ID=$(echo "$CREATE_OUTPUT" | jq -r '.client_id // empty')
+    M2M_CLIENT_SECRET=$(echo "$CREATE_OUTPUT" | jq -r '.client_secret // empty')
 
     if [ -z "$M2M_CLIENT_ID" ] || [ -z "$M2M_CLIENT_SECRET" ]; then
         print_error "Failed to create M2M application"
-        echo "Response: $CREATE_RESPONSE"
+        echo "Response: $CREATE_OUTPUT"
         exit 1
     fi
 
     print_success "M2M application created: ${M2M_CLIENT_ID}"
 
     # ============================================
-    # Step 4: Get Management API resource server ID
-    # ============================================
-    print_info "Looking up Management API resource server..."
-
-    API_ID="https://${AUTH0_DOMAIN}/api/v2/"
-
-    # ============================================
-    # Step 5: Grant client_credentials to Management API with read:users scope
+    # Step 4: Grant read:users scope to Management API
     # ============================================
     print_info "Granting read:users scope to M2M application..."
 
-    GRANT_RESPONSE=$(curl -s --request POST \
-        "https://${AUTH0_DOMAIN}/api/v2/client-grants" \
-        --header "authorization: Bearer ${MGMT_TOKEN}" \
-        --header 'content-type: application/json' \
-        --data "{
-            \"client_id\": \"${M2M_CLIENT_ID}\",
-            \"audience\": \"${API_ID}\",
-            \"scope\": [\"read:users\"]
-        }")
+    API_AUDIENCE="https://${AUTH0_DOMAIN}/api/v2/"
+
+    GRANT_RESPONSE=$(auth0 api post "client-grants" --data "{
+        \"client_id\": \"${M2M_CLIENT_ID}\",
+        \"audience\": \"${API_AUDIENCE}\",
+        \"scope\": [\"read:users\"]
+    }" 2>/dev/null)
 
     GRANT_ID=$(echo "$GRANT_RESPONSE" | jq -r '.id // empty')
 

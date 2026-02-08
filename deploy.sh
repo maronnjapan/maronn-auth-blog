@@ -49,6 +49,15 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
+# Check if auth0 CLI is installed
+if ! command -v auth0 &> /dev/null; then
+    print_error "Auth0 CLI is not installed"
+    echo "Please install it:"
+    echo "  macOS: brew install auth0/auth0-cli/auth0"
+    echo "  Linux: curl -sSfL https://raw.githubusercontent.com/auth0/auth0-cli/main/install.sh | sh -s -- -b /usr/local/bin"
+    exit 1
+fi
+
 # Check if logged in to Cloudflare
 if ! wrangler whoami &> /dev/null; then
     print_error "Not logged in to Cloudflare"
@@ -124,14 +133,10 @@ print_success "Environment variables collected"
 print_header "Step 1.5: Setting up Auth0 M2M Application"
 
 print_info "Creating Auth0 Machine-to-Machine application for Management API access..."
-print_info "This requires an existing Auth0 app with Management API permissions."
-print_info "You can use the 'Auth0 Management API (Test Application)' auto-created by Auth0."
-echo ""
-read -p "Auth0 Management API Client ID (for M2M setup): " AUTH0_MGMT_SETUP_CLIENT_ID
-read -sp "Auth0 Management API Client Secret (for M2M setup): " AUTH0_MGMT_SETUP_CLIENT_SECRET
+print_info "Auth0 CLI (auth0) is required. You will be prompted to login if not already authenticated."
 echo ""
 
-M2M_OUTPUT=$(bash scripts/setup-auth0-m2m.sh "$AUTH0_DOMAIN" "$AUTH0_MGMT_SETUP_CLIENT_ID" "$AUTH0_MGMT_SETUP_CLIENT_SECRET" 2>&1)
+M2M_OUTPUT=$(bash scripts/setup-auth0-m2m.sh "$AUTH0_DOMAIN" 2>&1)
 M2M_EXIT_CODE=$?
 
 echo "$M2M_OUTPUT"
