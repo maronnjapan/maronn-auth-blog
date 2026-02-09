@@ -1,3 +1,5 @@
+import { optimizeImageData } from '../../utils/image-optimizer';
+
 const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3 MB
 const ALLOWED_CONTENT_TYPES = [
   'image/jpeg',
@@ -31,10 +33,13 @@ export class R2Client {
       );
     }
 
+    // Optimize image before storing
+    const optimized = await optimizeImageData(data, contentType);
+
     const key = `images/${userId}/${slug}/${filename}`;
-    await this.r2.put(key, data, {
+    await this.r2.put(key, optimized.data, {
       httpMetadata: {
-        contentType,
+        contentType: optimized.contentType,
       },
     });
   }
@@ -71,10 +76,13 @@ export class R2Client {
       );
     }
 
+    // Optimize image before storing
+    const optimized = await optimizeImageData(data, contentType);
+
     const key = `avatars/${userId}/${filename}`;
-    await this.r2.put(key, data, {
+    await this.r2.put(key, optimized.data, {
       httpMetadata: {
-        contentType,
+        contentType: optimized.contentType,
       },
     });
 
