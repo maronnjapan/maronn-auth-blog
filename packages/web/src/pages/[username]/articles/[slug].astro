@@ -123,7 +123,7 @@ const hasToc = tocItems.length > 0;
           <ul class="toc-list">
             {tocItems.map((item) => (
               <li class={`toc-item toc-depth-${item.level - baseLevel}`}>
-                <a class="toc-link" href={`#${item.id}`} data-heading-id={item.id}>
+                <a class="toc-link" href={`#${item.id}`}>
                   {item.text}
                 </a>
               </li>
@@ -167,45 +167,6 @@ const hasToc = tocItems.length > 0;
     })();
   </script>
 
-  <!-- TOC scroll spy -->
-  <script>
-    const tocLinks = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
-
-    if (tocLinks.length > 0) {
-      const headingIds = Array.from(tocLinks).map(
-        (link) => link.dataset.headingId!
-      );
-
-      let ticking = false;
-
-      function updateActiveHeading() {
-        const scrollY = window.scrollY;
-        let activeId: string | null = null;
-
-        for (const id of headingIds) {
-          const el = document.getElementById(id);
-          if (el && el.offsetTop <= scrollY + 80) {
-            activeId = id;
-          }
-        }
-
-        for (const link of tocLinks) {
-          link.classList.toggle('active', link.dataset.headingId === activeId);
-        }
-
-        ticking = false;
-      }
-
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          requestAnimationFrame(updateActiveHeading);
-          ticking = true;
-        }
-      }, { passive: true });
-
-      updateActiveHeading();
-    }
-  </script>
 </BaseLayout>
 
 <style>
@@ -427,17 +388,10 @@ const hasToc = tocItems.length > 0;
     text-decoration: none;
     line-height: 1.4;
     border-left: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
   }
 
   .toc-link:hover {
     color: #0066cc;
-  }
-
-  .toc-link:global(.active) {
-    color: #0066cc;
-    font-weight: 600;
-    border-left-color: #0066cc;
   }
 
   /* Indentation by heading depth */
