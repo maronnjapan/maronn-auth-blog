@@ -1,8 +1,10 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import CommentSection from '../../../islands/CommentSection';
+import TableOfContents from '../../../islands/TableOfContents';
+import MobileTableOfContents from '../../../islands/MobileTableOfContents';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
-import { extractTocItems, getBaseLevel } from '../../../lib/toc';
+import { extractTocItems, getBaseLevel, buildNestedToc } from '../../../lib/toc';
 import type { TargetCategory } from '@maronn-auth-blog/shared';
 import 'zenn-content-css';
 
@@ -64,6 +66,7 @@ const authorName = article.author?.displayName ?? username;
 // Extract TOC items from article HTML
 const tocItems = extractTocItems(article.html || '');
 const baseLevel = getBaseLevel(tocItems);
+const nestedTocItems = buildNestedToc(tocItems);
 const hasToc = tocItems.length > 0;
 ---
 
@@ -104,6 +107,12 @@ const hasToc = tocItems.length > 0;
         )}
       </header>
 
+      {hasToc && (
+        <div class="mobile-toc-wrapper">
+          <MobileTableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
+        </div>
+      )}
+
       <div class="znc" set:html={article.html} />
 
       <CommentSection
@@ -118,18 +127,7 @@ const hasToc = tocItems.length > 0;
 
     {hasToc && (
       <aside class="toc-sidebar">
-        <nav class="toc" aria-label="目次">
-          <p class="toc-title">目次</p>
-          <ul class="toc-list">
-            {tocItems.map((item) => (
-              <li class={`toc-item toc-depth-${item.level - baseLevel}`}>
-                <a class="toc-link" href={`#${item.id}`}>
-                  {item.text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <TableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
       </aside>
     )}
   </div>
@@ -328,6 +326,18 @@ const hasToc = tocItems.length > 0;
     word-break: break-all;
   }
 
+  /* Mobile TOC Wrapper */
+  .mobile-toc-wrapper {
+    margin-bottom: 2rem;
+  }
+
+  /* Hide mobile TOC on desktop */
+  @media (min-width: 1081px) {
+    .mobile-toc-wrapper {
+      display: none;
+    }
+  }
+
   /* TOC Sidebar */
   .toc-sidebar {
     position: sticky;
@@ -349,66 +359,6 @@ const hasToc = tocItems.length > 0;
   .toc-sidebar::-webkit-scrollbar-thumb {
     background: #d0d0d0;
     border-radius: 2px;
-  }
-
-  .toc {
-    background: white;
-    border-radius: 8px;
-    padding: 1.25rem;
-    border: 1px solid #e8e8e8;
-  }
-
-  .toc-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #eee;
-  }
-
-  .toc-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .toc-item {
-    margin: 0;
-    padding: 0;
-  }
-
-  .toc-link {
-    display: block;
-    padding: 0.3rem 0 0.3rem 0;
-    font-size: 0.8rem;
-    color: #666;
-    text-decoration: none;
-    line-height: 1.4;
-    border-left: 2px solid transparent;
-  }
-
-  .toc-link:hover {
-    color: #0066cc;
-  }
-
-  /* Indentation by heading depth */
-  .toc-depth-0 .toc-link {
-    padding-left: 0.75rem;
-  }
-
-  .toc-depth-1 .toc-link {
-    padding-left: 1.5rem;
-  }
-
-  .toc-depth-2 .toc-link {
-    padding-left: 2.25rem;
-  }
-
-  .toc-depth-3 .toc-link {
-    padding-left: 3rem;
   }
 
   /* Responsive: hide TOC on smaller screens */

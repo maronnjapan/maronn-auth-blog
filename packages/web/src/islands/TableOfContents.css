@@ -1,0 +1,102 @@
+.toc {
+  background: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  border: 1px solid #e8e8e8;
+}
+
+.toc-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.toc-list,
+.toc-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc-sublist {
+  margin-top: 0.25rem;
+}
+
+.toc-item {
+  margin: 0;
+  padding: 0;
+}
+
+.toc-item-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.toc-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.toc-toggle:hover {
+  color: #666;
+}
+
+.toc-toggle.closed svg {
+  transform: rotate(-90deg);
+}
+
+.toc-link {
+  display: block;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+  color: #666;
+  text-decoration: none;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.toc-link:hover {
+  color: #0066cc;
+}
+
+/* Indentation by depth */
+.toc-depth-0 {
+  margin-left: 0;
+}
+
+.toc-depth-1 {
+  margin-left: 0.75rem;
+}
+
+.toc-depth-2 {
+  margin-left: 0.75rem;
+}
+
+.toc-depth-3 {
+  margin-left: 0.75rem;
+}
+
+/* Add left border for nested items */
+.toc-sublist {
+  border-left: 1px solid #eee;
+  padding-left: 0.5rem;
+  margin-left: 0.25rem;
+}
