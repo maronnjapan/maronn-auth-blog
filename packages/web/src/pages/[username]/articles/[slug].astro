@@ -313,6 +313,13 @@ const hasToc = tocItems.length > 0;
     display: block;
   }
 
+  .article :global(.znc td),
+  .article :global(.znc th) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
   .article :global(.znc pre) {
     max-width: 100%;
     overflow-x: auto;
@@ -324,6 +331,26 @@ const hasToc = tocItems.length > 0;
 
   .article :global(.znc code) {
     word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .article :global(.znc a) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .article :global(.znc p),
+  .article :global(.znc li),
+  .article :global(.znc h1),
+  .article :global(.znc h2),
+  .article :global(.znc h3),
+  .article :global(.znc h4),
+  .article :global(.znc h5),
+  .article :global(.znc h6) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
   }
 
   /* Mobile TOC Wrapper */

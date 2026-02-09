@@ -51,36 +51,61 @@ try {
     overflow-x: hidden;
   }
 
-  .legal-content :global(.znc) {
-    max-width: 100%;
-    overflow-x: hidden;
+  .legal-content {
     overflow-wrap: break-word;
     word-break: break-word;
   }
 
-  .legal-content :global(.znc img) {
+  .legal-content :global(img) {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
-  .legal-content :global(.znc table) {
+  .legal-content :global(table) {
     max-width: 100%;
     overflow-x: auto;
     display: block;
   }
 
-  .legal-content :global(.znc pre) {
+  .legal-content :global(td),
+  .legal-content :global(th) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .legal-content :global(pre) {
     max-width: 100%;
     overflow-x: auto;
   }
 
-  .legal-content :global(.znc iframe) {
+  .legal-content :global(iframe) {
     max-width: 100%;
   }
 
-  .legal-content :global(.znc code) {
+  .legal-content :global(code) {
     word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .legal-content :global(a) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .legal-content :global(p),
+  .legal-content :global(li),
+  .legal-content :global(h1),
+  .legal-content :global(h2),
+  .legal-content :global(h3),
+  .legal-content :global(h4),
+  .legal-content :global(h5),
+  .legal-content :global(h6) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
   }
 
   .back-link {
