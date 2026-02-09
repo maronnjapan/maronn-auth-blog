@@ -105,3 +105,14 @@ export const CARD_CSP = generateCsp({
   allowImages: [], // Allow any https images for OGP
   allowFrames: ["'none'"],
 });
+
+/**
+ * CSP for Mermaid diagram embed
+ * mermaid.js is loaded from jsDelivr CDN
+ */
+export const MERMAID_CSP = generateCsp({
+  allowScripts: ['https://cdn.jsdelivr.net'],
+  allowStyles: [],
+  allowImages: [],
+  allowFrames: ["'none'"],
+});

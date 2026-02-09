@@ -4,6 +4,7 @@ import { tweetHandler } from './handlers/tweet';
 import { githubHandler } from './handlers/github';
 import { gistHandler } from './handlers/gist';
 import { cardHandler } from './handlers/card';
+import { mermaidHandler } from './handlers/mermaid';
 
 const app = new Hono();
 
@@ -21,5 +22,6 @@ app.get('/tweet', tweetHandler);
 app.get('/github', githubHandler);
 app.get('/gist', gistHandler);
 app.get('/card', cardHandler);
+app.get('/mermaid', mermaidHandler);
 
 export default app;
