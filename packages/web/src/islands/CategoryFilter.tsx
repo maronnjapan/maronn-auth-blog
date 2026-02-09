@@ -44,9 +44,6 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
           border: 1px solid #e0e0e0;
           border-radius: 8px;
           padding: 1rem;
-          width: 100%;
-          max-width: 100%;
-          overflow: hidden;
         }
 
         .category-filter h3 {
@@ -59,28 +56,23 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
           list-style: none;
           padding: 0;
           margin: 0;
-          max-width: 100%;
         }
 
         .category-filter li {
           margin: 0;
-          max-width: 100%;
         }
 
         .category-filter a {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 0.5rem;
           padding: 0.5rem 0.75rem;
           margin: 0.25rem 0;
           border-radius: 4px;
           text-decoration: none;
           color: #666;
           transition: all 0.2s;
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
 
         .category-filter a:hover {
@@ -98,6 +90,7 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
           font-size: 0.875rem;
           color: #999;
           flex-shrink: 0;
+          white-space: nowrap;
         }
 
         .category-filter a.active .count {
