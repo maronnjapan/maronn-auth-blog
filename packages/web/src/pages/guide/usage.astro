@@ -107,6 +107,13 @@ try {
     display: block;
   }
 
+  .guide-content :global(.znc td),
+  .guide-content :global(.znc th) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
   .guide-content :global(.znc pre) {
     max-width: 100%;
     overflow-x: auto;
@@ -118,6 +125,26 @@ try {
 
   .guide-content :global(.znc code) {
     word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .guide-content :global(.znc a) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .guide-content :global(.znc p),
+  .guide-content :global(.znc li),
+  .guide-content :global(.znc h1),
+  .guide-content :global(.znc h2),
+  .guide-content :global(.znc h3),
+  .guide-content :global(.znc h4),
+  .guide-content :global(.znc h5),
+  .guide-content :global(.znc h6) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
   }
 
   .back-link {

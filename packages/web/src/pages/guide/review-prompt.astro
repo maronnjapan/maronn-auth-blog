@@ -88,36 +88,61 @@ try {
     overflow-x: hidden;
   }
 
-  .guide-content :global(.znc) {
-    max-width: 100%;
-    overflow-x: hidden;
+  .guide-content {
     overflow-wrap: break-word;
     word-break: break-word;
   }
 
-  .guide-content :global(.znc img) {
+  .guide-content :global(img) {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
-  .guide-content :global(.znc table) {
+  .guide-content :global(table) {
     max-width: 100%;
     overflow-x: auto;
     display: block;
   }
 
-  .guide-content :global(.znc pre) {
+  .guide-content :global(td),
+  .guide-content :global(th) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .guide-content :global(pre) {
     max-width: 100%;
     overflow-x: auto;
   }
 
-  .guide-content :global(.znc iframe) {
+  .guide-content :global(iframe) {
     max-width: 100%;
   }
 
-  .guide-content :global(.znc code) {
+  .guide-content :global(code) {
     word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  .guide-content :global(a) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .guide-content :global(p),
+  .guide-content :global(li),
+  .guide-content :global(h1),
+  .guide-content :global(h2),
+  .guide-content :global(h3),
+  .guide-content :global(h4),
+  .guide-content :global(h5),
+  .guide-content :global(h6) {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
   }
 
   .back-link {
