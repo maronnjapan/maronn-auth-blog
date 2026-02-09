@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import CommentSection from '../../../islands/CommentSection';
 import TableOfContents from '../../../islands/TableOfContents';
+import MobileTableOfContents from '../../../islands/MobileTableOfContents';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
 import { extractTocItems, getBaseLevel, buildNestedToc } from '../../../lib/toc';
 import type { TargetCategory } from '@maronn-auth-blog/shared';
@@ -105,6 +106,12 @@ const hasToc = tocItems.length > 0;
           </div>
         )}
       </header>
+
+      {hasToc && (
+        <div class="mobile-toc-wrapper">
+          <MobileTableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
+        </div>
+      )}
 
       <div class="znc" set:html={article.html} />
 
@@ -317,6 +324,18 @@ const hasToc = tocItems.length > 0;
 
   .article :global(.znc code) {
     word-break: break-all;
+  }
+
+  /* Mobile TOC Wrapper */
+  .mobile-toc-wrapper {
+    margin-bottom: 2rem;
+  }
+
+  /* Hide mobile TOC on desktop */
+  @media (min-width: 1081px) {
+    .mobile-toc-wrapper {
+      display: none;
+    }
   }
 
   /* TOC Sidebar */
