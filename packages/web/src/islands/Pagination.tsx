@@ -88,6 +88,10 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
       <style>{`
         .pagination {
           margin: 2rem 0;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          overflow-y: hidden;
         }
 
         .pagination ul {
@@ -98,6 +102,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
           list-style: none;
           padding: 0;
           margin: 0;
+          min-width: fit-content;
         }
 
         .page-link {
@@ -113,6 +118,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
           color: #666;
           background: white;
           transition: all 0.2s;
+          white-space: nowrap;
         }
 
         .page-link:hover {
@@ -133,6 +139,23 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
 
         .prev, .next {
           font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+          .pagination {
+            margin: 1.5rem 0;
+          }
+
+          .pagination ul {
+            gap: 0.375rem;
+          }
+
+          .page-link {
+            min-width: 36px;
+            height: 36px;
+            padding: 0 0.5rem;
+            font-size: 0.9rem;
+          }
         }
       `}</style>
     </nav>

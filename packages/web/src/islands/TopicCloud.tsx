@@ -45,6 +45,8 @@ export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
           border-radius: 8px;
           padding: 1rem;
           overflow: hidden;
+          width: 100%;
+          max-width: 100%;
         }
 
         .topic-cloud h3 {
@@ -57,6 +59,7 @@ export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
           display: flex;
           flex-wrap: wrap;
           gap: 0.5rem;
+          max-width: 100%;
         }
 
         .topic {
@@ -71,6 +74,7 @@ export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
           max-width: 100%;
           overflow: hidden;
           text-overflow: ellipsis;
+          word-break: break-word;
         }
 
         .topic:hover {

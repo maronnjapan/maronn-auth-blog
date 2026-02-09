@@ -126,6 +126,8 @@ else if (topic) pageTitle = `トピック: ${topic}`;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 1rem;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .header-section {
@@ -135,32 +137,44 @@ else if (topic) pageTitle = `トピック: ${topic}`;
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
+    max-width: 100%;
   }
 
   h1 {
     font-size: 2rem;
     color: #333;
     margin: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .search-wrapper {
     flex-shrink: 0;
+    max-width: 100%;
   }
 
   .layout {
     display: grid;
     grid-template-columns: 1fr 280px;
     gap: 2rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .main-content {
     min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .sidebar {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .filter-notice {
