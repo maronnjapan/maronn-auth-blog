@@ -203,19 +203,6 @@ const hasToc = tocItems.length > 0;
         }
       }, { passive: true });
 
-      // Smooth scroll on TOC link click
-      for (const link of tocLinks) {
-        link.addEventListener('click', (e) => {
-          const targetId = link.dataset.headingId;
-          const target = targetId ? document.getElementById(targetId) : null;
-          if (target) {
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            history.replaceState(null, '', `#${targetId}`);
-          }
-        });
-      }
-
       updateActiveHeading();
     }
   </script>
