@@ -11,6 +11,7 @@ import { DeleteCommentUsecase } from '../usecases/comment/delete-comment';
 import { ValidationError } from '@maronn-auth-blog/shared';
 import { commentInputSchema } from '@maronn-auth-blog/shared';
 import markdownToHtmlImport from 'zenn-markdown-html';
+import { optimizeImageData } from '../utils/image-optimizer';
 
 type MarkdownToHtmlFn = (markdown: string, options: { embedOrigin: string }) => string;
 
@@ -166,9 +167,12 @@ app.post(
     const ext = imageFile.name.split('.').pop() || 'png';
     const filename = `${crypto.randomUUID()}.${ext}`;
 
+    // Optimize image before storing
+    const optimized = await optimizeImageData(data, imageFile.type);
+
     const key = `comment-images/${auth.userId}/${filename}`;
-    await c.env.R2.put(key, data, {
-      httpMetadata: { contentType: imageFile.type },
+    await c.env.R2.put(key, optimized.data, {
+      httpMetadata: { contentType: optimized.contentType },
     });
 
     const imageUrl = `${c.env.IMAGE_URL}/comment-images/${auth.userId}/${filename}`;

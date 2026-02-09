@@ -26,6 +26,7 @@
     "hono": "^4.0.0",
     "jose": "^5.2.0",
     "resend": "^6.9.1",
+    "wasm-image-optimization": "^1.4.5",
     "zenn-markdown-html": "^0.1.148",
     "zod": "^3.22.4"
   },
