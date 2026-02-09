@@ -14,7 +14,7 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' });
 });
 
-// Embed endpoints
+// Embed endpoints.
 // Each endpoint:
 // - With ?url=<encoded-url>: Returns complete HTML for iframe
 // - Without query: Returns loader that fetches URL from parent's data-content attribute via postMessage
