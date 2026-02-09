@@ -16,6 +16,10 @@ body {
 }
 
 /* Article Cards */
+.article-list {
+  width: 100%;
+}
+
 .article-card-link {
   display: block;
   text-decoration: none;

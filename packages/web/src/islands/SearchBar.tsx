@@ -41,6 +41,7 @@ export default function SearchBar({
 
         .search-input {
           flex: 1;
+          min-width: 0;
           padding: 0.75rem 1rem;
           border: 1px solid #e0e0e0;
           border-radius: 4px;
@@ -63,10 +64,23 @@ export default function SearchBar({
           font-weight: 500;
           cursor: pointer;
           transition: background 0.2s;
+          white-space: nowrap;
         }
 
         .search-button:hover {
           background: #0052a3;
+        }
+
+        @media (max-width: 480px) {
+          .search-input {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.9rem;
+          }
+
+          .search-button {
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+          }
         }
       `}</style>
     </form>

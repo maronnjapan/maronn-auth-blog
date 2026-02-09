@@ -141,6 +141,8 @@ else if (topic) pageTitle = `トピック: ${topic}`;
     font-size: 2rem;
     color: #333;
     margin: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .search-wrapper {
@@ -161,6 +163,7 @@ else if (topic) pageTitle = `トピック: ${topic}`;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    min-width: 0;
   }
 
   .filter-notice {

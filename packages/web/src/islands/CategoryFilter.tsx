@@ -66,6 +66,7 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 0.5rem;
           padding: 0.5rem 0.75rem;
           margin: 0.25rem 0;
           border-radius: 4px;
@@ -88,6 +89,8 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
         .count {
           font-size: 0.875rem;
           color: #999;
+          flex-shrink: 0;
+          white-space: nowrap;
         }
 
         .category-filter a.active .count {
