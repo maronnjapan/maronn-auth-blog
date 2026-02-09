@@ -168,68 +168,57 @@ const hasToc = tocItems.length > 0;
   </script>
 
   <!-- TOC scroll spy -->
-  {hasToc && (
-    <script is:inline>
-      (function() {
-        var tocLinks = document.querySelectorAll('.toc-link');
-        if (!tocLinks.length) return;
+  <script>
+    const tocLinks = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
 
-        var headingIds = [];
-        for (var i = 0; i < tocLinks.length; i++) {
-          headingIds.push(tocLinks[i].getAttribute('data-heading-id'));
+    if (tocLinks.length > 0) {
+      const headingIds = Array.from(tocLinks).map(
+        (link) => link.dataset.headingId!
+      );
+
+      let ticking = false;
+
+      function updateActiveHeading() {
+        const scrollY = window.scrollY;
+        let activeId: string | null = null;
+
+        for (const id of headingIds) {
+          const el = document.getElementById(id);
+          if (el && el.offsetTop <= scrollY + 80) {
+            activeId = id;
+          }
         }
 
-        var ticking = false;
-
-        function updateActiveHeading() {
-          var scrollY = window.scrollY;
-          var activeId = null;
-
-          for (var i = 0; i < headingIds.length; i++) {
-            var el = document.getElementById(headingIds[i]);
-            if (el && el.offsetTop <= scrollY + 80) {
-              activeId = headingIds[i];
-            }
-          }
-
-          for (var j = 0; j < tocLinks.length; j++) {
-            var link = tocLinks[j];
-            if (link.getAttribute('data-heading-id') === activeId) {
-              link.classList.add('active');
-            } else {
-              link.classList.remove('active');
-            }
-          }
-
-          ticking = false;
+        for (const link of tocLinks) {
+          link.classList.toggle('active', link.dataset.headingId === activeId);
         }
 
-        window.addEventListener('scroll', function() {
-          if (!ticking) {
-            requestAnimationFrame(updateActiveHeading);
-            ticking = true;
-          }
-        }, { passive: true });
+        ticking = false;
+      }
 
-        // Smooth scroll on TOC link click
-        for (var k = 0; k < tocLinks.length; k++) {
-          tocLinks[k].addEventListener('click', function(e) {
-            var targetId = this.getAttribute('data-heading-id');
-            var target = document.getElementById(targetId);
-            if (target) {
-              e.preventDefault();
-              target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              // Update URL hash without jumping
-              history.replaceState(null, '', '#' + targetId);
-            }
-          });
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(updateActiveHeading);
+          ticking = true;
         }
+      }, { passive: true });
 
-        // Initial highlight
-        updateActiveHeading();
-      })();
-    </script>
-  )}
+      // Smooth scroll on TOC link click
+      for (const link of tocLinks) {
+        link.addEventListener('click', (e) => {
+          const targetId = link.dataset.headingId;
+          const target = targetId ? document.getElementById(targetId) : null;
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            history.replaceState(null, '', `#${targetId}`);
+          }
+        });
+      }
+
+      updateActiveHeading();
+    }
+  </script>
 </BaseLayout>
 
 <style>

@@ -11,9 +11,8 @@ export interface TocItem {
 export function extractTocItems(html: string): TocItem[] {
   const headingRegex = /<h([1-4])\s[^>]*?id="([^"]*)"[^>]*?>([\s\S]*?)<\/h\1>/gi;
   const items: TocItem[] = [];
-  let match;
 
-  while ((match = headingRegex.exec(html)) !== null) {
+  for (const match of html.matchAll(headingRegex)) {
     const level = parseInt(match[1]);
     const id = match[2];
     // Strip HTML tags (e.g. anchor links) to get plain text
