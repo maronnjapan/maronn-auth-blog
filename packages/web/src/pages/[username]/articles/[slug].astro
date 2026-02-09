@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import CommentSection from '../../../islands/CommentSection';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
+import { extractTocItems, getBaseLevel } from '../../../lib/toc';
 import type { TargetCategory } from '@maronn-auth-blog/shared';
 import 'zenn-content-css';
 
@@ -59,10 +60,15 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
   day: 'numeric',
 });
 const authorName = article.author?.displayName ?? username;
+
+// Extract TOC items from article HTML
+const tocItems = extractTocItems(article.html || '');
+const baseLevel = getBaseLevel(tocItems);
+const hasToc = tocItems.length > 0;
 ---
 
 <BaseLayout title={`${article.title} - ${username}`}>
-  <div class="container">
+  <div class={`article-page ${hasToc ? 'has-toc' : ''}`}>
     <article class="article">
       <header class="article-header">
         <h1>{article.title}</h1>
@@ -109,6 +115,23 @@ const authorName = article.author?.displayName ?? username;
         client:load
       />
     </article>
+
+    {hasToc && (
+      <aside class="toc-sidebar">
+        <nav class="toc" aria-label="目次">
+          <p class="toc-title">目次</p>
+          <ul class="toc-list">
+            {tocItems.map((item) => (
+              <li class={`toc-item toc-depth-${item.level - baseLevel}`}>
+                <a class="toc-link" href={`#${item.id}`}>
+                  {item.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+    )}
   </div>
 
   <!-- Script to handle embed iframe messages (similar to zenn's listen-embed-event.js) -->
@@ -143,14 +166,24 @@ const authorName = article.author?.displayName ?? username;
       });
     })();
   </script>
+
 </BaseLayout>
 
 <style>
-  .container {
+  .article-page {
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
     overflow-x: hidden;
+  }
+
+  .article-page.has-toc {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 2.5rem;
+    align-items: start;
+    overflow-x: visible;
   }
 
   .article {
@@ -159,6 +192,7 @@ const authorName = article.author?.displayName ?? username;
     border-radius: 8px;
     max-width: 100%;
     overflow-x: hidden;
+    min-width: 0;
   }
 
   .article-header {
@@ -294,8 +328,103 @@ const authorName = article.author?.displayName ?? username;
     word-break: break-all;
   }
 
+  /* TOC Sidebar */
+  .toc-sidebar {
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #d0d0d0 transparent;
+  }
+
+  .toc-sidebar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .toc-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .toc-sidebar::-webkit-scrollbar-thumb {
+    background: #d0d0d0;
+    border-radius: 2px;
+  }
+
+  .toc {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    border: 1px solid #e8e8e8;
+  }
+
+  .toc-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-item {
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-link {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0;
+    font-size: 0.8rem;
+    color: #666;
+    text-decoration: none;
+    line-height: 1.4;
+    border-left: 2px solid transparent;
+  }
+
+  .toc-link:hover {
+    color: #0066cc;
+  }
+
+  /* Indentation by heading depth */
+  .toc-depth-0 .toc-link {
+    padding-left: 0.75rem;
+  }
+
+  .toc-depth-1 .toc-link {
+    padding-left: 1.5rem;
+  }
+
+  .toc-depth-2 .toc-link {
+    padding-left: 2.25rem;
+  }
+
+  .toc-depth-3 .toc-link {
+    padding-left: 3rem;
+  }
+
+  /* Responsive: hide TOC on smaller screens */
+  @media (max-width: 1080px) {
+    .article-page.has-toc {
+      display: block;
+      max-width: 800px;
+    }
+
+    .toc-sidebar {
+      display: none;
+    }
+  }
+
   @media (max-width: 768px) {
-    .container {
+    .article-page {
       padding: 0 0.75rem;
     }
 
@@ -326,7 +455,7 @@ const authorName = article.author?.displayName ?? username;
   }
 
   @media (max-width: 480px) {
-    .container {
+    .article-page {
       padding: 0 0.5rem;
     }
 
