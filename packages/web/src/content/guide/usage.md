@@ -31,8 +31,8 @@ Auth Vaultは **1つのリポジトリのみ** の連携を想定しています
 4. インストールを許可して完了
 
 :::message
-連携するリポジトリは、記事専用のリポジトリを作成することをお勧めします
-。既存のプロジェクトリポジトリでも動作しますが、記事ファイルの管理がしやすくなります。
+連携するリポジトリは、記事専用のリポジトリを作成することをお勧めします。
+既存のプロジェクトリポジトリでも実装上動作する想定ですが、動作の担保はできておりません。
 :::
 
 ## 記事の書き方
@@ -320,50 +320,6 @@ Markdownファイル内で相対パスを使って画像を参照します。
 
 ## 埋め込みコンテンツ
 
-外部サービスのコンテンツを記事内に埋め込むことができます。
-
-### YouTube
-
-```markdown
-@[youtube](動画ID)
-```
-
-例: `@[youtube](dQw4w9WgXcQ)`
-
-### X（Twitter）
-
-```markdown
-@[tweet](ツイートURL)
-```
-
-例: `@[tweet](https://twitter.com/example/status/1234567890)`
-
-### GitHub Gist
-
-```markdown
-@[gist](GistのURL)
-```
-
-例: `@[gist](https://gist.github.com/username/abcdef123456)`
-
-### CodePen
-
-```markdown
-@[codepen](https://codepen.io/username/pen/abcdef)
-```
-
-### CodeSandbox
-
-```markdown
-@[codesandbox](https://codesandbox.io/s/example-id)
-```
-
-### StackBlitz
-
-```markdown
-@[stackblitz](https://stackblitz.com/edit/example-project)
-```
-
 ### リンクカード
 
 URLを単独の行に記述すると、自動的にリンクカードとして表示されます。
@@ -392,7 +348,8 @@ git push origin main
 ```
 
 :::message
-プッシュは必ず `main` ブランチに対して行ってください。他のブランチへのプッシュは検知されません。
+プッシュは必ず `main` ブランチに対して行ってください。
+他のブランチへのプッシュは検知されません。
 :::
 
 ### 記事の更新
@@ -415,12 +372,12 @@ Auth Vaultでは、すべての記事が公開前に審査を受けます。
 
 https://web.maronn-room.com/guide/review-prompt
 
-**承認される記事:**
+承認される記事:
 - オリジナルのコンテンツである
 - 適切な日本語（または英語）で書かれている
 - 他者を攻撃・誹謗中傷する内容がない
 
-**却下される可能性がある記事:**
+却下される可能性がある記事:
 - スパムや宣伝のみを目的とした内容
 - 著作権を侵害するコンテンツ
 - 差別的・攻撃的な表現
