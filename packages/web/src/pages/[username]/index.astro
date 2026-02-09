@@ -17,12 +17,25 @@ let isOwner = false;
 let error = null;
 
 try {
+  // First, check authentication to determine if viewing own profile
+  const authRes = await fetch(`${API_URL}/auth/me`, { headers: { Cookie: cookie } });
+  if (authRes.ok) {
+    const authData = await authRes.json();
+    isOwner = authData.username === username;
+  }
+
   // Fetch user, stats, and articles in parallel
-  const [userRes, statsRes, articlesRes, authRes] = await Promise.all([
+  // If owner, fetch all articles from dashboard endpoint; otherwise fetch public articles only
+  const articlesEndpoint = isOwner
+    ? `${API_URL}/dashboard/articles`
+    : `${API_URL}/users/${username}/articles`;
+
+  const articlesHeaders = isOwner ? { Cookie: cookie } : {};
+
+  const [userRes, statsRes, articlesRes] = await Promise.all([
     fetch(`${API_URL}/users/${username}`),
     fetch(`${API_URL}/users/${username}/stats`),
-    fetch(`${API_URL}/users/${username}/articles`),
-    fetch(`${API_URL}/auth/me`, { headers: { Cookie: cookie } }),
+    fetch(articlesEndpoint, { headers: articlesHeaders }),
   ]);
 
   if (userRes.ok) {
@@ -39,11 +52,6 @@ try {
   if (articlesRes.ok) {
     const data = await articlesRes.json();
     articles = data.articles || [];
-  }
-
-  if (authRes.ok) {
-    const authData = await authRes.json();
-    isOwner = authData.username === username;
   }
 } catch (err) {
   error = 'ユーザー情報の取得に失敗しました';
