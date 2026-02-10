@@ -188,7 +188,8 @@ app.get('/:username/:slug', async (c) => {
     throw new NotFoundError('Article', slug);
   }
 
-  const isPublished = !!article.publishedAt && article.status.toString() !== 'deleted';
+  const status = article.status.toString();
+  const isPublished = status === 'published' || status === 'pending_update';
 
   if (!isPublished) {
     throw new NotFoundError('Article', slug);

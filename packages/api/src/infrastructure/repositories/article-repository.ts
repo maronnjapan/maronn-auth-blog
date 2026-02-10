@@ -74,10 +74,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE published_at IS NOT NULL AND status != ?
+         WHERE status IN ('published', 'pending_update')
          ORDER BY published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', limit, offset)
+      .bind(limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -87,10 +87,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE user_id = ? AND published_at IS NOT NULL AND status != ?
+         WHERE user_id = ? AND status IN ('published', 'pending_update')
          ORDER BY published_at DESC`
       )
-      .bind(userId, 'deleted')
+      .bind(userId)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -177,8 +177,7 @@ export class ArticleRepository {
 
   async countPublished(): Promise<number> {
     const result = await this.db
-      .prepare('SELECT COUNT(*) as count FROM articles WHERE published_at IS NOT NULL AND status != ?')
-      .bind('deleted')
+      .prepare("SELECT COUNT(*) as count FROM articles WHERE status IN ('published', 'pending_update')")
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -188,9 +187,9 @@ export class ArticleRepository {
     const result = await this.db
       .prepare(
         `SELECT COUNT(*) as count FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category = ?`
+         WHERE status IN ('published', 'pending_update') AND category = ?`
       )
-      .bind('deleted', category)
+      .bind(category)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -201,9 +200,9 @@ export class ArticleRepository {
       .prepare(`
         SELECT COUNT(*) as count FROM articles a
         INNER JOIN article_topics at ON a.id = at.article_id
-        WHERE a.published_at IS NOT NULL AND a.status != ? AND at.topic = ?
+        WHERE a.status IN ('published', 'pending_update') AND at.topic = ?
       `)
-      .bind('deleted', topic)
+      .bind(topic)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -217,10 +216,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category = ?
+         WHERE status IN ('published', 'pending_update') AND category = ?
          ORDER BY published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', category, limit, offset)
+      .bind(category, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -235,10 +234,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN article_topics at ON a.id = at.article_id
-         WHERE a.published_at IS NOT NULL AND a.status != ? AND at.topic = ?
+         WHERE a.status IN ('published', 'pending_update') AND at.topic = ?
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', topic, limit, offset)
+      .bind(topic, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -253,10 +252,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(query, 'deleted', limit, offset)
+      .bind(query, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -267,9 +266,9 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')`
       )
-      .bind(query, 'deleted')
+      .bind(query)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -294,10 +293,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(andQuery, 'deleted', limit, offset)
+      .bind(andQuery, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -316,9 +315,9 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')`
       )
-      .bind(andQuery, 'deleted')
+      .bind(andQuery)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -347,10 +346,10 @@ export class ArticleRepository {
         .prepare(
           `SELECT a.* FROM articles a
            INNER JOIN articles_fts fts ON a.id = fts.id
-           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+           WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')
            ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
         )
-        .bind(orQuery, 'deleted', limit, offset)
+        .bind(orQuery, limit, offset)
         .all<ArticleRow>();
 
       return results.results.map((row) => this.rowToEntity(row));
@@ -362,11 +361,11 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')
          AND a.id NOT IN (${placeholders})
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(orQuery, 'deleted', ...excludeIds, limit, offset)
+      .bind(orQuery, ...excludeIds, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -391,9 +390,9 @@ export class ArticleRepository {
         .prepare(
           `SELECT COUNT(*) as count FROM articles a
            INNER JOIN articles_fts fts ON a.id = fts.id
-           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+           WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')`
         )
-        .bind(orQuery, 'deleted')
+        .bind(orQuery)
         .first<{ count: number }>();
 
       return result?.count ?? 0;
@@ -405,10 +404,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.status IN ('published', 'pending_update')
          AND a.id NOT IN (${placeholders})`
       )
-      .bind(orQuery, 'deleted', ...excludeIds)
+      .bind(orQuery, ...excludeIds)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -418,10 +417,9 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT category, COUNT(*) as count FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category IS NOT NULL AND category != ''
+         WHERE status IN ('published', 'pending_update') AND category IS NOT NULL AND category != ''
          GROUP BY category ORDER BY count DESC`
       )
-      .bind('deleted')
       .all<{ category: string; count: number }>();
 
     return results.results;
@@ -432,10 +430,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT at.topic, COUNT(*) as count FROM article_topics at
          INNER JOIN articles a ON at.article_id = a.id
-         WHERE a.published_at IS NOT NULL AND a.status != ?
+         WHERE a.status IN ('published', 'pending_update')
          GROUP BY at.topic ORDER BY count DESC LIMIT ?`
       )
-      .bind('deleted', limit)
+      .bind(limit)
       .all<{ topic: string; count: number }>();
 
     return results.results;
