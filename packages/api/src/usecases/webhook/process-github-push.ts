@@ -210,7 +210,11 @@ export class ProcessGitHubPushUsecase {
 
       // Mark for update if currently published or rejected
       if (['published', 'rejected'].includes(existingArticle.status.toString())) {
-        existingArticle.markForUpdate(sha);
+        existingArticle.markForUpdate(sha, {
+          title,
+          category,
+          targetCategories,
+        });
         await this.articleRepo.save(existingArticle);
 
         // Save topics
@@ -236,6 +240,19 @@ export class ProcessGitHubPushUsecase {
         });
 
         console.info(`[ProcessGitHubPush] Article ${existingArticle.id} marked for update`);
+      } else if (['pending_new', 'pending_update'].includes(existingArticle.status.toString())) {
+        // Update metadata for articles already pending review
+        existingArticle.updatePendingContent(sha, {
+          title,
+          category,
+          targetCategories,
+        });
+        await this.articleRepo.save(existingArticle);
+
+        // Save topics
+        await this.articleRepo.saveTopics(existingArticle.id, topics);
+
+        console.info(`[ProcessGitHubPush] Article ${existingArticle.id} pending content updated`);
       }
     } else {
       // Create new article
