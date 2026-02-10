@@ -34,7 +34,7 @@ try {
     fetch(articlesUrl),
     fetch(`${API_URL}/articles/categories`),
     fetch(`${API_URL}/articles/topics?limit=30`),
-    fetch(`${API_URL}/articles/trending?limit=5&days=7`),
+    fetch(`${API_URL}/articles/trending?limit=5`),
   ]);
 
   if (articlesRes.ok) {

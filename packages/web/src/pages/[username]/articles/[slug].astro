@@ -52,7 +52,7 @@ let relatedTrendingArticles: any[] = [];
 
 const articleTopics = article.topics || [];
 const trendingUrl = articleTopics.length > 0
-  ? `${API_URL}/articles/trending?limit=5&days=7&topics=${encodeURIComponent(articleTopics.join(','))}&excludeArticleId=${article.id}`
+  ? `${API_URL}/articles/trending?limit=5&topics=${encodeURIComponent(articleTopics.join(','))}&excludeArticleId=${article.id}`
   : null;
 
 try {

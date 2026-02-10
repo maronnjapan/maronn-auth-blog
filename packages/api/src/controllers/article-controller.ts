@@ -12,7 +12,6 @@ import { GetArticlesByTopicUsecase } from '../usecases/article/get-articles-by-t
 import { GetCategoriesUsecase } from '../usecases/article/get-categories';
 import { GetTopicsUsecase } from '../usecases/article/get-topics';
 import { GetTrendingArticlesUsecase } from '../usecases/article/get-trending-articles';
-import { CloudflareAnalyticsClient } from '../infrastructure/cloudflare-analytics-client';
 import type { Article as ArticleEntity } from '../domain/entities/article';
 import { parseArticle, convertImagePaths } from '../utils/markdown-parser';
 
@@ -171,26 +170,21 @@ app.get('/topics', async (c) => {
   return c.json({ topics });
 });
 
-// GET /articles/trending - Get trending articles by page views
+// GET /articles/trending - Get trending articles by page views (KV cached)
 app.get('/trending', async (c) => {
   const limit = parseInt(c.req.query('limit') || '5');
-  const days = parseInt(c.req.query('days') || '7');
   const topicsParam = c.req.query('topics');
   const excludeArticleId = c.req.query('excludeArticleId');
 
   const topics = topicsParam ? topicsParam.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
 
-  const analyticsClient = new CloudflareAnalyticsClient(c.env.CF_API_TOKEN, c.env.CF_ZONE_ID);
+  const kvClient = new KVClient(c.env.KV);
   const articleRepo = new ArticleRepository(c.env.DB);
   const userRepo = new UserRepository(c.env.DB);
 
-  const usecase = new GetTrendingArticlesUsecase(analyticsClient, articleRepo, userRepo);
+  const usecase = new GetTrendingArticlesUsecase(kvClient, articleRepo, userRepo);
 
-  // WEB_URL から host を抽出 (e.g., "https://web.maronn-room.com" -> "web.maronn-room.com")
-  const webHost = new URL(c.env.WEB_URL).host;
-
-  const results = await usecase.execute(webHost, {
-    days,
+  const results = await usecase.execute({
     limit,
     topics,
     excludeArticleId,

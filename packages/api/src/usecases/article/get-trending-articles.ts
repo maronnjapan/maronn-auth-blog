@@ -1,15 +1,14 @@
-import type { CloudflareAnalyticsClient } from '../../infrastructure/cloudflare-analytics-client';
 import type { ArticleRepository } from '../../infrastructure/repositories/article-repository';
 import type { UserRepository } from '../../infrastructure/repositories/user-repository';
+import type { KVClient } from '../../infrastructure/storage/kv-client';
 import type { Article } from '../../domain/entities/article';
 
-interface TrendingArticleResult {
+export interface TrendingArticleResult {
   article: Article;
   views: number;
 }
 
 interface GetTrendingArticlesInput {
-  days?: number;
   limit?: number;
   topics?: string[];
   excludeArticleId?: string;
@@ -24,21 +23,20 @@ function parseArticlePath(path: string): { username: string; slug: string } | nu
 
 export class GetTrendingArticlesUsecase {
   constructor(
-    private analyticsClient: CloudflareAnalyticsClient,
+    private kvClient: KVClient,
     private articleRepo: ArticleRepository,
     private userRepo: UserRepository
   ) {}
 
   async execute(
-    webHost: string,
     input: GetTrendingArticlesInput = {}
   ): Promise<TrendingArticleResult[]> {
-    const { days = 7, limit = 5, topics, excludeArticleId } = input;
+    const { limit = 5, topics, excludeArticleId } = input;
 
-    // 1. Cloudflare Analytics からページビューデータを取得
-    const pageViews = await this.analyticsClient.getArticlePageViews(webHost, days, 50);
+    // 1. KV からキャッシュされたページビューデータを取得
+    const pageViews = await this.kvClient.getTrendingPageViews();
 
-    if (pageViews.length === 0) {
+    if (!pageViews || pageViews.length === 0) {
       return [];
     }
 

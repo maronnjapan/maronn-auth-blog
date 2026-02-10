@@ -4,9 +4,11 @@ import { logger } from 'hono/logger';
 import type { Env } from './types/env';
 import { AppError } from '@maronn-auth-blog/shared';
 import { CleanupOrphanedDataUsecase } from './usecases/batch/cleanup-orphaned-data';
+import { RefreshTrendingPageviewsUsecase } from './usecases/batch/refresh-trending-pageviews';
 import { ArticleRepository } from './infrastructure/repositories/article-repository';
 import { KVClient } from './infrastructure/storage/kv-client';
 import { R2Client } from './infrastructure/storage/r2-client';
+import { CloudflareAnalyticsClient } from './infrastructure/cloudflare-analytics-client';
 
 // Import controllers
 import authController from './controllers/auth-controller';
@@ -71,17 +73,30 @@ app.notFound((c) => {
 
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    const articleRepo = new ArticleRepository(env.DB);
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     const kvClient = new KVClient(env.KV);
-    const r2Client = new R2Client(env.R2);
 
-    const orphanedDataUsecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
+    // 毎時: トレンド記事のページビューキャッシュを更新
+    const analyticsClient = new CloudflareAnalyticsClient(env.CF_API_TOKEN, env.CF_ZONE_ID);
+    const refreshTrendingUsecase = new RefreshTrendingPageviewsUsecase(analyticsClient, kvClient);
+    const webHost = new URL(env.WEB_URL).host;
     ctx.waitUntil(
-      orphanedDataUsecase.execute().catch((err) => {
-        console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
+      refreshTrendingUsecase.execute(webHost).catch((err) => {
+        console.error('[RefreshTrendingPageviews] Scheduled refresh failed:', err);
       })
     );
+
+    // 日次 (3:00 UTC): 孤立データのクリーンアップ
+    if (event.cron === '0 3 * * *') {
+      const articleRepo = new ArticleRepository(env.DB);
+      const r2Client = new R2Client(env.R2);
+      const orphanedDataUsecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
+      ctx.waitUntil(
+        orphanedDataUsecase.execute().catch((err) => {
+          console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
+        })
+      );
+    }
   },
 };
 export type AppType = typeof app;
