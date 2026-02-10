@@ -74,29 +74,48 @@ app.notFound((c) => {
 export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    console.info(`[Scheduled] Cron triggered: ${event.cron}`);
+
     const kvClient = new KVClient(env.KV);
 
     // 毎時: トレンド記事のページビューキャッシュを更新
-    const analyticsClient = new CloudflareAnalyticsClient(env.CF_WEB_ANALYTICS_API_TOKEN, env.CF_ZONE_ID);
-    const refreshTrendingUsecase = new RefreshTrendingPageviewsUsecase(analyticsClient, kvClient);
-    const webHost = new URL(env.WEB_URL).host;
-    ctx.waitUntil(
-      refreshTrendingUsecase.execute(webHost).catch((err) => {
-        console.error('[RefreshTrendingPageviews] Scheduled refresh failed:', err);
-      })
-    );
+    if (event.cron === '0 * * * *') {
+      try {
+        if (!env.CF_WEB_ANALYTICS_API_TOKEN || !env.CF_ZONE_ID || !env.WEB_URL) {
+          console.error('[RefreshTrendingPageviews] Missing required env vars: CF_WEB_ANALYTICS_API_TOKEN, CF_ZONE_ID, or WEB_URL');
+        } else {
+          const analyticsClient = new CloudflareAnalyticsClient(env.CF_WEB_ANALYTICS_API_TOKEN, env.CF_ZONE_ID);
+          const refreshTrendingUsecase = new RefreshTrendingPageviewsUsecase(analyticsClient, kvClient);
+          const webHost = new URL(env.WEB_URL).host;
+          console.info(`[RefreshTrendingPageviews] Refreshing for host: ${webHost}`);
+          ctx.waitUntil(
+            refreshTrendingUsecase.execute(webHost).catch((err) => {
+              console.error('[RefreshTrendingPageviews] Scheduled refresh failed:', err);
+            })
+          );
+        }
+      } catch (err) {
+        console.error('[RefreshTrendingPageviews] Failed to initialize:', err);
+      }
+    }
 
     // 日次 (3:00 UTC): 孤立データのクリーンアップ
     if (event.cron === '0 3 * * *') {
-      const articleRepo = new ArticleRepository(env.DB);
-      const r2Client = new R2Client(env.R2);
-      const orphanedDataUsecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
-      ctx.waitUntil(
-        orphanedDataUsecase.execute().catch((err) => {
-          console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
-        })
-      );
+      try {
+        const articleRepo = new ArticleRepository(env.DB);
+        const r2Client = new R2Client(env.R2);
+        const orphanedDataUsecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
+        ctx.waitUntil(
+          orphanedDataUsecase.execute().catch((err) => {
+            console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
+          })
+        );
+      } catch (err) {
+        console.error('[CleanupOrphanedData] Failed to initialize:', err);
+      }
     }
+
+    console.info(`[Scheduled] Cron handler completed: ${event.cron}`);
   },
 };
 export type AppType = typeof app;

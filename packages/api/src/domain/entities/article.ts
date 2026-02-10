@@ -113,7 +113,11 @@ export class Article {
     };
   }
 
-  markForUpdate(newSha: string): void {
+  markForUpdate(newSha: string, metadata?: {
+    title?: string;
+    category?: string;
+    targetCategories?: TargetCategories;
+  }): void {
     if (!this.props.status.canUpdate()) {
       throw new InvalidStatusTransitionError(
         this.props.status.toString(),
@@ -127,6 +131,24 @@ export class Article {
       githubSha: newSha,
       rejectionReason: undefined,
       updatedAt: new Date(),
+      ...(metadata?.title !== undefined && { title: metadata.title }),
+      ...(metadata?.category !== undefined && { category: metadata.category }),
+      ...(metadata?.targetCategories !== undefined && { targetCategories: metadata.targetCategories }),
+    };
+  }
+
+  updatePendingContent(newSha: string, metadata?: {
+    title?: string;
+    category?: string;
+    targetCategories?: TargetCategories;
+  }): void {
+    this.props = {
+      ...this.props,
+      githubSha: newSha,
+      updatedAt: new Date(),
+      ...(metadata?.title !== undefined && { title: metadata.title }),
+      ...(metadata?.category !== undefined && { category: metadata.category }),
+      ...(metadata?.targetCategories !== undefined && { targetCategories: metadata.targetCategories }),
     };
   }
 

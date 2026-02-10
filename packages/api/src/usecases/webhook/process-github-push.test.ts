@@ -536,6 +536,222 @@ describe('ProcessGitHubPushUsecase', () => {
     expect(r2ClientMock.putImage).not.toHaveBeenCalled();
   });
 
+  it('updates targetCategories, title, and category when a published article is modified', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Old Title',
+      category: '認証',
+      status: ArticleStatus.published(),
+      githubPath: 'articles/test.md',
+      githubSha: 'old-sha',
+      publishedSha: 'old-sha',
+      rejectionReason: undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      targetCategories: ['authentication'],
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({
+        content: ['---', 'title: New Title', 'published: true', 'category: セキュリティ', 'targetCategories: [security, authorization]', 'topics: [oauth]', '---', 'Content'].join('\n'),
+        sha: 'new-sha',
+      }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: ['articles/test.md'],
+          removed: [],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(article.status.toString()).toBe('pending_update');
+    expect(article.githubSha).toBe('new-sha');
+    expect(article.title).toBe('New Title');
+    expect(article.category).toBe('セキュリティ');
+    expect(article.targetCategories).toEqual(['security', 'authorization']);
+    expect(articleRepo.save).toHaveBeenCalledWith(article);
+  });
+
+  it('updates metadata for a pending_new article when content changes', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const article = new Article({
+      id: 'article-1',
+      userId: user.id,
+      slug: Slug.create('test'),
+      title: 'Old Title',
+      category: undefined,
+      status: ArticleStatus.pendingNew(),
+      githubPath: 'articles/test.md',
+      githubSha: 'old-sha',
+      publishedSha: undefined,
+      rejectionReason: undefined,
+      publishedAt: undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      targetCategories: ['authentication'],
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(article),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({
+        content: ['---', 'title: Updated Title', 'published: true', 'targetCategories: [security]', 'topics: []', '---', 'New Content'].join('\n'),
+        sha: 'new-sha',
+      }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn().mockResolvedValue(undefined),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: {
+        full_name: 'foo/bar',
+      },
+      commits: [
+        {
+          added: [],
+          modified: ['articles/test.md'],
+          removed: [],
+        },
+      ],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(article.status.toString()).toBe('pending_new');
+    expect(article.githubSha).toBe('new-sha');
+    expect(article.title).toBe('Updated Title');
+    expect(article.targetCategories).toEqual(['security']);
+    expect(articleRepo.save).toHaveBeenCalledWith(article);
+    expect(articleRepo.saveTopics).toHaveBeenCalledWith('article-1', []);
+  });
+
   it('marks a rejected article for re-review when updated', async () => {
     const user = new User({
       ...baseUserProps,

@@ -80,19 +80,21 @@ export class CloudflareAnalyticsClient {
     });
 
     if (!response.ok) {
-      console.error(`[CloudflareAnalytics] HTTP error: ${response.status}`);
+      const body = await response.text().catch(() => '(failed to read body)');
+      console.error(`[CloudflareAnalytics] HTTP error: ${response.status}, body: ${body}`);
       return [];
     }
 
     const result = (await response.json()) as GraphQLResponse;
 
     if (result.errors && result.errors.length > 0) {
-      console.error('[CloudflareAnalytics] GraphQL errors:', result.errors);
+      console.error('[CloudflareAnalytics] GraphQL errors:', JSON.stringify(result.errors));
       return [];
     }
 
     const groups = result.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups;
-    if (!groups) {
+    if (!groups || groups.length === 0) {
+      console.info('[CloudflareAnalytics] No adaptive groups returned from query');
       return [];
     }
 
