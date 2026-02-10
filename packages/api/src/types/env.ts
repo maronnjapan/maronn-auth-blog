@@ -35,7 +35,7 @@ export interface Env {
   ADMIN_NOTIFICATION_EMAIL: string;
 
   // Cloudflare Analytics
-  CF_API_TOKEN: string;
+  CF_WEB_ANALYTICS_API_TOKEN: string;
   CF_ZONE_ID: string;
 
   // Cloudflare Bindings
