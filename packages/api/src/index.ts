@@ -4,7 +4,6 @@ import { logger } from 'hono/logger';
 import type { Env } from './types/env';
 import { AppError } from '@maronn-auth-blog/shared';
 import { CleanupOrphanedDataUsecase } from './usecases/batch/cleanup-orphaned-data';
-import { CleanupStaleSessionsUsecase } from './usecases/batch/cleanup-stale-sessions';
 import { ArticleRepository } from './infrastructure/repositories/article-repository';
 import { KVClient } from './infrastructure/storage/kv-client';
 import { R2Client } from './infrastructure/storage/r2-client';
@@ -81,13 +80,6 @@ export default {
     ctx.waitUntil(
       orphanedDataUsecase.execute().catch((err) => {
         console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
-      })
-    );
-
-    const staleSessionsUsecase = new CleanupStaleSessionsUsecase(kvClient);
-    ctx.waitUntil(
-      staleSessionsUsecase.execute().catch((err) => {
-        console.error('[CleanupStaleSessions] Scheduled cleanup failed:', err);
       })
     );
   },

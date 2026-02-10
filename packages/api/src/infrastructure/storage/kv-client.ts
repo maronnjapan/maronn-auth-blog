@@ -7,16 +7,6 @@ export interface SessionData {
   permissions?: string[];
 }
 
-export interface SessionKeyEntry {
-  sessionId: string;
-  metadata?: SessionMetadata;
-}
-
-export interface SessionMetadata {
-  userId: string;
-  expiresAt: number;
-}
-
 export class KVClient {
   constructor(private kv: KVNamespace) {}
 
@@ -31,41 +21,13 @@ export class KVClient {
     data: SessionData,
     ttl: number = 90 * 24 * 60 * 60 // 90 days
   ): Promise<void> {
-    const metadata: SessionMetadata = {
-      userId: data.userId,
-      expiresAt: data.expiresAt,
-    };
     await this.kv.put(`session:${sessionId}`, JSON.stringify(data), {
       expirationTtl: ttl,
-      metadata,
     });
   }
 
   async deleteSession(sessionId: string): Promise<void> {
     await this.kv.delete(`session:${sessionId}`);
-  }
-
-  async listSessionKeys(): Promise<SessionKeyEntry[]> {
-    const keys: SessionKeyEntry[] = [];
-    let listComplete = false;
-    let cursor: string | undefined;
-
-    while (!listComplete) {
-      const result = await this.kv.list({ prefix: 'session:', cursor });
-      for (const key of result.keys) {
-        const sessionId = key.name.replace('session:', '');
-        keys.push({
-          sessionId,
-          metadata: key.metadata as SessionMetadata | undefined,
-        });
-      }
-      listComplete = result.list_complete;
-      if (!result.list_complete) {
-        cursor = result.cursor;
-      }
-    }
-
-    return keys;
   }
 
   // Article Markdown cache
