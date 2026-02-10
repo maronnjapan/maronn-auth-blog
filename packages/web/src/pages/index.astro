@@ -5,6 +5,7 @@ import SearchBar from '../islands/SearchBar';
 import CategoryFilter from '../islands/CategoryFilter';
 import TopicCloud from '../islands/TopicCloud';
 import Pagination from '../islands/Pagination';
+import TrendingArticles from '../islands/TrendingArticles';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -14,11 +15,12 @@ const category = Astro.url.searchParams.get('category') || '';
 const topic = Astro.url.searchParams.get('topic') || '';
 const limit = 20;
 
-// Fetch articles, categories, and topics on server-side
+// Fetch articles, categories, topics, and trending on server-side
 let articles = [];
 let total = 0;
 let categories = [];
 let topics = [];
+let trendingArticles = [];
 let error = null;
 
 try {
@@ -28,10 +30,11 @@ try {
   if (topic) articlesUrl += `&topic=${encodeURIComponent(topic)}`;
 
   // Fetch all data in parallel
-  const [articlesRes, categoriesRes, topicsRes] = await Promise.all([
+  const [articlesRes, categoriesRes, topicsRes, trendingRes] = await Promise.all([
     fetch(articlesUrl),
     fetch(`${API_URL}/articles/categories`),
     fetch(`${API_URL}/articles/topics?limit=30`),
+    fetch(`${API_URL}/articles/trending?limit=5&days=7`),
   ]);
 
   if (articlesRes.ok) {
@@ -50,6 +53,11 @@ try {
   if (topicsRes.ok) {
     const data = await topicsRes.json();
     topics = data.topics || [];
+  }
+
+  if (trendingRes.ok) {
+    const data = await trendingRes.json();
+    trendingArticles = data.articles || [];
   }
 } catch (err) {
   error = '記事の取得に失敗しました';
@@ -84,6 +92,9 @@ else if (topic) pageTitle = `トピック: ${topic}`;
           </div>
         ) : (
           <>
+            {!category && !topic && page === 1 && trendingArticles.length > 0 && (
+              <TrendingArticles articles={trendingArticles} client:load />
+            )}
             {(category || topic) && (
               <div class="filter-notice">
                 <p>

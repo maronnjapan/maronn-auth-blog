@@ -5,6 +5,7 @@ import TableOfContents from '../../../islands/TableOfContents';
 import MobileTableOfContents from '../../../islands/MobileTableOfContents';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
 import { extractTocItems, getBaseLevel, buildNestedToc } from '../../../lib/toc';
+import TrendingArticles from '../../../islands/TrendingArticles';
 import type { TargetCategory } from '@maronn-auth-blog/shared';
 import 'zenn-content-css';
 
@@ -45,15 +46,35 @@ try {
   // Not logged in
 }
 
-// Fetch comments for this article
+// Fetch comments and related trending articles in parallel
 let commentsData = { comments: [] as any[], total: 0 };
+let relatedTrendingArticles: any[] = [];
+
+const articleTopics = article.topics || [];
+const trendingUrl = articleTopics.length > 0
+  ? `${API_URL}/articles/trending?limit=5&days=7&topics=${encodeURIComponent(articleTopics.join(','))}&excludeArticleId=${article.id}`
+  : null;
+
 try {
-  const commentsResponse = await fetch(`${API_URL}/comments/articles/${article.id}`);
-  if (commentsResponse.ok) {
-    commentsData = await commentsResponse.json();
+  const fetchPromises: Promise<Response>[] = [
+    fetch(`${API_URL}/comments/articles/${article.id}`),
+  ];
+  if (trendingUrl) {
+    fetchPromises.push(fetch(trendingUrl));
+  }
+
+  const results = await Promise.all(fetchPromises);
+
+  if (results[0].ok) {
+    commentsData = await results[0].json();
+  }
+
+  if (results[1] && results[1].ok) {
+    const trendingData = await results[1].json();
+    relatedTrendingArticles = trendingData.articles || [];
   }
 } catch {
-  // Failed to fetch comments
+  // Failed to fetch comments or trending
 }
 
 const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', {
@@ -123,6 +144,16 @@ const hasToc = tocItems.length > 0;
         apiUrl={API_URL}
         client:load
       />
+
+      {relatedTrendingArticles.length > 0 && (
+        <div class="related-trending">
+          <TrendingArticles
+            articles={relatedTrendingArticles}
+            title="同じトピックの注目記事"
+            client:load
+          />
+        </div>
+      )}
     </article>
 
     {hasToc && (
@@ -351,6 +382,13 @@ const hasToc = tocItems.length > 0;
     overflow-wrap: break-word;
     word-break: break-word;
     max-width: 100%;
+  }
+
+  /* Related trending articles */
+  .related-trending {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e0e0e0;
   }
 
   /* Mobile TOC Wrapper */
