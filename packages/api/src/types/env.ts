@@ -34,6 +34,10 @@ export interface Env {
   NOTIFICATION_EMAIL_FROM: string;
   ADMIN_NOTIFICATION_EMAIL: string;
 
+  // Cloudflare Analytics
+  CF_WEB_ANALYTICS_API_TOKEN: string;
+  CF_ZONE_ID: string;
+
   // Cloudflare Bindings
   DB: D1Database;
   KV: KVNamespace;

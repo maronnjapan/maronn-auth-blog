@@ -43,6 +43,20 @@ export class KVClient {
     await this.kv.delete(`article:${userId}:${slug}`);
   }
 
+  // Trending page views cache
+  async getTrendingPageViews(): Promise<Array<{ path: string; views: number }> | null> {
+    const data = await this.kv.get('trending:pageviews', 'json');
+    return data as Array<{ path: string; views: number }> | null;
+  }
+
+  async setTrendingPageViews(
+    pageViews: Array<{ path: string; views: number }>
+  ): Promise<void> {
+    await this.kv.put('trending:pageviews', JSON.stringify(pageViews), {
+      expirationTtl: 2 * 60 * 60, // 2時間（1時間更新の安全マージン）
+    });
+  }
+
   async listArticleKeys(): Promise<string[]> {
     const keys: string[] = [];
     let listComplete = false;
