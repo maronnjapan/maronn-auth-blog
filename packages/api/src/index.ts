@@ -76,9 +76,9 @@ export default {
     const kvClient = new KVClient(env.KV);
     const r2Client = new R2Client(env.R2);
 
-    const usecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
+    const orphanedDataUsecase = new CleanupOrphanedDataUsecase(articleRepo, kvClient, r2Client);
     ctx.waitUntil(
-      usecase.execute().catch((err) => {
+      orphanedDataUsecase.execute().catch((err) => {
         console.error('[CleanupOrphanedData] Scheduled cleanup failed:', err);
       })
     );

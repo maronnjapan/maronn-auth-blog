@@ -1,8 +1,10 @@
 import { Context, Next } from 'hono';
-import { getCookie } from 'hono/cookie';
+import { getCookie, setCookie } from 'hono/cookie';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Env } from '../types/env';
 import { KVClient } from '../infrastructure/storage/kv-client';
+import { Auth0Client } from '../infrastructure/auth0-client';
+import { RefreshSessionUsecase } from '../usecases/auth/refresh-session';
 import { UnauthorizedError, ForbiddenError } from '@maronn-auth-blog/shared';
 
 export interface AuthContext {
@@ -67,8 +69,60 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
   // Check if access token is expired
   if (session.expiresAt < Date.now()) {
-    // TODO: Implement token refresh
-    throw new UnauthorizedError('Session expired');
+    if (!session.refreshToken) {
+      throw new UnauthorizedError('Session expired');
+    }
+
+    try {
+      const auth0Client = new Auth0Client(
+        c.env.AUTH0_DOMAIN,
+        c.env.AUTH0_CLIENT_ID,
+        c.env.AUTH0_CLIENT_SECRET,
+        c.env.AUTH0_CALLBACK_URL,
+        c.env.API_URL
+      );
+
+      const usecase = new RefreshSessionUsecase(auth0Client, kvClient);
+      const { newSessionId, newSessionData } = await usecase.execute(session);
+
+      // Set new encrypted session cookie
+      const newEncryptedSessionId = await encryptSessionId(
+        newSessionId,
+        c.env.SESSION_SECRET
+      );
+      setCookie(c, 'session', newEncryptedSessionId, {
+        httpOnly: true,
+        secure: c.env.ENVIRONMENT === 'production',
+        sameSite: c.env.ENVIRONMENT === 'production' ? 'None' : 'Lax',
+        maxAge: 90 * 24 * 60 * 60, // 90 days
+        path: '/',
+        ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {}),
+      });
+
+      // Async delete old session (non-blocking)
+      c.executionCtx.waitUntil(
+        kvClient.deleteSession(sessionId).catch((err) => {
+          console.error(
+            `[AuthMiddleware] Failed to delete old session: ${sessionId}`,
+            err
+          );
+        })
+      );
+
+      // Use refreshed session data
+      c.set('auth', {
+        userId: newSessionData.userId,
+        sessionId: newSessionId,
+        permissions: newSessionData.permissions ?? [],
+      });
+
+      await next();
+      return;
+    } catch (err) {
+      if (err instanceof UnauthorizedError) throw err;
+      console.error('[AuthMiddleware] Token refresh failed:', err);
+      throw new UnauthorizedError('Session expired');
+    }
   }
 
   // Set auth context
