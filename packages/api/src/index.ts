@@ -77,7 +77,7 @@ export default {
     const kvClient = new KVClient(env.KV);
 
     // 毎時: トレンド記事のページビューキャッシュを更新
-    const analyticsClient = new CloudflareAnalyticsClient(env.CF_API_TOKEN, env.CF_ZONE_ID);
+    const analyticsClient = new CloudflareAnalyticsClient(env.CF_WEB_ANALYTICS_API_TOKEN, env.CF_ZONE_ID);
     const refreshTrendingUsecase = new RefreshTrendingPageviewsUsecase(analyticsClient, kvClient);
     const webHost = new URL(env.WEB_URL).host;
     ctx.waitUntil(
