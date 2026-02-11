@@ -5,13 +5,17 @@ const mocks = vi.hoisted(() => {
   const authFn = vi.fn();
   const createAppAuthMock = vi.fn(() => authFn);
   const listReposMock = vi.fn();
+  const getContentMock = vi.fn();
   const OctokitMock = vi.fn(() => ({
     apps: {
       listReposAccessibleToInstallation: listReposMock,
     },
+    repos: {
+      getContent: getContentMock,
+    },
   }));
 
-  return { authFn, createAppAuthMock, listReposMock, OctokitMock };
+  return { authFn, createAppAuthMock, listReposMock, getContentMock, OctokitMock };
 });
 
 vi.mock('@octokit/auth-app', () => ({
@@ -26,6 +30,7 @@ describe('GitHubClient', () => {
   beforeEach(() => {
     mocks.authFn.mockReset();
     mocks.listReposMock.mockReset();
+    mocks.getContentMock.mockReset();
     mocks.createAppAuthMock.mockClear();
     mocks.OctokitMock.mockClear();
     mocks.authFn.mockResolvedValue({ token: 'test-token' });
@@ -76,6 +81,74 @@ describe('GitHubClient', () => {
         pushedAt: '2024-01-01T00:00:00Z',
       },
     ]);
+  });
+
+  describe('fetchImage', () => {
+    it('correctly handles small images (< 1MB)', async () => {
+      const client = new GitHubClient('app-id', 'private-key');
+
+      // Create a small test image (100 bytes)
+      const testData = new Uint8Array(100);
+      for (let i = 0; i < 100; i++) {
+        testData[i] = i % 256;
+      }
+      const base64Data = Buffer.from(testData).toString('base64');
+
+      mocks.getContentMock.mockResolvedValue({
+        data: {
+          type: 'file',
+          content: base64Data,
+          sha: 'test-sha',
+        },
+      });
+
+      const result = await client.fetchImage('999999', 'owner', 'repo', 'images/small.png');
+
+      expect(result).toBeInstanceOf(ArrayBuffer);
+      expect(result.byteLength).toBe(100);
+
+      // Verify data integrity
+      const resultData = new Uint8Array(result);
+      for (let i = 0; i < 100; i++) {
+        expect(resultData[i]).toBe(i % 256);
+      }
+    });
+
+    it('correctly handles large images (> 1MB) with proper ArrayBuffer slicing', async () => {
+      const client = new GitHubClient('app-id', 'private-key');
+
+      // Create a large test image (1.5MB)
+      const size = 1.5 * 1024 * 1024;
+      const testData = new Uint8Array(size);
+      // Fill with pattern to verify data integrity
+      for (let i = 0; i < size; i++) {
+        testData[i] = i % 256;
+      }
+      const base64Data = Buffer.from(testData).toString('base64');
+
+      mocks.getContentMock.mockResolvedValue({
+        data: {
+          type: 'file',
+          content: base64Data,
+          sha: 'test-sha',
+        },
+      });
+
+      const result = await client.fetchImage('999999', 'owner', 'repo', 'images/large.gif');
+
+      expect(result).toBeInstanceOf(ArrayBuffer);
+      expect(result.byteLength).toBe(size);
+
+      // Verify data integrity at different positions
+      const resultData = new Uint8Array(result);
+      expect(resultData[0]).toBe(0);
+      expect(resultData[100]).toBe(100);
+      expect(resultData[size - 1]).toBe((size - 1) % 256);
+
+      // Spot check some random positions
+      expect(resultData[500000]).toBe(500000 % 256);
+      expect(resultData[1000000]).toBe(1000000 % 256);
+    });
   });
 
   describe('verifyWebhookSignature', () => {
