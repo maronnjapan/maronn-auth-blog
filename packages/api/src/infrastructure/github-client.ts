@@ -111,11 +111,30 @@ export class GitHubClient {
     });
 
     if ('content' in data && data.type === 'file') {
-      const buffer = Buffer.from(data.content, 'base64');
-      // Create a proper view of the buffer data and slice it to get a new ArrayBuffer
-      // This ensures we get a clean copy without any offset issues
-      const uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-      return uint8.slice().buffer;
+      if (data.content && (!data.encoding || data.encoding === 'base64')) {
+        const buffer = Buffer.from(data.content, 'base64');
+        // Create a proper view of the buffer data and slice it to get a new ArrayBuffer
+        // This ensures we get a clean copy without any offset issues
+        const uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        return uint8.slice().buffer;
+      }
+
+      if (data.download_url) {
+        const response = await fetch(data.download_url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/octet-stream',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to download image from GitHub: ${response.status}`);
+        }
+
+        return await response.arrayBuffer();
+      }
+
+      throw new Error('File content is not available from GitHub API response');
     }
 
     throw new Error('Not a file');
