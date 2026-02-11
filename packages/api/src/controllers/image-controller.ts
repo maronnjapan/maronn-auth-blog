@@ -5,6 +5,18 @@ import { NotFoundError } from '@maronn-auth-blog/shared';
 
 const app = new Hono<{ Bindings: Env }>();
 
+/**
+ * ファイル名からContent-Typeを推定する
+ */
+function detectContentTypeFromFilename(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
 // GET /images/comment-images/:userId/:filename - Get comment image from R2
 app.get('/comment-images/:userId/:filename', async (c) => {
   const userId = c.req.param('userId');
@@ -17,9 +29,11 @@ app.get('/comment-images/:userId/:filename', async (c) => {
     throw new NotFoundError('Image', filename);
   }
 
+  const contentType = object.httpMetadata?.contentType || detectContentTypeFromFilename(filename);
+
   return new Response(object.body, {
     headers: {
-      'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
     },
   });
@@ -38,9 +52,11 @@ app.get('/:userId/:slug/:filename', async (c) => {
     throw new NotFoundError('Image', filename);
   }
 
+  const contentType = object.httpMetadata?.contentType || detectContentTypeFromFilename(filename);
+
   return new Response(object.body, {
     headers: {
-      'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
     },
   });
