@@ -149,6 +149,55 @@ describe('GitHubClient', () => {
       expect(resultData[500000]).toBe(500000 % 256);
       expect(resultData[1000000]).toBe(1000000 % 256);
     });
+
+    it('downloads image via download_url when content is omitted by GitHub API', async () => {
+      const client = new GitHubClient('app-id', 'private-key');
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const size = 1100 * 1024;
+      const testData = new Uint8Array(size);
+      for (let i = 0; i < size; i++) {
+        testData[i] = i % 256;
+      }
+
+      mocks.getContentMock.mockResolvedValue({
+        data: {
+          type: 'file',
+          content: '',
+          encoding: 'none',
+          sha: 'test-sha',
+          download_url: 'https://raw.githubusercontent.com/owner/repo/main/images/large.gif',
+        },
+      });
+
+      fetchMock.mockResolvedValue(
+        new Response(testData.buffer, {
+          status: 200,
+          headers: { 'content-type': 'image/gif' },
+        })
+      );
+
+      const result = await client.fetchImage('999999', 'owner', 'repo', 'images/large.gif');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://raw.githubusercontent.com/owner/repo/main/images/large.gif',
+        {
+          headers: {
+            Authorization: 'Bearer test-token',
+            Accept: 'application/octet-stream',
+          },
+        }
+      );
+      expect(result.byteLength).toBe(size);
+
+      const resultData = new Uint8Array(result);
+      expect(resultData[0]).toBe(0);
+      expect(resultData[500000]).toBe(500000 % 256);
+      expect(resultData[size - 1]).toBe((size - 1) % 256);
+
+      vi.unstubAllGlobals();
+    });
   });
 
   describe('verifyWebhookSignature', () => {
