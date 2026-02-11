@@ -82,6 +82,12 @@ const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', 
   month: 'long',
   day: 'numeric',
 });
+const updatedDate = article.updatedAt ? new Date(article.updatedAt).toLocaleDateString('ja-JP', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+}) : null;
+const isUpdated = article.updatedAt && new Date(article.updatedAt).getTime() !== new Date(article.publishedAt).getTime();
 const authorName = article.author?.displayName ?? username;
 
 // Extract TOC items from article HTML
@@ -98,7 +104,12 @@ const hasToc = tocItems.length > 0;
         <h1>{article.title}</h1>
         <div class="article-meta">
           <a href={`/${username}`} class="author">{authorName}</a>
-          <time datetime={article.publishedAt}>{publishedDate}</time>
+          <div class="dates">
+            <time datetime={article.publishedAt} class="published-date">公開日: {publishedDate}</time>
+            {isUpdated && updatedDate && (
+              <time datetime={article.updatedAt} class="updated-date">更新日: {updatedDate}</time>
+            )}
+          </div>
           {article.category && (
             <span class="category">{article.category}</span>
           )}
@@ -243,6 +254,18 @@ const hasToc = tocItems.length > 0;
     color: #666;
     font-size: 0.9rem;
     flex-wrap: wrap;
+  }
+
+  .dates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+
+  .published-date,
+  .updated-date {
+    display: block;
   }
 
   .author {
