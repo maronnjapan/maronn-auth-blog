@@ -112,10 +112,10 @@ export class GitHubClient {
 
     if ('content' in data && data.type === 'file') {
       const buffer = Buffer.from(data.content, 'base64');
-      return buffer.buffer.slice(
-        buffer.byteOffset,
-        buffer.byteOffset + buffer.byteLength
-      );
+      // Create a proper view of the buffer data and slice it to get a new ArrayBuffer
+      // This ensures we get a clean copy without any offset issues
+      const uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+      return uint8.slice().buffer;
     }
 
     throw new Error('Not a file');
