@@ -91,7 +91,7 @@ export class Article {
       ...this.props,
       status: ArticleStatus.published(),
       publishedSha: sha,
-      publishedAt: new Date(),
+      publishedAt: this.props.publishedAt ?? new Date(), // 初回承認時のみ設定、再承認時は維持
       rejectionReason: undefined,
       updatedAt: new Date(),
     };

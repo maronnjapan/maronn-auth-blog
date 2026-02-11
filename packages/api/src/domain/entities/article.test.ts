@@ -122,4 +122,75 @@ describe('Article entity', () => {
       expect(article.targetCategories).toEqual(['authentication']);
     });
   });
+
+  describe('approve', () => {
+    it('sets publishedAt on initial approval (pending_new -> published)', () => {
+      const article = new Article({
+        ...baseArticleProps,
+        status: ArticleStatus.pendingNew(),
+        publishedAt: undefined,
+        publishedSha: undefined,
+      });
+
+      const beforeApproval = Date.now();
+      article.approve('new-sha');
+      const afterApproval = Date.now();
+
+      expect(article.status.toString()).toBe('published');
+      expect(article.publishedSha).toBe('new-sha');
+      expect(article.publishedAt).toBeDefined();
+      expect(article.publishedAt!.getTime()).toBeGreaterThanOrEqual(beforeApproval);
+      expect(article.publishedAt!.getTime()).toBeLessThanOrEqual(afterApproval);
+      expect(article.rejectionReason).toBeUndefined();
+    });
+
+    it('preserves original publishedAt on re-approval (pending_update -> published)', () => {
+      const originalPublishedAt = new Date('2024-01-01');
+      const article = new Article({
+        ...baseArticleProps,
+        status: ArticleStatus.pendingUpdate(),
+        publishedAt: originalPublishedAt,
+        publishedSha: 'old-sha',
+      });
+
+      article.approve('new-sha');
+
+      expect(article.status.toString()).toBe('published');
+      expect(article.publishedSha).toBe('new-sha');
+      expect(article.publishedAt).toEqual(originalPublishedAt); // 元の公開日が維持される
+      expect(article.updatedAt.getTime()).toBeGreaterThan(originalPublishedAt.getTime()); // 更新日は新しい
+    });
+
+    it('clears rejection reason on re-approval after update', () => {
+      // 却下された記事がユーザーによって更新され、pending_updateになったケース
+      const article = new Article({
+        ...baseArticleProps,
+        status: ArticleStatus.pendingUpdate(),
+        rejectionReason: 'Some reason',
+      });
+
+      article.approve('new-sha');
+
+      expect(article.status.toString()).toBe('published');
+      expect(article.rejectionReason).toBeUndefined();
+    });
+
+    it('throws when article status does not allow approval (rejected)', () => {
+      const article = new Article({
+        ...baseArticleProps,
+        status: ArticleStatus.rejected(),
+      });
+
+      expect(() => article.approve('new-sha')).toThrow();
+    });
+
+    it('throws when article status does not allow approval (deleted)', () => {
+      const article = new Article({
+        ...baseArticleProps,
+        status: ArticleStatus.deleted(),
+      });
+
+      expect(() => article.approve('new-sha')).toThrow();
+    });
+  });
 });
