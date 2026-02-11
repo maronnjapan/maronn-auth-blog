@@ -66,7 +66,7 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
             <tr>
               <th>タイトル</th>
               <th>ステータス</th>
-              <th>作成日</th>
+              <th>日付</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -94,7 +94,18 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
                       {status.label}
                     </span>
                   </td>
-                  <td>{new Date(article.createdAt).toLocaleDateString('ja-JP')}</td>
+                  <td>
+                    {article.status === 'published' && article.publishedAt ? (
+                      <div className="date-column">
+                        <div>公開日: {new Date(article.publishedAt).toLocaleDateString('ja-JP')}</div>
+                        {article.updatedAt && new Date(article.updatedAt).getTime() !== new Date(article.publishedAt).getTime() && (
+                          <div className="updated-date">更新日: {new Date(article.updatedAt).toLocaleDateString('ja-JP')}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>作成日: {new Date(article.createdAt).toLocaleDateString('ja-JP')}</div>
+                    )}
+                  </td>
                   <td>
                     {!isDeleted && (
                       <button
@@ -117,6 +128,17 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
         .table-wrapper {
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
+        }
+
+        .date-column {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .updated-date {
+          font-size: 0.85rem;
+          color: #666;
         }
 
         .delete-button {

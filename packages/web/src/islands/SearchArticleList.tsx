@@ -9,6 +9,7 @@ interface SearchArticle {
   title: string;
   category?: string;
   publishedAt: string;
+  updatedAt?: string;
   matchType: MatchType;
   author?: {
     username: string;
@@ -71,9 +72,16 @@ export default function SearchArticleList({ articles }: SearchArticleListProps) 
               {article.category && (
                 <span className="category">{article.category}</span>
               )}
-              <p className="meta">
-                公開日: {new Date(article.publishedAt).toLocaleDateString('ja-JP')}
-              </p>
+              <div className="meta">
+                <p className="date">
+                  公開日: {new Date(article.publishedAt).toLocaleDateString('ja-JP')}
+                </p>
+                {article.updatedAt && new Date(article.updatedAt).getTime() !== new Date(article.publishedAt).getTime() && (
+                  <p className="date">
+                    更新日: {new Date(article.updatedAt).toLocaleDateString('ja-JP')}
+                  </p>
+                )}
+              </div>
             </div>
           </article>
         );
