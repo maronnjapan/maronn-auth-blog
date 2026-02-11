@@ -156,12 +156,12 @@ export class ArticleRepository {
       .bind(articleId)
       .run();
 
-    // Insert new topics
+    // Insert new topics (normalize to lowercase for consistent searching)
     for (const topic of topics) {
       const topicId = crypto.randomUUID();
       await this.db
         .prepare('INSERT INTO article_topics (id, article_id, topic) VALUES (?, ?, ?)')
-        .bind(topicId, articleId, topic)
+        .bind(topicId, articleId, topic.toLowerCase())
         .run();
     }
   }
@@ -201,7 +201,7 @@ export class ArticleRepository {
       .prepare(`
         SELECT COUNT(*) as count FROM articles a
         INNER JOIN article_topics at ON a.id = at.article_id
-        WHERE a.published_at IS NOT NULL AND a.status != ? AND at.topic = ?
+        WHERE a.published_at IS NOT NULL AND a.status != ? AND LOWER(at.topic) = LOWER(?)
       `)
       .bind('deleted', topic)
       .first<{ count: number }>();
@@ -235,7 +235,7 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN article_topics at ON a.id = at.article_id
-         WHERE a.published_at IS NOT NULL AND a.status != ? AND at.topic = ?
+         WHERE a.published_at IS NOT NULL AND a.status != ? AND LOWER(at.topic) = LOWER(?)
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
       .bind('deleted', topic, limit, offset)
@@ -430,10 +430,10 @@ export class ArticleRepository {
   async getAllTopics(limit: number = 50): Promise<Array<{ topic: string; count: number }>> {
     const results = await this.db
       .prepare(
-        `SELECT at.topic, COUNT(*) as count FROM article_topics at
+        `SELECT LOWER(at.topic) as topic, COUNT(*) as count FROM article_topics at
          INNER JOIN articles a ON at.article_id = a.id
          WHERE a.published_at IS NOT NULL AND a.status != ?
-         GROUP BY at.topic ORDER BY count DESC LIMIT ?`
+         GROUP BY LOWER(at.topic) ORDER BY count DESC LIMIT ?`
       )
       .bind('deleted', limit)
       .all<{ topic: string; count: number }>();
