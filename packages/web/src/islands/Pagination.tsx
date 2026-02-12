@@ -42,7 +42,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
   }
 
   const getPageUrl = (page: number) => {
-    const url = new URL(baseUrl, window.location.origin);
+    const url = new URL(baseUrl, 'http://localhost');
     url.searchParams.set('page', page.toString());
     return url.pathname + url.search;
   };
