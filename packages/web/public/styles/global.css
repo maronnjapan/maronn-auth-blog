@@ -15,16 +15,18 @@ body {
   background: #f5f5f5;
 }
 
-/* Article Cards */
+/* Article Cards - Grid Layout */
 .article-list {
   width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
 }
 
 .article-card-link {
   display: block;
   text-decoration: none;
   color: inherit;
-  margin-bottom: 1rem;
 }
 
 .article-card-link:hover .article-card {
@@ -48,6 +50,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
+  height: 100%;
 }
 
 .article-card h2,
@@ -119,6 +122,45 @@ body {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* Article Card Footer (bookmark) */
+.article-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.bookmark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  background: white;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.bookmark-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.bookmark-btn.bookmarked {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+}
+
+.bookmark-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Loading, Error, Empty States */
@@ -507,6 +549,10 @@ button:disabled {
 
 /* Mobile Responsive Breakpoints */
 @media (max-width: 900px) {
+  .article-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
@@ -523,6 +569,10 @@ button:disabled {
 
   .container {
     padding: 0 0.75rem;
+  }
+
+  .article-list {
+    grid-template-columns: 1fr;
   }
 
   .article-card {
