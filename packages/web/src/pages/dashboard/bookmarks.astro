@@ -1,0 +1,113 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import ArticleList from '../../islands/ArticleList';
+import Pagination from '../../islands/Pagination';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const cookie = Astro.request.headers.get('Cookie') || '';
+
+// Check authentication
+let currentUser = null;
+try {
+  const userRes = await fetch(`${API_URL}/auth/me`, {
+    headers: { Cookie: cookie },
+  });
+  if (userRes.ok) {
+    currentUser = await userRes.json();
+  }
+} catch {
+  // Not logged in
+}
+
+if (!currentUser) {
+  return Astro.redirect(`${API_URL}/auth/login`);
+}
+
+// Fetch bookmarked articles
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 20;
+
+let articles: any[] = [];
+let total = 0;
+let bookmarkedIds: string[] = [];
+let error = null;
+
+try {
+  const res = await fetch(`${API_URL}/bookmarks?page=${page}&limit=${limit}`, {
+    headers: { Cookie: cookie },
+  });
+  if (res.ok) {
+    const data = await res.json();
+    articles = data.articles || [];
+    total = data.total || 0;
+    bookmarkedIds = articles.map((a: any) => a.id);
+  } else {
+    error = 'ブックマークの取得に失敗しました';
+  }
+} catch {
+  error = 'ブックマークの取得に失敗しました';
+}
+
+const totalPages = Math.ceil(total / limit);
+---
+
+<DashboardLayout title="ブックマーク">
+  {error ? (
+    <div class="error">
+      <p>{error}</p>
+    </div>
+  ) : articles.length === 0 ? (
+    <div class="empty-state">
+      <p>ブックマークした記事はまだありません</p>
+      <a href="/" class="btn-primary">記事を探す</a>
+    </div>
+  ) : (
+    <>
+      <p class="bookmark-count">{total}件のブックマーク</p>
+      <ArticleList
+        articles={articles}
+        bookmarkedIds={bookmarkedIds}
+        isLoggedIn={true}
+        apiUrl={API_URL}
+        client:load
+      />
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          baseUrl="/dashboard/bookmarks"
+          client:load
+        />
+      )}
+    </>
+  )}
+</DashboardLayout>
+
+<style>
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 8px;
+  }
+
+  .empty-state p {
+    color: #666;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+  }
+
+  .bookmark-count {
+    color: #666;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .error {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 8px;
+    color: #f44336;
+  }
+</style>

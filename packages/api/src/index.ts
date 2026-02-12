@@ -20,6 +20,7 @@ import imageController from './controllers/image-controller';
 import webhookController from './controllers/webhook-controller';
 import avatarController from './controllers/avatar-controller';
 import commentController from './controllers/comment-controller';
+import bookmarkController from './controllers/bookmark-controller';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -44,6 +45,7 @@ app.route('/images', imageController);
 app.route('/webhook', webhookController);
 app.route('/avatars', avatarController);
 app.route('/comments', commentController);
+app.route('/bookmarks', bookmarkController);
 
 // Error handling
 app.onError((err, c) => {

@@ -3,6 +3,8 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import CommentSection from '../../../islands/CommentSection';
 import TableOfContents from '../../../islands/TableOfContents';
 import MobileTableOfContents from '../../../islands/MobileTableOfContents';
+import ShareButtons from '../../../islands/ShareButtons';
+import BookmarkButton from '../../../islands/BookmarkButton';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
 import { extractTocItems, getBaseLevel, buildNestedToc } from '../../../lib/toc';
 import TrendingArticles from '../../../islands/TrendingArticles';
@@ -45,6 +47,26 @@ try {
 } catch {
   // Not logged in
 }
+
+// Check bookmark status
+let isBookmarked = false;
+if (currentUser) {
+  try {
+    const bookmarkRes = await fetch(`${API_URL}/bookmarks/${article.id}/status`, {
+      headers: { Cookie: cookie },
+    });
+    if (bookmarkRes.ok) {
+      const bookmarkData = await bookmarkRes.json();
+      isBookmarked = bookmarkData.bookmarked;
+    }
+  } catch {
+    // Not bookmarked
+  }
+}
+
+// Build article URL for share buttons
+const APP_URL = import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321';
+const articleUrl = `${APP_URL}/${username}/articles/${slug}`;
 
 // Fetch comments and related trending articles in parallel
 let commentsData = { comments: [] as any[], total: 0 };
@@ -137,6 +159,16 @@ const hasToc = tocItems.length > 0;
             ))}
           </div>
         )}
+        <div class="article-actions">
+          <ShareButtons url={articleUrl} title={article.title} client:load />
+          <BookmarkButton
+            articleId={article.id}
+            initialBookmarked={isBookmarked}
+            apiUrl={API_URL}
+            isLoggedIn={!!currentUser}
+            client:load
+          />
+        </div>
       </header>
 
       {hasToc && (
@@ -346,6 +378,83 @@ const hasToc = tocItems.length > 0;
   .target-category .icon {
     font-size: 1rem;
     line-height: 1;
+  }
+
+  /* Article actions (share + bookmark) */
+  .article-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .article-actions :global(.share-buttons) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .article-actions :global(.share-label) {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .article-actions :global(.share-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    transition: opacity 0.2s, transform 0.15s;
+    text-decoration: none;
+  }
+
+  .article-actions :global(.share-btn:hover) {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  .article-actions :global(.share-btn-x) {
+    background: #000;
+  }
+
+  .article-actions :global(.share-btn-hatena) {
+    background: #00A4DE;
+  }
+
+  .article-actions :global(.bookmark-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    background: white;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .article-actions :global(.bookmark-btn:hover) {
+    border-color: #6366f1;
+    color: #6366f1;
+  }
+
+  .article-actions :global(.bookmark-btn.bookmarked) {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+  }
+
+  .article-actions :global(.bookmark-btn:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .article :global(.znc) {

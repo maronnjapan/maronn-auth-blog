@@ -73,6 +73,7 @@ else if (topic) baseUrl = `/?topic=${encodeURIComponent(topic)}`;
 let pageTitle = '最新の記事';
 if (category) pageTitle = `カテゴリ: ${category}`;
 else if (topic) pageTitle = `トピック: ${topic}`;
+
 ---
 
 <BaseLayout title={`${pageTitle} - Auth Vault`}>
