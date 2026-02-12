@@ -59,7 +59,7 @@ export default function DashboardArticleList({ articles: initialArticles, apiUrl
   }
 
   return (
-    <div className="article-list">
+    <div className="dashboard-article-list">
       <div className="table-wrapper">
         <table className="article-table">
           <thead>
