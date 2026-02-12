@@ -74,10 +74,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE published_at IS NOT NULL AND status != ?
+         WHERE published_at IS NOT NULL AND status = ?
          ORDER BY published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', limit, offset)
+      .bind('published', limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -87,10 +87,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE user_id = ? AND published_at IS NOT NULL AND status != ?
+         WHERE user_id = ? AND published_at IS NOT NULL AND status = ?
          ORDER BY published_at DESC`
       )
-      .bind(userId, 'deleted')
+      .bind(userId, 'published')
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -177,8 +177,8 @@ export class ArticleRepository {
 
   async countPublished(): Promise<number> {
     const result = await this.db
-      .prepare('SELECT COUNT(*) as count FROM articles WHERE published_at IS NOT NULL AND status != ?')
-      .bind('deleted')
+      .prepare('SELECT COUNT(*) as count FROM articles WHERE published_at IS NOT NULL AND status = ?')
+      .bind('published')
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -188,9 +188,9 @@ export class ArticleRepository {
     const result = await this.db
       .prepare(
         `SELECT COUNT(*) as count FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category = ?`
+         WHERE published_at IS NOT NULL AND status = ? AND category = ?`
       )
-      .bind('deleted', category)
+      .bind('published', category)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -201,9 +201,9 @@ export class ArticleRepository {
       .prepare(`
         SELECT COUNT(*) as count FROM articles a
         INNER JOIN article_topics at ON a.id = at.article_id
-        WHERE a.published_at IS NOT NULL AND a.status != ? AND LOWER(at.topic) = LOWER(?)
+        WHERE a.published_at IS NOT NULL AND a.status = ? AND LOWER(at.topic) = LOWER(?)
       `)
-      .bind('deleted', topic)
+      .bind('published', topic)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -217,10 +217,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT * FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category = ?
+         WHERE published_at IS NOT NULL AND status = ? AND category = ?
          ORDER BY published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', category, limit, offset)
+      .bind('published', category, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -235,10 +235,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN article_topics at ON a.id = at.article_id
-         WHERE a.published_at IS NOT NULL AND a.status != ? AND LOWER(at.topic) = LOWER(?)
+         WHERE a.published_at IS NOT NULL AND a.status = ? AND LOWER(at.topic) = LOWER(?)
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind('deleted', topic, limit, offset)
+      .bind('published', topic, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -253,10 +253,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(query, 'deleted', limit, offset)
+      .bind(query, 'published', limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -267,9 +267,9 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?`
       )
-      .bind(query, 'deleted')
+      .bind(query, 'published')
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -294,10 +294,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(andQuery, 'deleted', limit, offset)
+      .bind(andQuery, 'published', limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -316,9 +316,9 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?`
       )
-      .bind(andQuery, 'deleted')
+      .bind(andQuery, 'published')
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -347,10 +347,10 @@ export class ArticleRepository {
         .prepare(
           `SELECT a.* FROM articles a
            INNER JOIN articles_fts fts ON a.id = fts.id
-           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?
            ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
         )
-        .bind(orQuery, 'deleted', limit, offset)
+        .bind(orQuery, 'published', limit, offset)
         .all<ArticleRow>();
 
       return results.results.map((row) => this.rowToEntity(row));
@@ -362,11 +362,11 @@ export class ArticleRepository {
       .prepare(
         `SELECT a.* FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?
          AND a.id NOT IN (${placeholders})
          ORDER BY a.published_at DESC LIMIT ? OFFSET ?`
       )
-      .bind(orQuery, 'deleted', ...excludeIds, limit, offset)
+      .bind(orQuery, 'published', ...excludeIds, limit, offset)
       .all<ArticleRow>();
 
     return results.results.map((row) => this.rowToEntity(row));
@@ -391,9 +391,9 @@ export class ArticleRepository {
         .prepare(
           `SELECT COUNT(*) as count FROM articles a
            INNER JOIN articles_fts fts ON a.id = fts.id
-           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?`
+           WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?`
         )
-        .bind(orQuery, 'deleted')
+        .bind(orQuery, 'published')
         .first<{ count: number }>();
 
       return result?.count ?? 0;
@@ -405,10 +405,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT COUNT(*) as count FROM articles a
          INNER JOIN articles_fts fts ON a.id = fts.id
-         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status != ?
+         WHERE fts.articles_fts MATCH ? AND a.published_at IS NOT NULL AND a.status = ?
          AND a.id NOT IN (${placeholders})`
       )
-      .bind(orQuery, 'deleted', ...excludeIds)
+      .bind(orQuery, 'published', ...excludeIds)
       .first<{ count: number }>();
 
     return result?.count ?? 0;
@@ -418,10 +418,10 @@ export class ArticleRepository {
     const results = await this.db
       .prepare(
         `SELECT category, COUNT(*) as count FROM articles
-         WHERE published_at IS NOT NULL AND status != ? AND category IS NOT NULL AND category != ''
+         WHERE published_at IS NOT NULL AND status = ? AND category IS NOT NULL AND category != ''
          GROUP BY category ORDER BY count DESC`
       )
-      .bind('deleted')
+      .bind('published')
       .all<{ category: string; count: number }>();
 
     return results.results;
@@ -432,10 +432,10 @@ export class ArticleRepository {
       .prepare(
         `SELECT LOWER(at.topic) as topic, COUNT(*) as count FROM article_topics at
          INNER JOIN articles a ON at.article_id = a.id
-         WHERE a.published_at IS NOT NULL AND a.status != ?
+         WHERE a.published_at IS NOT NULL AND a.status = ?
          GROUP BY LOWER(at.topic) ORDER BY count DESC LIMIT ?`
       )
-      .bind('deleted', limit)
+      .bind('published', limit)
       .all<{ topic: string; count: number }>();
 
     return results.results;
