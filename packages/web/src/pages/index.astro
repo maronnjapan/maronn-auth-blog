@@ -74,30 +74,6 @@ let pageTitle = '最新の記事';
 if (category) pageTitle = `カテゴリ: ${category}`;
 else if (topic) pageTitle = `トピック: ${topic}`;
 
-// Fetch current user and bookmarked article IDs
-const cookie = Astro.request.headers.get('Cookie') || '';
-let currentUser = null;
-let bookmarkedIds: string[] = [];
-
-try {
-  const userRes = await fetch(`${API_URL}/auth/me`, {
-    headers: { Cookie: cookie },
-  });
-  if (userRes.ok) {
-    currentUser = await userRes.json();
-
-    // Fetch bookmarked articles
-    const bookmarkRes = await fetch(`${API_URL}/bookmarks?limit=1000`, {
-      headers: { Cookie: cookie },
-    });
-    if (bookmarkRes.ok) {
-      const bookmarkData = await bookmarkRes.json();
-      bookmarkedIds = (bookmarkData.articles || []).map((a: any) => a.id);
-    }
-  }
-} catch {
-  // Not logged in
-}
 ---
 
 <BaseLayout title={`${pageTitle} - Auth Vault`}>
@@ -128,13 +104,7 @@ try {
                 </p>
               </div>
             )}
-            <ArticleList
-              articles={articles}
-              bookmarkedIds={bookmarkedIds}
-              isLoggedIn={!!currentUser}
-              apiUrl={API_URL}
-              client:load
-            />
+            <ArticleList articles={articles} client:load />
             {totalPages > 1 && (
               <Pagination
                 currentPage={page}

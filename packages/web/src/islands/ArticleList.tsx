@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Article, TargetCategory } from '@maronn-auth-blog/shared';
 import { getTargetCategoryMeta } from '../lib/target-categories';
 
@@ -10,83 +9,9 @@ type ArticleWithAuthor = Article & {
 
 interface ArticleListProps {
   articles: ArticleWithAuthor[];
-  bookmarkedIds?: string[];
-  isLoggedIn?: boolean;
-  apiUrl?: string;
 }
 
-function BookmarkCardButton({
-  articleId,
-  initialBookmarked,
-  apiUrl,
-  isLoggedIn,
-}: {
-  articleId: string;
-  initialBookmarked: boolean;
-  apiUrl: string;
-  isLoggedIn: boolean;
-}) {
-  const [bookmarked, setBookmarked] = useState(initialBookmarked);
-  const [loading, setLoading] = useState(false);
-
-  const handleToggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isLoggedIn) {
-      window.location.href = `${apiUrl}/auth/login`;
-      return;
-    }
-
-    if (loading) return;
-    setLoading(true);
-
-    try {
-      const method = bookmarked ? 'DELETE' : 'POST';
-      const response = await fetch(`${apiUrl}/bookmarks/${articleId}`, {
-        method,
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setBookmarked(!bookmarked);
-      }
-    } catch {
-      // Silently fail
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <button
-      className={`bookmark-btn ${bookmarked ? 'bookmarked' : ''}`}
-      onClick={handleToggle}
-      disabled={loading}
-      title={bookmarked ? 'ブックマーク解除' : 'ブックマークに追加'}
-      aria-label={bookmarked ? 'ブックマーク解除' : 'ブックマークに追加'}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        width={16}
-        height={16}
-        fill={bookmarked ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        strokeWidth="2"
-        aria-hidden="true"
-      >
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-      </svg>
-    </button>
-  );
-}
-
-export default function ArticleList({
-  articles,
-  bookmarkedIds = [],
-  isLoggedIn = false,
-  apiUrl = '',
-}: ArticleListProps) {
+export default function ArticleList({ articles }: ArticleListProps) {
   if (articles.length === 0) {
     return (
       <div className="empty">
@@ -94,8 +19,6 @@ export default function ArticleList({
       </div>
     );
   }
-
-  const bookmarkedSet = new Set(bookmarkedIds);
 
   return (
     <div className="article-list">
@@ -141,16 +64,6 @@ export default function ArticleList({
                   )}
                 </div>
               </div>
-              {apiUrl && (
-                <div className="article-card-footer">
-                  <BookmarkCardButton
-                    articleId={article.id}
-                    initialBookmarked={bookmarkedSet.has(article.id)}
-                    apiUrl={apiUrl}
-                    isLoggedIn={isLoggedIn}
-                  />
-                </div>
-              )}
             </article>
           </a>
         );

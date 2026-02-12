@@ -124,45 +124,6 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* Article Card Footer (bookmark) */
-.article-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: auto;
-}
-
-.bookmark-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ddd;
-  border-radius: 50%;
-  background: white;
-  color: #999;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 0;
-}
-
-.bookmark-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.bookmark-btn.bookmarked {
-  background: #6366f1;
-  border-color: #6366f1;
-  color: white;
-}
-
-.bookmark-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Loading, Error, Empty States */
 .loading,
 .error,
