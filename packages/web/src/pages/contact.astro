@@ -1,8 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import InquiryForm from '../islands/InquiryForm';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const GOOGLE_FORM_URL = import.meta.env.PUBLIC_GOOGLE_FORM_URL || '#';
 ---
 
 <BaseLayout
@@ -20,7 +19,26 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
       <div class="contact-layout">
         <div class="form-section">
-          <InquiryForm apiUrl={API_URL} client:load />
+          <div class="form-link-card">
+            <div class="form-icon">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#6366f1" stroke-width="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h2>お問い合わせフォーム</h2>
+            <p>
+              以下のGoogleフォームよりお問い合わせください。<br />
+              内容を確認の上、担当者よりご連絡いたします。
+            </p>
+            <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" class="form-btn">
+              お問い合わせフォームを開く
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
         </div>
 
         <aside class="info-section">
@@ -45,7 +63,7 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
           <div class="info-card">
             <h3>対応フロー</h3>
             <ol>
-              <li>お問い合わせフォームからご連絡</li>
+              <li>Googleフォームからご連絡</li>
               <li>担当者より2営業日以内にご返信</li>
               <li>ヒアリング・要件整理</li>
               <li>お見積り・ご提案</li>
@@ -95,6 +113,46 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
     background: white;
     border-radius: 8px;
     padding: 2rem;
+  }
+
+  .form-link-card {
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  .form-icon {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-link-card h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 0.75rem;
+  }
+
+  .form-link-card p {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  .form-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #6366f1;
+    color: white;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .form-btn:hover {
+    background: #4f46e5;
   }
 
   .info-section {
@@ -199,6 +257,14 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 
     .page-header h1 {
       font-size: 1.5rem;
+    }
+
+    .form-link-card {
+      padding: 1.5rem 0.5rem;
+    }
+
+    .form-link-card h2 {
+      font-size: 1.25rem;
     }
   }
 </style>
