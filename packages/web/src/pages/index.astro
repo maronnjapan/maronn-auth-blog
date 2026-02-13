@@ -76,7 +76,10 @@ else if (topic) pageTitle = `トピック: ${topic}`;
 
 ---
 
-<BaseLayout title={`${pageTitle} - Auth Vault`}>
+<BaseLayout
+  title={`${pageTitle} - Auth Vault`}
+  description="認証・認可・セキュリティに特化した技術ブログプラットフォーム。OAuth、OIDC、ゼロトラストなど、セキュリティの最新トピックを専門家が解説。"
+>
   <div class="container">
     <div class="header-section">
       <h1>{pageTitle}</h1>

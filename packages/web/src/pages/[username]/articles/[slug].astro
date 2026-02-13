@@ -5,6 +5,8 @@ import TableOfContents from '../../../islands/TableOfContents';
 import MobileTableOfContents from '../../../islands/MobileTableOfContents';
 import ShareButtons from '../../../islands/ShareButtons';
 import BookmarkButton from '../../../islands/BookmarkButton';
+import LikeButton from '../../../islands/LikeButton';
+import SeriesNavigation from '../../../islands/SeriesNavigation';
 import { getTargetCategoryMeta } from '../../../lib/target-categories';
 import { extractTocItems, getBaseLevel, buildNestedToc } from '../../../lib/toc';
 import TrendingArticles from '../../../islands/TrendingArticles';
@@ -48,29 +50,49 @@ try {
   // Not logged in
 }
 
-// Check bookmark status
+// Check bookmark and like status
 let isBookmarked = false;
-if (currentUser) {
-  try {
-    const bookmarkRes = await fetch(`${API_URL}/bookmarks/${article.id}/status`, {
+let isLiked = false;
+let likeCount = 0;
+
+try {
+  const statusFetches: Promise<Response>[] = [
+    fetch(`${API_URL}/likes/${article.id}/status`, {
       headers: { Cookie: cookie },
-    });
-    if (bookmarkRes.ok) {
-      const bookmarkData = await bookmarkRes.json();
-      isBookmarked = bookmarkData.bookmarked;
-    }
-  } catch {
-    // Not bookmarked
+    }),
+  ];
+  if (currentUser) {
+    statusFetches.push(
+      fetch(`${API_URL}/bookmarks/${article.id}/status`, {
+        headers: { Cookie: cookie },
+      })
+    );
   }
+
+  const statusResults = await Promise.all(statusFetches);
+
+  if (statusResults[0].ok) {
+    const likeData = await statusResults[0].json();
+    isLiked = likeData.liked;
+    likeCount = likeData.count;
+  }
+
+  if (statusResults[1] && statusResults[1].ok) {
+    const bookmarkData = await statusResults[1].json();
+    isBookmarked = bookmarkData.bookmarked;
+  }
+} catch {
+  // Status fetch failed
 }
 
 // Build article URL for share buttons
 const APP_URL = import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321';
 const articleUrl = `${APP_URL}/${username}/articles/${slug}`;
 
-// Fetch comments and related trending articles in parallel
+// Fetch comments, related trending articles, and series info in parallel
 let commentsData = { comments: [] as any[], total: 0 };
 let relatedTrendingArticles: any[] = [];
+let seriesList: any[] = [];
 
 const articleTopics = article.topics || [];
 const trendingUrl = articleTopics.length > 0
@@ -84,6 +106,8 @@ try {
   if (trendingUrl) {
     fetchPromises.push(fetch(trendingUrl));
   }
+  // Fetch series info for this article
+  fetchPromises.push(fetch(`${API_URL}/series/article/${article.id}`));
 
   const results = await Promise.all(fetchPromises);
 
@@ -91,12 +115,20 @@ try {
     commentsData = await results[0].json();
   }
 
-  if (results[1] && results[1].ok) {
-    const trendingData = await results[1].json();
+  const trendingIdx = trendingUrl ? 1 : -1;
+  const seriesIdx = trendingUrl ? 2 : 1;
+
+  if (trendingIdx >= 0 && results[trendingIdx] && results[trendingIdx].ok) {
+    const trendingData = await results[trendingIdx].json();
     relatedTrendingArticles = trendingData.articles || [];
   }
+
+  if (results[seriesIdx] && results[seriesIdx].ok) {
+    const seriesData = await results[seriesIdx].json();
+    seriesList = seriesData.series || [];
+  }
 } catch {
-  // Failed to fetch comments or trending
+  // Failed to fetch comments, trending, or series
 }
 
 const publishedDate = new Date(article.publishedAt).toLocaleDateString('ja-JP', {
@@ -117,9 +149,22 @@ const tocItems = extractTocItems(article.html || '');
 const baseLevel = getBaseLevel(tocItems);
 const nestedTocItems = buildNestedToc(tocItems);
 const hasToc = tocItems.length > 0;
+
+// Build OGP description from article title
+const ogDescription = `${article.title} - ${authorName}による認証・セキュリティに関する技術記事`;
+const APP_URL = import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321';
+const ogUrl = `${APP_URL}/${username}/articles/${slug}`;
 ---
 
-<BaseLayout title={`${article.title} - ${username}`}>
+<BaseLayout
+  title={`${article.title} - ${authorName} | Auth Vault`}
+  description={ogDescription}
+  ogType="article"
+  ogUrl={ogUrl}
+  articleAuthor={authorName}
+  articlePublishedTime={article.publishedAt}
+  articleTags={article.topics}
+>
   <div class={`article-page ${hasToc ? 'has-toc' : ''}`}>
     <article class="article">
       <header class="article-header">
@@ -161,13 +206,23 @@ const hasToc = tocItems.length > 0;
         )}
         <div class="article-actions">
           <ShareButtons url={articleUrl} title={article.title} client:load />
-          <BookmarkButton
-            articleId={article.id}
-            initialBookmarked={isBookmarked}
-            apiUrl={API_URL}
-            isLoggedIn={!!currentUser}
-            client:load
-          />
+          <div class="article-actions-right">
+            <LikeButton
+              articleId={article.id}
+              initialLiked={isLiked}
+              initialCount={likeCount}
+              apiUrl={API_URL}
+              isLoggedIn={!!currentUser}
+              client:load
+            />
+            <BookmarkButton
+              articleId={article.id}
+              initialBookmarked={isBookmarked}
+              apiUrl={API_URL}
+              isLoggedIn={!!currentUser}
+              client:load
+            />
+          </div>
         </div>
       </header>
 
@@ -175,6 +230,15 @@ const hasToc = tocItems.length > 0;
         <div class="mobile-toc-wrapper">
           <MobileTableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
         </div>
+      )}
+
+      {seriesList.length > 0 && (
+        <SeriesNavigation
+          seriesList={seriesList}
+          currentArticleId={article.id}
+          authorUsername={username!}
+          client:load
+        />
       )}
 
       <div class="znc" set:html={article.html} />
@@ -388,6 +452,12 @@ const hasToc = tocItems.length > 0;
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #f0f0f0;
+  }
+
+  .article-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .article-actions :global(.share-buttons) {

@@ -1,0 +1,204 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import InquiryForm from '../islands/InquiryForm';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+---
+
+<BaseLayout
+  title="お問い合わせ - Auth Vault"
+  description="セキュリティコンサルティング、認証・認可システム開発、セキュリティ研修のお問い合わせはこちらから。"
+>
+  <div class="container">
+    <div class="contact-page">
+      <header class="page-header">
+        <h1>お問い合わせ</h1>
+        <p class="lead">
+          認証・認可、セキュリティに関するご相談を承ります。
+        </p>
+      </header>
+
+      <div class="contact-layout">
+        <div class="form-section">
+          <InquiryForm apiUrl={API_URL} client:load />
+        </div>
+
+        <aside class="info-section">
+          <div class="info-card">
+            <h3>ご相談いただける内容</h3>
+            <ul>
+              <li>
+                <strong>セキュリティコンサルティング</strong>
+                <p>認証・認可設計のレビュー、セキュリティアーキテクチャの評価</p>
+              </li>
+              <li>
+                <strong>認証・認可システム開発</strong>
+                <p>OAuth 2.0 / OIDC 対応のシステム開発、IdP 連携</p>
+              </li>
+              <li>
+                <strong>セキュリティ研修</strong>
+                <p>開発チーム向けのセキュアコーディング研修</p>
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h3>対応フロー</h3>
+            <ol>
+              <li>お問い合わせフォームからご連絡</li>
+              <li>担当者より2営業日以内にご返信</li>
+              <li>ヒアリング・要件整理</li>
+              <li>お見積り・ご提案</li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .contact-page {
+    padding-bottom: 3rem;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+
+  .lead {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 1.6;
+  }
+
+  .contact-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .form-section {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+  }
+
+  .info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .info-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .info-card h3 {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #6366f1;
+  }
+
+  .info-card ul,
+  .info-card ol {
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .info-card ul li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .info-card ul li:last-child {
+    border-bottom: none;
+  }
+
+  .info-card ul li strong {
+    display: block;
+    color: #333;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .info-card ul li p {
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .info-card ol {
+    counter-reset: step;
+  }
+
+  .info-card ol li {
+    counter-increment: step;
+    padding: 0.5rem 0 0.5rem 2rem;
+    position: relative;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+  }
+
+  .info-card ol li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: #eef2ff;
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 900px) {
+    .contact-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .info-section {
+      order: -1;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .info-card {
+      flex: 1;
+      min-width: 250px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .form-section {
+      padding: 1.5rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>

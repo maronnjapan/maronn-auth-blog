@@ -1,0 +1,248 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const { username, slug } = Astro.params;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+
+let series = null;
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/series/${username}/${slug}`);
+  if (response.ok) {
+    series = await response.json();
+  } else {
+    error = 'シリーズが見つかりません';
+  }
+} catch (err) {
+  error = 'シリーズの取得に失敗しました';
+}
+
+if (error || !series) {
+  return Astro.redirect('/404');
+}
+
+const statusLabel = series.status === 'completed' ? '完結済み' : series.status === 'active' ? '連載中' : 'アーカイブ';
+const statusClass = series.status === 'completed' ? 'completed' : series.status === 'active' ? 'active' : 'archived';
+---
+
+<BaseLayout title={`${series.title} - ${series.author?.displayName || username} - Auth Vault`}>
+  <div class="container">
+    <div class="series-detail">
+      <header class="series-header">
+        <div class="series-meta">
+          <span class={`status-badge ${statusClass}`}>{statusLabel}</span>
+          <span class="article-count">{series.articles?.length || 0}記事</span>
+        </div>
+        <h1>{series.title}</h1>
+        {series.description && (
+          <p class="description">{series.description}</p>
+        )}
+        <div class="author-info">
+          <a href={`/${username}`} class="author-link">
+            {series.author?.iconUrl && (
+              <img src={series.author.iconUrl} alt="" class="author-avatar" width="24" height="24" />
+            )}
+            <span>{series.author?.displayName || username}</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="articles-list">
+        <h2>記事一覧</h2>
+        {series.articles && series.articles.length > 0 ? (
+          <ol class="article-items">
+            {series.articles.map((article: any, idx: number) => (
+              <li class="article-item">
+                <span class="article-number">{idx + 1}</span>
+                <div class="article-content">
+                  <a href={`/${username}/articles/${article.slug}`} class="article-title">
+                    {article.title}
+                  </a>
+                  {article.publishedAt && (
+                    <time class="article-date" datetime={article.publishedAt}>
+                      {new Date(article.publishedAt).toLocaleDateString('ja-JP', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </time>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p class="no-articles">まだ記事がありません</p>
+        )}
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .series-detail {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+  }
+
+  .series-header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .series-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+  }
+
+  .status-badge.active {
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  .status-badge.completed {
+    background: #eef2ff;
+    color: #6366f1;
+  }
+
+  .status-badge.archived {
+    background: #f5f5f5;
+    color: #888;
+  }
+
+  .article-count {
+    font-size: 0.85rem;
+    color: #666;
+  }
+
+  h1 {
+    font-size: 2rem;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+  }
+
+  .description {
+    color: #555;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .author-info {
+    margin-top: 0.75rem;
+  }
+
+  .author-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #0066cc;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .author-link:hover {
+    text-decoration: underline;
+  }
+
+  .author-avatar {
+    border-radius: 50%;
+  }
+
+  .articles-list h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .article-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .article-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .article-item:last-child {
+    border-bottom: none;
+  }
+
+  .article-number {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f7fb;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6366f1;
+  }
+
+  .article-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .article-title {
+    display: block;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .article-title:hover {
+    color: #6366f1;
+    text-decoration: underline;
+  }
+
+  .article-date {
+    display: block;
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 0.25rem;
+  }
+
+  .no-articles {
+    color: #888;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .series-detail {
+      padding: 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>
