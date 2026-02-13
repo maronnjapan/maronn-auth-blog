@@ -54,7 +54,11 @@ if (error || !user) {
 }
 ---
 
-<BaseLayout title={`${user.displayName} (@${user.username}) - Auth Vault`}>
+<BaseLayout
+  title={`${user.displayName} (@${user.username}) - Auth Vault`}
+  description={user.bio || `${user.displayName}のプロフィール - Auth Vault`}
+  ogImage={user.iconUrl}
+>
   <div class="container">
     <div class="profile-section">
       <UserProfileCard

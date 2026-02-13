@@ -4,10 +4,29 @@ import Header from '../islands/Header';
 export interface Props {
   title: string;
   description?: string;
+  ogType?: 'website' | 'article';
+  ogImage?: string;
+  ogUrl?: string;
+  articleAuthor?: string;
+  articlePublishedTime?: string;
+  articleTags?: string[];
+  noindex?: boolean;
 }
 
-const { title, description = 'Auth Vault' } = Astro.props;
+const {
+  title,
+  description = 'Auth Vault - 認証・認可・セキュリティに特化した技術ブログプラットフォーム',
+  ogType = 'website',
+  ogImage,
+  ogUrl,
+  articleAuthor,
+  articlePublishedTime,
+  articleTags,
+  noindex = false,
+} = Astro.props;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
+const APP_URL = import.meta.env.PUBLIC_APP_URL || 'http://localhost:4321';
+const canonicalUrl = ogUrl || new URL(Astro.url.pathname, APP_URL).toString();
 const cookie = Astro.request.headers.get('Cookie') || '';
 
 // Check authentication status and fetch unread count on server-side
@@ -42,9 +61,63 @@ try {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="stylesheet" href="/styles/global.css" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Auth Vault" />
+    <meta property="og:locale" content="ja_JP" />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    <!-- Article specific -->
+    {ogType === 'article' && articleAuthor && (
+      <meta property="article:author" content={articleAuthor} />
+    )}
+    {ogType === 'article' && articlePublishedTime && (
+      <meta property="article:published_time" content={articlePublishedTime} />
+    )}
+    {ogType === 'article' && articleTags && articleTags.map((tag) => (
+      <meta property="article:tag" content={tag} />
+    ))}
+
+    <!-- JSON-LD Structured Data -->
+    {ogType === 'article' ? (
+      <script type="application/ld+json" set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": title,
+        "description": description,
+        "url": canonicalUrl,
+        ...(ogImage ? { "image": ogImage } : {}),
+        ...(articleAuthor ? { "author": { "@type": "Person", "name": articleAuthor } } : {}),
+        ...(articlePublishedTime ? { "datePublished": articlePublishedTime } : {}),
+        "publisher": {
+          "@type": "Organization",
+          "name": "Auth Vault",
+        },
+      })} />
+    ) : (
+      <script type="application/ld+json" set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Auth Vault",
+        "description": "認証・認可・セキュリティに特化した技術ブログプラットフォーム",
+        "url": APP_URL,
+      })} />
+    )}
   </head>
   <body>
     <Header user={user} apiUrl={API_URL} unreadCount={unreadCount} client:load />
@@ -56,6 +129,8 @@ try {
     <footer class="footer">
       <div class="container">
         <div class="footer-links">
+          <a href="/contact">お問い合わせ</a>
+          <span class="separator">|</span>
           <a href="/terms">利用規約</a>
           <span class="separator">|</span>
           <a href="/privacy">プライバシーポリシー</a>
