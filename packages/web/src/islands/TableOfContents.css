@@ -53,7 +53,12 @@
   transition: color 0.2s, transform 0.2s;
 }
 
-.toc-toggle:hover {
+.toc-toggle.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.toc-toggle:not(.hidden):hover {
   color: #666;
 }
 
