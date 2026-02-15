@@ -15,6 +15,10 @@ export class NotificationType {
     return new NotificationType('article_update_detected');
   }
 
+  static newArticleFromFollowed(): NotificationType {
+    return new NotificationType('new_article_from_followed');
+  }
+
   static fromString(value: string): NotificationType {
     const parsed = notificationTypeSchema.parse(value);
     return new NotificationType(parsed);
