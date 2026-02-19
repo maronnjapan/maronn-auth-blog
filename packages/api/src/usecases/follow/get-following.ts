@@ -44,7 +44,7 @@ export class GetFollowingUsecase {
       })
     );
 
-    const filteredItems = items.filter((item): item is FollowingInfo => item !== null);
+    const filteredItems = items.filter((item) => item !== null) as FollowingInfo[];
 
     return {
       items: filteredItems,

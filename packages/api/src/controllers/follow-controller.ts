@@ -6,7 +6,7 @@ import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { requireAuth } from '../middleware/auth';
 import { decryptSessionId } from '../middleware/auth';
 import { KVClient } from '../infrastructure/storage/kv-client';
-import { UnauthorizedError, NotFoundError } from '@maronn-auth-blog/shared';
+import { UnauthorizedError } from '@maronn-auth-blog/shared';
 import { FollowUserUsecase } from '../usecases/follow/follow-user';
 import { UnfollowUserUsecase } from '../usecases/follow/unfollow-user';
 import { GetFollowStatusUsecase } from '../usecases/follow/get-follow-status';

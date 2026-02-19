@@ -44,7 +44,7 @@ export class GetFollowersUsecase {
       })
     );
 
-    const filteredItems = items.filter((item): item is FollowerInfo => item !== null);
+    const filteredItems = items.filter((item) => item !== null) as FollowerInfo[];
 
     return {
       items: filteredItems,
