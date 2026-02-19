@@ -117,6 +117,13 @@ export class ProcessGitHubPushUsecase {
         );
       } catch (error) {
         console.error(`[ProcessGitHubPush] Error processing ${filePath}:`, error);
+
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        await this.createErrorNotification(
+          user.id,
+          filePath,
+          errorMessage
+        );
       }
     }
 
@@ -154,8 +161,9 @@ export class ProcessGitHubPushUsecase {
       const parsed = extractFrontmatter(markdown);
       frontmatter = parsed.frontmatter;
     } catch {
-      console.info(`[ProcessGitHubPush] Invalid frontmatter in ${filePath}, skipping`);
-      return;
+      throw new Error(
+        `フロントマターの解析に失敗しました。YAML 形式が正しいか確認してください。`
+      );
     }
 
     // Check if published flag is set
@@ -170,13 +178,15 @@ export class ProcessGitHubPushUsecase {
     const topics = frontmatter.topics as string[];
 
     if (!title) {
-      console.info(`[ProcessGitHubPush] File ${filePath} has no title, skipping`);
-      return;
+      throw new Error(
+        `フロントマターに title が設定されていません。title は必須項目です。`
+      );
     }
 
     if (!targetCategories || targetCategories.length === 0) {
-      console.info(`[ProcessGitHubPush] File ${filePath} has no targetCategories, skipping`);
-      return;
+      throw new Error(
+        `フロントマターに targetCategories が設定されていません。targetCategories は必須項目です。`
+      );
     }
 
     // Extract slug from filename
@@ -370,5 +380,25 @@ export class ProcessGitHubPushUsecase {
       return 'image/gif';
     }
     return 'image/jpeg';
+  }
+
+  private async createErrorNotification(
+    userId: string,
+    filePath: string,
+    errorMessage: string
+  ): Promise<void> {
+    try {
+      const createNotification = new CreateNotificationUsecase(this.notificationRepo);
+      await createNotification.execute({
+        userId,
+        type: 'github_integration_error',
+        message: `「${filePath}」の処理中にエラーが発生しました: ${errorMessage}`,
+      });
+    } catch (notificationError) {
+      console.error(
+        `[ProcessGitHubPush] Failed to create error notification for ${filePath}:`,
+        notificationError
+      );
+    }
   }
 }

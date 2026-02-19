@@ -15,6 +15,10 @@ export class NotificationType {
     return new NotificationType('article_update_detected');
   }
 
+  static githubIntegrationError(): NotificationType {
+    return new NotificationType('github_integration_error');
+  }
+
   static fromString(value: string): NotificationType {
     const parsed = notificationTypeSchema.parse(value);
     return new NotificationType(parsed);
