@@ -1,27 +1,7 @@
 ---
-// This page is pre-rendered at build time (SSG) as it's a static legal document
-export const prerender = true;
-
 import BaseLayout from "../layouts/BaseLayout.astro";
-import markdownToHtmlImport from "zenn-markdown-html";
 import "zenn-content-css";
-import termsContent from "../content/legal/terms.md?raw";
-
-type MarkdownToHtmlFn = (markdown: string, options?: { embedOrigin?: string }) => string;
-
-const markdownToHtml: MarkdownToHtmlFn =
-  typeof markdownToHtmlImport === "function"
-    ? (markdownToHtmlImport as MarkdownToHtmlFn)
-    : ((markdownToHtmlImport as { default: MarkdownToHtmlFn }).default as MarkdownToHtmlFn);
-
-let htmlContent = "";
-
-try {
-  htmlContent = markdownToHtml(termsContent, { embedOrigin: "" });
-} catch (error) {
-  console.error("Failed to parse markdown:", error);
-  htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
-}
+import { htmlContent } from "../generated/legal/terms";
 ---
 
 <BaseLayout title="利用規約 - Auth Vault">

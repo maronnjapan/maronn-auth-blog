@@ -14,6 +14,8 @@ let user = null;
 let stats = { totalArticles: 0, publishedArticles: 0, pendingArticles: 0, rejectedArticles: 0 };
 let articles = [];
 let isOwner = false;
+let isLoggedIn = false;
+let followStatus = { isFollowing: false, followerCount: 0, followingCount: 0 };
 let error = null;
 
 try {
@@ -44,6 +46,18 @@ try {
   if (authRes.ok) {
     const authData = await authRes.json();
     isOwner = authData.username === username;
+    isLoggedIn = true;
+  }
+
+  // Fetch follow status after we have the user data
+  if (user) {
+    const followStatusRes = await fetch(
+      `${API_URL}/follows/${user.id}/status`,
+      { headers: { Cookie: cookie } }
+    );
+    if (followStatusRes.ok) {
+      followStatus = await followStatusRes.json();
+    }
   }
 } catch (err) {
   error = 'ユーザー情報の取得に失敗しました';
@@ -61,6 +75,9 @@ if (error || !user) {
         user={user}
         stats={stats}
         isOwner={isOwner}
+        followStatus={followStatus}
+        isLoggedIn={isLoggedIn}
+        apiUrl={API_URL}
         client:load
       />
     </div>

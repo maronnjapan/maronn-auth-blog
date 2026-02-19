@@ -6,6 +6,8 @@ import { ArticleRepository } from '../infrastructure/repositories/article-reposi
 import { UserRepository } from '../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../infrastructure/repositories/repository-repository';
 import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
+import { FollowRepository } from '../infrastructure/repositories/follow-repository';
+import { NotificationSettingsRepository } from '../infrastructure/repositories/notification-settings-repository';
 import { GitHubClient } from '../infrastructure/github-client';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
@@ -132,6 +134,8 @@ app.post(
     const userRepo = new UserRepository(c.env.DB);
     const repoRepo = new RepositoryRepository(c.env.DB);
     const notificationRepo = new NotificationRepository(c.env.DB);
+    const followRepo = new FollowRepository(c.env.DB);
+    const notificationSettingsRepo = new NotificationSettingsRepository(c.env.DB);
     const githubClient = new GitHubClient(c.env.GITHUB_APP_ID, c.env.GITHUB_APP_PRIVATE_KEY);
     const kvClient = new KVClient(c.env.KV);
     const r2Client = new R2Client(c.env.R2);
@@ -147,6 +151,8 @@ app.post(
       userRepo,
       repoRepo,
       notificationRepo,
+      followRepo,
+      notificationSettingsRepo,
       githubClient,
       kvClient,
       r2Client,

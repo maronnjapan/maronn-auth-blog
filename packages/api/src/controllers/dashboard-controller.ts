@@ -3,13 +3,16 @@ import { zValidator } from '@hono/zod-validator';
 import type { Env } from '../types/env';
 import { ArticleRepository } from '../infrastructure/repositories/article-repository';
 import { NotificationRepository } from '../infrastructure/repositories/notification-repository';
+import { NotificationSettingsRepository } from '../infrastructure/repositories/notification-settings-repository';
 import { KVClient } from '../infrastructure/storage/kv-client';
 import { R2Client } from '../infrastructure/storage/r2-client';
 import { requireAuth } from '../middleware/auth';
-import { UnauthorizedError, paginationQuerySchema } from '@maronn-auth-blog/shared';
+import { UnauthorizedError, paginationQuerySchema, notificationSettingsInputSchema } from '@maronn-auth-blog/shared';
 import { GetNotificationsUsecase } from '../usecases/notification/get-notifications';
 import { MarkNotificationReadUsecase, MarkAllNotificationsReadUsecase } from '../usecases/notification/mark-notification-read';
 import { GetUnreadCountUsecase } from '../usecases/notification/get-unread-count';
+import { GetNotificationSettingsUsecase } from '../usecases/notification/get-notification-settings';
+import { UpdateNotificationSettingsUsecase } from '../usecases/notification/update-notification-settings';
 import { DeleteArticleUsecase } from '../usecases/article/delete-article';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -131,5 +134,43 @@ app.post('/notifications/read-all', requireAuth(), async (c) => {
 
   return c.json({ success: true });
 });
+
+// GET /dashboard/notification-settings - Get notification settings
+app.get('/notification-settings', requireAuth(), async (c) => {
+  const auth = c.get('auth');
+  if (!auth) {
+    throw new UnauthorizedError();
+  }
+
+  const settingsRepo = new NotificationSettingsRepository(c.env.DB);
+  const usecase = new GetNotificationSettingsUsecase(settingsRepo);
+  const settings = await usecase.execute(auth.userId);
+
+  return c.json(settings.toJSON());
+});
+
+// PUT /dashboard/notification-settings - Update notification settings
+app.put(
+  '/notification-settings',
+  requireAuth(),
+  zValidator('json', notificationSettingsInputSchema),
+  async (c) => {
+    const auth = c.get('auth');
+    if (!auth) {
+      throw new UnauthorizedError();
+    }
+
+    const input = c.req.valid('json');
+    const settingsRepo = new NotificationSettingsRepository(c.env.DB);
+    const usecase = new UpdateNotificationSettingsUsecase(settingsRepo);
+
+    const settings = await usecase.execute({
+      userId: auth.userId,
+      emailNotifications: input.emailNotifications,
+    });
+
+    return c.json(settings.toJSON());
+  }
+);
 
 export default app;

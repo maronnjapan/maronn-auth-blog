@@ -2,6 +2,8 @@ import { ArticleRepository } from '../../infrastructure/repositories/article-rep
 import { UserRepository } from '../../infrastructure/repositories/user-repository';
 import { RepositoryRepository } from '../../infrastructure/repositories/repository-repository';
 import { NotificationRepository } from '../../infrastructure/repositories/notification-repository';
+import { FollowRepository } from '../../infrastructure/repositories/follow-repository';
+import { NotificationSettingsRepository } from '../../infrastructure/repositories/notification-settings-repository';
 import { GitHubClient } from '../../infrastructure/github-client';
 import { KVClient } from '../../infrastructure/storage/kv-client';
 import { R2Client } from '../../infrastructure/storage/r2-client';
@@ -12,6 +14,7 @@ import { parseArticle } from '../../utils/markdown-parser';
 import { validateImageCount, validateImageContentType, validateImageSize, getImageFilename } from '../../utils/image-validator';
 import { CreateNotificationUsecase } from '../notification/create-notification';
 import { SendEmailNotificationUsecase } from '../notification/send-email-notification';
+import { NotifyFollowersUsecase } from '../notification/notify-followers';
 
 export class ApproveArticleUsecase {
   constructor(
@@ -19,6 +22,8 @@ export class ApproveArticleUsecase {
     private userRepo: UserRepository,
     private repoRepo: RepositoryRepository,
     private notificationRepo: NotificationRepository,
+    private followRepo: FollowRepository,
+    private notificationSettingsRepo: NotificationSettingsRepository,
     private githubClient: GitHubClient,
     private kvClient: KVClient,
     private r2Client: R2Client,
@@ -138,6 +143,25 @@ export class ApproveArticleUsecase {
       articleTitle: article.title,
       articleSlug: article.slug.toString(),
       username: user.username,
+      webUrl: this.webUrl,
+    });
+
+    // Notify followers about the new article
+    const notifyFollowers = new NotifyFollowersUsecase(
+      this.followRepo,
+      this.notificationRepo,
+      this.notificationSettingsRepo,
+      this.userRepo,
+      this.auth0UserInfoClient,
+      this.resendClient,
+    );
+    await notifyFollowers.execute({
+      authorId: user.id,
+      articleId: article.id,
+      articleTitle: article.title,
+      articleSlug: article.slug.toString(),
+      authorUsername: user.username,
+      authorDisplayName: user.displayName,
       webUrl: this.webUrl,
     });
 
