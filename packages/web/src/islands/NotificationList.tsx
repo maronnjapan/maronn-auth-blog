@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 interface Notification {
   id: string;
   userId: string;
-  type: 'article_approved' | 'article_rejected' | 'article_update_detected';
+  type: 'article_approved' | 'article_rejected' | 'article_update_detected' | 'new_article_from_followed';
   articleId?: string;
   message: string;
   readAt?: string;
@@ -81,6 +81,8 @@ export default function NotificationList({
         return '✕';
       case 'article_update_detected':
         return '↻';
+      case 'new_article_from_followed':
+        return '★';
     }
   };
 
@@ -92,6 +94,8 @@ export default function NotificationList({
         return 'rejected';
       case 'article_update_detected':
         return 'update';
+      case 'new_article_from_followed':
+        return 'new-article';
     }
   };
 
@@ -268,6 +272,11 @@ export default function NotificationList({
         .icon.update {
           background: #e3f2fd;
           color: #1565c0;
+        }
+
+        .icon.new-article {
+          background: #fff3e0;
+          color: #e65100;
         }
 
         .content {

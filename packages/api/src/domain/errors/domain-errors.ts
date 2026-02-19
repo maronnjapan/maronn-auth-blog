@@ -152,3 +152,30 @@ export class UnauthorizedArticleAccessError extends AppError {
     super(`Not authorized to access article: ${articleId}`);
   }
 }
+
+export class CannotFollowSelfError extends AppError {
+  readonly code = 'CANNOT_FOLLOW_SELF';
+  readonly statusCode = 400;
+
+  constructor() {
+    super('Cannot follow yourself');
+  }
+}
+
+export class AlreadyFollowingError extends AppError {
+  readonly code = 'ALREADY_FOLLOWING';
+  readonly statusCode = 409;
+
+  constructor(followingId: string) {
+    super(`Already following user: ${followingId}`);
+  }
+}
+
+export class FollowNotFoundError extends AppError {
+  readonly code = 'FOLLOW_NOT_FOUND';
+  readonly statusCode = 404;
+
+  constructor(followingId: string) {
+    super(`Not following user: ${followingId}`);
+  }
+}

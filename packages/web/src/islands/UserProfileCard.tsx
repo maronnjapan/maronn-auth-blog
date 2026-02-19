@@ -1,3 +1,5 @@
+import FollowButton from './FollowButton';
+
 interface UserStats {
   totalArticles: number;
   publishedArticles: number;
@@ -17,13 +19,31 @@ interface User {
   createdAt: string;
 }
 
+interface FollowStatus {
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+}
+
 interface UserProfileCardProps {
   user: User;
   stats: UserStats;
   isOwner?: boolean;
+  followStatus?: FollowStatus;
+  isLoggedIn?: boolean;
+  apiUrl: string;
 }
 
-export default function UserProfileCard({ user, stats, isOwner }: UserProfileCardProps) {
+export default function UserProfileCard({
+  user,
+  stats,
+  isOwner,
+  followStatus,
+  isLoggedIn = false,
+  apiUrl,
+}: UserProfileCardProps) {
+  const loginUrl = `${apiUrl}/auth/login`;
+
   return (
     <div className="profile-card">
       <div className="profile-header">
@@ -47,11 +67,36 @@ export default function UserProfileCard({ user, stats, isOwner }: UserProfileCar
 
       {user.bio && <p className="bio">{user.bio}</p>}
 
+      {!isOwner && followStatus && (
+        <div className="follow-section">
+          <FollowButton
+            targetUserId={user.id}
+            initialIsFollowing={followStatus.isFollowing}
+            initialFollowerCount={followStatus.followerCount}
+            apiUrl={apiUrl}
+            isLoggedIn={isLoggedIn}
+            loginUrl={loginUrl}
+          />
+        </div>
+      )}
+
       <div className="stats">
         <div className="stat">
           <span className="stat-value">{stats.publishedArticles}</span>
           <span className="stat-label">公開記事</span>
         </div>
+        {followStatus && (
+          <>
+            <div className="stat">
+              <span className="stat-value">{followStatus.followerCount}</span>
+              <span className="stat-label">フォロワー</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">{followStatus.followingCount}</span>
+              <span className="stat-label">フォロー</span>
+            </div>
+          </>
+        )}
         {isOwner && (
           <>
             <div className="stat">
@@ -166,6 +211,10 @@ export default function UserProfileCard({ user, stats, isOwner }: UserProfileCar
         .bio {
           color: #555;
           line-height: 1.6;
+          margin: 1rem 0;
+        }
+
+        .follow-section {
           margin: 1rem 0;
         }
 

@@ -4,3 +4,5 @@ export * from './article';
 export * from './repository';
 export * from './notification';
 export * from './comment';
+export * from './follow';
+export * from './notification-settings';

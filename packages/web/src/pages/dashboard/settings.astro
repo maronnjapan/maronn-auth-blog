@@ -1,6 +1,7 @@
 ---
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import SettingsForm from '../../islands/SettingsForm';
+import NotificationSettingsForm from '../../islands/NotificationSettingsForm';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 const GITHUB_APP_INSTALL_URL = import.meta.env.PUBLIC_GITHUB_APP_INSTALL_URL || '';
@@ -10,6 +11,7 @@ let user = null;
 let repository = null;
 let error = null;
 let initialMessage: { type: 'success' | 'error'; text: string } | null = null;
+let notificationSettings = { emailNotifications: false };
 let availableRepositories: {
   id: number;
   name: string;
@@ -49,12 +51,16 @@ const loadAvailableRepositories = async () => {
 };
 
 try {
-  const [userRes, repoRes] = await Promise.all([
+  const [userRes, repoRes, notifSettingsRes] = await Promise.all([
     fetch(`${API_URL}/auth/me`, {
       credentials: 'include',
       headers: { Cookie: cookieHeader },
     }),
     fetch(`${API_URL}/users/me/repository`, {
+      credentials: 'include',
+      headers: { Cookie: cookieHeader },
+    }),
+    fetch(`${API_URL}/dashboard/notification-settings`, {
       credentials: 'include',
       headers: { Cookie: cookieHeader },
     }),
@@ -71,6 +77,13 @@ try {
   if (repoRes.ok) {
     const data = await repoRes.json();
     repository = data;
+  }
+
+  if (notifSettingsRes.ok) {
+    const data = await notifSettingsRes.json();
+    notificationSettings = {
+      emailNotifications: data.emailNotifications ?? false,
+    };
   }
 } catch (err) {
   error = 'データの取得に失敗しました';
@@ -123,15 +136,26 @@ if (installationId && setupAction !== 'uninstall') {
   {error ? (
     <div class="error"><p>{error}</p></div>
   ) : (
-    <SettingsForm
-      user={user}
-      repository={repository}
-      apiUrl={API_URL}
-      githubAppInstallUrl={GITHUB_APP_INSTALL_URL}
-      initialMessage={initialMessage}
-      availableRepositories={availableRepositories}
-      client:load
-    />
+    <div class="settings-page">
+      <SettingsForm
+        user={user}
+        repository={repository}
+        apiUrl={API_URL}
+        githubAppInstallUrl={GITHUB_APP_INSTALL_URL}
+        initialMessage={initialMessage}
+        availableRepositories={availableRepositories}
+        client:load
+      />
+
+      <section class="notification-settings-section">
+        <h2>通知設定</h2>
+        <NotificationSettingsForm
+          initialSettings={notificationSettings}
+          apiUrl={API_URL}
+          client:load
+        />
+      </section>
+    </div>
   )}
 </DashboardLayout>
 
@@ -141,5 +165,17 @@ if (installationId && setupAction !== 'uninstall') {
     padding: 2rem;
     border-radius: 8px;
     color: #f44336;
+  }
+
+  .settings-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .notification-settings-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: #333;
   }
 </style>
