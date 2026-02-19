@@ -1,29 +1,7 @@
 ---
-// This page is pre-rendered at build time (SSG) to use zenn-markdown-html
-// which requires Node.js built-in modules not available in Cloudflare Workers
-export const prerender = true;
-
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import markdownToHtmlImport from "zenn-markdown-html";
 import "zenn-content-css";
-import guideContent from "../../content/guide/usage.md?raw";
-
-type MarkdownToHtmlFn = (markdown: string, options?: { embedOrigin?: string }) => string;
-
-const markdownToHtml: MarkdownToHtmlFn =
-  typeof markdownToHtmlImport === "function"
-    ? (markdownToHtmlImport as MarkdownToHtmlFn)
-    : ((markdownToHtmlImport as { default: MarkdownToHtmlFn }).default as MarkdownToHtmlFn);
-
-let htmlContent = "";
-
-try {
-  // Convert Markdown to HTML using zenn-markdown-html
-  htmlContent = markdownToHtml(guideContent, { embedOrigin: import.meta.env.PUBLIC_EMBED_ORIGIN || "" });
-} catch (error) {
-  console.error("Failed to parse markdown:", error);
-  htmlContent = "<p>コンテンツの読み込みに失敗しました。</p>";
-}
+import { htmlContent } from "../../generated/guide/usage";
 ---
 
 <BaseLayout title="使い方ガイド - Auth Vault">
