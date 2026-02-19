@@ -5,6 +5,7 @@ export const notificationTypeSchema = z.enum([
   'article_approved',
   'article_rejected',
   'article_update_detected',
+  'github_integration_error',
   'new_article_from_followed',
 ]);
 

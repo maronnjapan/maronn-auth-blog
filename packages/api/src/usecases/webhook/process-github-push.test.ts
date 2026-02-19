@@ -858,6 +858,408 @@ describe('ProcessGitHubPushUsecase', () => {
     expect(articleRepo.save).toHaveBeenCalledWith(article);
   });
 
+  it('creates error notification when GitHub file fetch fails', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(null),
+      save: vi.fn().mockResolvedValue(undefined),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockRejectedValue(new Error('GitHub API rate limit exceeded')),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn(),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo,
+      userRepo,
+      repoRepo,
+      notificationRepo,
+      githubClient,
+      kvClient,
+      r2Client,
+      IMAGE_URL,
+      resendClient,
+      ADMIN_EMAIL,
+      WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: { full_name: 'foo/bar' },
+      commits: [{ added: ['articles/test.md'], modified: [], removed: [] }],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(notificationRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: 'user-1',
+          message: expect.stringContaining('GitHub API rate limit exceeded'),
+        }),
+      })
+    );
+  });
+
+  it('creates error notification when frontmatter is invalid', async () => {
+    const markdown = 'no frontmatter here, just plain text';
+    const { usecase, event } = createUsecase({
+      userInstallationId: '67890',
+      markdown,
+    });
+
+    // Override fetchFile to return invalid frontmatter
+    const githubClient = (usecase as unknown as { githubClient: GitHubClient }).githubClient;
+    (githubClient.fetchFile as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: markdown,
+      sha: 'abc123',
+    });
+
+    await usecase.execute(event);
+  });
+
+  it('creates error notification when title is missing', async () => {
+    const markdownNoTitle = ['---', 'published: true', 'targetCategories: [authentication]', 'topics: []', '---', 'Content'].join('\n');
+
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(null),
+      save: vi.fn(),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({ content: markdownNoTitle, sha: 'abc123' }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn(),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo, userRepo, repoRepo, notificationRepo,
+      githubClient, kvClient, r2Client, IMAGE_URL,
+      resendClient, ADMIN_EMAIL, WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: { full_name: 'foo/bar' },
+      commits: [{ added: ['articles/test.md'], modified: [], removed: [] }],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(notificationRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: 'user-1',
+          message: expect.stringContaining('title'),
+        }),
+      })
+    );
+  });
+
+  it('creates error notification when targetCategories is missing', async () => {
+    const markdownNoCategories = ['---', 'title: Test', 'published: true', 'topics: []', '---', 'Content'].join('\n');
+
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(null),
+      save: vi.fn(),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({ content: markdownNoCategories, sha: 'abc123' }),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn(),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo, userRepo, repoRepo, notificationRepo,
+      githubClient, kvClient, r2Client, IMAGE_URL,
+      resendClient, ADMIN_EMAIL, WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: { full_name: 'foo/bar' },
+      commits: [{ added: ['articles/test.md'], modified: [], removed: [] }],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(notificationRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: 'user-1',
+          message: expect.stringContaining('targetCategories'),
+        }),
+      })
+    );
+  });
+
+  it('creates error notification when image processing fails', async () => {
+    const markdownWithImage = [
+      '---',
+      'title: Test Article',
+      'published: true',
+      'targetCategories: [authentication]',
+      'topics: []',
+      '---',
+      '![alt](./images/sample.png)',
+      '',
+    ].join('\n');
+
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(null),
+      save: vi.fn(),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockResolvedValue({ content: markdownWithImage, sha: 'abc123' }),
+      fetchImage: vi.fn().mockRejectedValue(new Error('Not Found')),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn(),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo, userRepo, repoRepo, notificationRepo,
+      githubClient, kvClient, r2Client, IMAGE_URL,
+      resendClient, ADMIN_EMAIL, WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: { full_name: 'foo/bar' },
+      commits: [{ added: ['articles/test.md'], modified: [], removed: [] }],
+      installation: { id: 123 },
+    };
+
+    await usecase.execute(event);
+
+    expect(notificationRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: 'user-1',
+          message: expect.stringContaining('Not Found'),
+        }),
+      })
+    );
+  });
+
+  it('does not throw when error notification creation itself fails', async () => {
+    const user = new User({
+      ...baseUserProps,
+      githubInstallationId: '67890',
+    });
+
+    const articleRepo = {
+      findByGitHubPath: vi.fn().mockResolvedValue(null),
+      save: vi.fn(),
+      saveTopics: vi.fn(),
+      removeFtsIndex: vi.fn(),
+    } as unknown as ArticleRepository;
+
+    const userRepo = {
+      findById: vi.fn().mockResolvedValue(user),
+    } as unknown as UserRepository;
+
+    const repoRepo = {
+      findByGitHubRepoFullName: vi.fn().mockResolvedValue({
+        id: 'repo-1',
+        user_id: user.id,
+        github_repo_full_name: 'foo/bar',
+        created_at: new Date().toISOString(),
+      }),
+    } as unknown as RepositoryRepository;
+
+    const notificationRepo = {
+      save: vi.fn().mockRejectedValue(new Error('DB connection error')),
+    } as unknown as NotificationRepository;
+
+    const githubClient = {
+      fetchFile: vi.fn().mockRejectedValue(new Error('GitHub API error')),
+      fetchImage: vi.fn(),
+    } as unknown as GitHubClient;
+
+    const kvClient = {
+      setArticleMarkdown: vi.fn(),
+      deleteArticleMarkdown: vi.fn(),
+    } as unknown as KVClient;
+
+    const r2Client = {
+      putImage: vi.fn(),
+      deleteImages: vi.fn(),
+    } as unknown as R2Client;
+
+    const resendClient = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ResendClient;
+
+    const usecase = new ProcessGitHubPushUsecase(
+      articleRepo, userRepo, repoRepo, notificationRepo,
+      githubClient, kvClient, r2Client, IMAGE_URL,
+      resendClient, ADMIN_EMAIL, WEB_URL
+    );
+
+    const event: GitHubPushEvent = {
+      ref: 'refs/heads/main',
+      repository: { full_name: 'foo/bar' },
+      commits: [{ added: ['articles/test.md'], modified: [], removed: [] }],
+      installation: { id: 123 },
+    };
+
+    // Should not throw even when both the file processing and notification creation fail
+    await expect(usecase.execute(event)).resolves.toBeUndefined();
+  });
+
   it('removes cached markdown when the source file is deleted', async () => {
     const user = new User({
       ...baseUserProps,

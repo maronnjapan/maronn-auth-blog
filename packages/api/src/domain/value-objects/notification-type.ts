@@ -1,7 +1,7 @@
 import { notificationTypeSchema, type NotificationType as NotificationTypeValue } from '@maronn-auth-blog/shared';
 
 export class NotificationType {
-  private constructor(private readonly value: NotificationTypeValue) {}
+  private constructor(private readonly value: NotificationTypeValue) { }
 
   static articleApproved(): NotificationType {
     return new NotificationType('article_approved');
@@ -13,6 +13,10 @@ export class NotificationType {
 
   static articleUpdateDetected(): NotificationType {
     return new NotificationType('article_update_detected');
+  }
+
+  static githubIntegrationError(): NotificationType {
+    return new NotificationType('github_integration_error');
   }
 
   static newArticleFromFollowed(): NotificationType {
