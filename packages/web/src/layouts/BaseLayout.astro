@@ -4,9 +4,10 @@ import Header from '../islands/Header';
 export interface Props {
   title: string;
   description?: string;
+  feedUrl?: string;
 }
 
-const { title, description = 'Auth Vault' } = Astro.props;
+const { title, description = 'Auth Vault', feedUrl } = Astro.props;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
 const cookie = Astro.request.headers.get('Cookie') || '';
 
@@ -45,6 +46,8 @@ try {
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/styles/global.css" />
+    <link rel="alternate" type="application/atom+xml" title="Auth Vault Feed" href={`${API_URL}/feed.xml`} />
+    {feedUrl && <link rel="alternate" type="application/atom+xml" title={`${title}`} href={feedUrl} />}
   </head>
   <body>
     <Header user={user} apiUrl={API_URL} unreadCount={unreadCount} client:load />

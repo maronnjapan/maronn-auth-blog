@@ -68,7 +68,7 @@ if (error || !user) {
 }
 ---
 
-<BaseLayout title={`${user.displayName} (@${user.username}) - Auth Vault`}>
+<BaseLayout title={`${user.displayName} (@${user.username}) - Auth Vault`} feedUrl={`${API_URL}/users/${username}/feed.xml`}>
   <div class="container">
     <div class="profile-section">
       <UserProfileCard

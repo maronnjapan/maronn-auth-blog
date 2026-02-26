@@ -22,6 +22,7 @@ import avatarController from './controllers/avatar-controller';
 import commentController from './controllers/comment-controller';
 import bookmarkController from './controllers/bookmark-controller';
 import followController from './controllers/follow-controller';
+import feedController from './controllers/feed-controller';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -48,6 +49,7 @@ app.route('/avatars', avatarController);
 app.route('/comments', commentController);
 app.route('/bookmarks', bookmarkController);
 app.route('/follows', followController);
+app.route('/', feedController);
 
 // Error handling
 app.onError((err, c) => {
