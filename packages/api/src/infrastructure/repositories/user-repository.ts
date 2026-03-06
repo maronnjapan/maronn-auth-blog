@@ -12,6 +12,8 @@ interface UserRow {
   github_url: string | null;
   twitter_url: string | null;
   website_url: string | null;
+  google_analytics_id: string | null;
+  cf_web_analytics_token: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +41,8 @@ export class UserRepository {
       githubUrl: row.github_url ?? undefined,
       twitterUrl: row.twitter_url ?? undefined,
       websiteUrl: row.website_url ?? undefined,
+      googleAnalyticsId: row.google_analytics_id ?? undefined,
+      cfWebAnalyticsToken: row.cf_web_analytics_token ?? undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -81,9 +85,10 @@ export class UserRepository {
           id, username, display_name, icon_url, bio,
           github_user_id, auth0_user_id, github_installation_id,
           github_url, twitter_url, website_url,
+          google_analytics_id, cf_web_analytics_token,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           username = excluded.username,
           display_name = excluded.display_name,
@@ -94,6 +99,8 @@ export class UserRepository {
           github_url = excluded.github_url,
           twitter_url = excluded.twitter_url,
           website_url = excluded.website_url,
+          google_analytics_id = excluded.google_analytics_id,
+          cf_web_analytics_token = excluded.cf_web_analytics_token,
           updated_at = excluded.updated_at
       `)
       .bind(
@@ -108,6 +115,8 @@ export class UserRepository {
         json.githubUrl ?? null,
         json.twitterUrl ?? null,
         json.websiteUrl ?? null,
+        json.googleAnalyticsId ?? null,
+        json.cfWebAnalyticsToken ?? null,
         json.createdAt,
         json.updatedAt
       )

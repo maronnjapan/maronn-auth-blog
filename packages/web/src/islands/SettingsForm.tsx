@@ -24,6 +24,8 @@ interface SettingsFormProps {
     githubUrl?: string;
     twitterUrl?: string;
     websiteUrl?: string;
+    googleAnalyticsId?: string;
+    cfWebAnalyticsToken?: string;
   };
   repository: {
     id: string;
@@ -49,6 +51,8 @@ export default function SettingsForm({
   const [githubUrl, setGithubUrl] = useState(user.githubUrl || '');
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || '');
   const [websiteUrl, setWebsiteUrl] = useState(user.websiteUrl || '');
+  const [googleAnalyticsId, setGoogleAnalyticsId] = useState(user.googleAnalyticsId || '');
+  const [cfWebAnalyticsToken, setCfWebAnalyticsToken] = useState(user.cfWebAnalyticsToken || '');
   const [avatarUrl, setAvatarUrl] = useState(user.iconUrl || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(initialMessage);
@@ -77,6 +81,8 @@ export default function SettingsForm({
           githubUrl: normalizeOptionalUrl(githubUrl),
           twitterUrl: normalizeOptionalUrl(twitterUrl),
           websiteUrl: normalizeOptionalUrl(websiteUrl),
+          googleAnalyticsId: normalizeOptional(googleAnalyticsId),
+          cfWebAnalyticsToken: normalizeOptional(cfWebAnalyticsToken),
         }),
       });
 
@@ -189,6 +195,44 @@ export default function SettingsForm({
 
           <button type="submit" disabled={saving} className="btn-primary">
             {saving ? '保存中...' : 'プロフィールを保存'}
+          </button>
+        </form>
+      </section>
+
+      <section className="settings-section">
+        <h2>アクセス解析</h2>
+        <p className="section-description">
+          自分の記事ページに Google Analytics や Cloudflare Web Analytics を埋め込めます。設定すると、あなたの記事が表示されるページにトラッキングコードが自動的に挿入されます。
+        </p>
+        <form onSubmit={handleSaveProfile}>
+          <div className="form-group">
+            <label htmlFor="googleAnalyticsId">Google Analytics 測定 ID</label>
+            <input
+              type="text"
+              id="googleAnalyticsId"
+              value={googleAnalyticsId}
+              onChange={(e) => setGoogleAnalyticsId(e.target.value)}
+              placeholder="G-XXXXXXXXXX"
+              pattern="^G-[A-Z0-9]+$"
+            />
+            <span className="form-hint">Google Analytics 4 の測定 ID（例: G-XXXXXXXXXX）</span>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="cfWebAnalyticsToken">Cloudflare Web Analytics トークン</label>
+            <input
+              type="text"
+              id="cfWebAnalyticsToken"
+              value={cfWebAnalyticsToken}
+              onChange={(e) => setCfWebAnalyticsToken(e.target.value)}
+              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              pattern="^[a-f0-9]{32}$"
+            />
+            <span className="form-hint">Cloudflare Web Analytics のサイトトークン（32文字の16進数）</span>
+          </div>
+
+          <button type="submit" disabled={saving} className="btn-primary">
+            {saving ? '保存中...' : 'アクセス解析設定を保存'}
           </button>
         </form>
       </section>

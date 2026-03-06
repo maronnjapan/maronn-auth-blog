@@ -18,6 +18,14 @@ export const userSchema = z.object({
   githubUrl: optionalUrlSchema,
   twitterUrl: optionalUrlSchema,
   websiteUrl: optionalUrlSchema,
+  googleAnalyticsId: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().regex(/^G-[A-Z0-9]+$/, 'Google Analytics の測定 ID は G- で始まる必要があります').optional()
+  ),
+  cfWebAnalyticsToken: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().regex(/^[a-f0-9]{32}$/, 'Cloudflare Web Analytics トークンは32文字の16進数です').optional()
+  ),
   createdAt: datetimeSchema,
   updatedAt: datetimeSchema,
 });
@@ -30,6 +38,8 @@ export const userInputSchema = userSchema.pick({
   githubUrl: true,
   twitterUrl: true,
   websiteUrl: true,
+  googleAnalyticsId: true,
+  cfWebAnalyticsToken: true,
 });
 
 export const userResponseSchema = userSchema;

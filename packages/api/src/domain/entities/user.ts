@@ -10,6 +10,8 @@ export interface UserProps {
   githubUrl?: string;
   twitterUrl?: string;
   websiteUrl?: string;
+  googleAnalyticsId?: string;
+  cfWebAnalyticsToken?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +63,14 @@ export class User {
     return this.props.websiteUrl;
   }
 
+  get googleAnalyticsId(): string | undefined {
+    return this.props.googleAnalyticsId;
+  }
+
+  get cfWebAnalyticsToken(): string | undefined {
+    return this.props.cfWebAnalyticsToken;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -77,12 +87,16 @@ export class User {
     githubUrl?: string;
     twitterUrl?: string;
     websiteUrl?: string;
+    googleAnalyticsId?: string;
+    cfWebAnalyticsToken?: string;
   }): void {
     const normalizedUpdates = {
       ...updates,
       githubUrl: this.normalizeOptionalUrl(updates.githubUrl),
       twitterUrl: this.normalizeOptionalUrl(updates.twitterUrl),
       websiteUrl: this.normalizeOptionalUrl(updates.websiteUrl),
+      googleAnalyticsId: this.normalizeOptionalString(updates.googleAnalyticsId),
+      cfWebAnalyticsToken: this.normalizeOptionalString(updates.cfWebAnalyticsToken),
     };
 
     this.props = {
@@ -90,6 +104,15 @@ export class User {
       ...normalizedUpdates,
       updatedAt: new Date(),
     };
+  }
+
+  private normalizeOptionalString(value?: string): string | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
 
   private normalizeOptionalUrl(value?: string): string | undefined {
@@ -130,6 +153,8 @@ export class User {
       githubUrl: this.props.githubUrl,
       twitterUrl: this.props.twitterUrl,
       websiteUrl: this.props.websiteUrl,
+      googleAnalyticsId: this.props.googleAnalyticsId,
+      cfWebAnalyticsToken: this.props.cfWebAnalyticsToken,
       createdAt: this.props.createdAt.toISOString(),
       updatedAt: this.props.updatedAt.toISOString(),
     };

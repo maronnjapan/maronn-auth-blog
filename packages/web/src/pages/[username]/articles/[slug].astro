@@ -117,6 +117,10 @@ const tocItems = extractTocItems(article.html || '');
 const baseLevel = getBaseLevel(tocItems);
 const nestedTocItems = buildNestedToc(tocItems);
 const hasToc = tocItems.length > 0;
+
+// Author analytics settings
+const authorGoogleAnalyticsId = article.author?.googleAnalyticsId;
+const authorCfWebAnalyticsToken = article.author?.cfWebAnalyticsToken;
 ---
 
 <BaseLayout title={`${article.title} - ${username}`}>
@@ -205,6 +209,27 @@ const hasToc = tocItems.length > 0;
       </aside>
     )}
   </div>
+
+  {/* Author analytics scripts */}
+  {authorGoogleAnalyticsId && (
+    <Fragment>
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${authorGoogleAnalyticsId}`}></script>
+      <script is:inline define:vars={{ gaId: authorGoogleAnalyticsId }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', gaId);
+      </script>
+    </Fragment>
+  )}
+
+  {authorCfWebAnalyticsToken && (
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon={`{"token": "${authorCfWebAnalyticsToken}"}`}
+    ></script>
+  )}
 
   <!-- Script to handle embed iframe messages (similar to zenn's listen-embed-event.js) -->
   <script is:inline>
