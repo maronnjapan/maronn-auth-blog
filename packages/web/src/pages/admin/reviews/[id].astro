@@ -26,10 +26,16 @@ try {
     article = data.article;
     markdown = data.markdown || '';
   } else {
-    error = '記事の取得に失敗しました';
+    let detail = '';
+    try {
+      const body = await response.json();
+      detail = body?.error?.message || body?.error?.code || '';
+    } catch {}
+    error = `記事の取得に失敗しました (status: ${response.status}${detail ? `, ${detail}` : ''})`;
+    console.error(`[ReviewDetail] API error: status=${response.status}, detail=${detail}`);
   }
 } catch (err) {
-  error = '記事の取得に失敗しました';
+  error = `記事の取得に失敗しました: ${err instanceof Error ? err.message : String(err)}`;
   console.error('Failed to fetch article for review:', err);
 }
 
@@ -43,7 +49,12 @@ const TARGET_CATEGORY_LABELS: Record<string, string> = {
   security: 'セキュリティ',
 };
 
-const targetCategories: string[] = article?.targetCategories ?? [];
+const rawTargetCategories = article?.targetCategories;
+const targetCategories: string[] = Array.isArray(rawTargetCategories)
+  ? rawTargetCategories
+  : typeof rawTargetCategories === 'string' && rawTargetCategories.length > 0
+    ? [rawTargetCategories]
+    : [];
 const categoryLabels = targetCategories.map((cat: string) => TARGET_CATEGORY_LABELS[cat] || cat).join('、');
 ---
 
