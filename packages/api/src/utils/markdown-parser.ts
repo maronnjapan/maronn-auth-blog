@@ -30,6 +30,42 @@ function removeQuotes(str: string): string {
   return trimmed;
 }
 
+/**
+ * Strip inline YAML comment from a value string.
+ * Handles comments after arrays like: [a, b] # comment
+ * and after quoted strings like: "value" # comment
+ * but preserves # inside quotes: "has # inside"
+ */
+function stripInlineComment(value: string): string {
+  // If the value contains a bracket-enclosed array, strip comment after the closing bracket
+  const bracketEnd = value.indexOf(']');
+  if (value.startsWith('[') && bracketEnd !== -1) {
+    return value.slice(0, bracketEnd + 1).trim();
+  }
+
+  // For quoted strings, find the closing quote first
+  if (value.startsWith('"') || value.startsWith("'")) {
+    const quote = value[0];
+    const closingQuote = value.indexOf(quote, 1);
+    if (closingQuote !== -1) {
+      // Check if there's a # after the closing quote
+      const afterQuote = value.slice(closingQuote + 1).trim();
+      if (afterQuote.startsWith('#') || afterQuote === '') {
+        return value.slice(0, closingQuote + 1).trim();
+      }
+    }
+    return value;
+  }
+
+  // For unquoted values, strip # comment (with preceding space)
+  const hashIndex = value.indexOf(' #');
+  if (hashIndex !== -1) {
+    return value.slice(0, hashIndex).trim();
+  }
+
+  return value;
+}
+
 export function extractFrontmatter(markdown: string): {
   frontmatter: Record<string, any>;
   content: string;
@@ -51,7 +87,9 @@ export function extractFrontmatter(markdown: string): {
     const [key, ...valueParts] = line.split(':');
     if (!key || !valueParts.length) continue;
 
-    const value = valueParts.join(':').trim();
+    const rawValue = valueParts.join(':').trim();
+    // Remove inline YAML comments (# ...) that are outside of quotes and brackets
+    const value = stripInlineComment(rawValue);
 
     // Parse boolean
     if (value === 'true' || value === 'false') {

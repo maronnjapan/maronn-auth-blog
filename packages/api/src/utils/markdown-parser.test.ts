@@ -101,6 +101,84 @@ topics: []
     expect(result.frontmatter.topics).toEqual([]);
   });
 
+  it('should handle inline YAML comments after arrays', () => {
+    const markdown = `---
+title: "Test Article"
+published: true
+targetCategories: ["security"] # カテゴリーは複数指定可能
+topics: ["Auth0", "Token Vault"]
+---
+
+# Content`;
+
+    const result = extractFrontmatter(markdown);
+
+    expect(result.frontmatter.targetCategories).toEqual(['security']);
+    expect(result.frontmatter.topics).toEqual(['Auth0', 'Token Vault']);
+  });
+
+  it('should handle inline YAML comments after quoted strings', () => {
+    const markdown = `---
+title: "Test Article" # タイトル
+published: true
+targetCategories: ["authentication"]
+---
+
+# Content`;
+
+    const result = extractFrontmatter(markdown);
+
+    expect(result.frontmatter.title).toBe('Test Article');
+  });
+
+  it('should handle inline YAML comments after unquoted values', () => {
+    const markdown = `---
+title: Test Article
+published: true # 公開フラグ
+targetCategories: ["security"]
+---
+
+# Content`;
+
+    const result = extractFrontmatter(markdown);
+
+    expect(result.frontmatter.published).toBe(true);
+  });
+
+  it('should preserve hash inside quoted strings', () => {
+    const markdown = `---
+title: "Article with # hash"
+published: true
+targetCategories: ["security"]
+---
+
+# Content`;
+
+    const result = extractFrontmatter(markdown);
+
+    expect(result.frontmatter.title).toBe('Article with # hash');
+  });
+
+  it('should handle multiple inline comments in frontmatter', () => {
+    const markdown = `---
+title: "Auth0のToken Vault" # タイトル
+emoji: "📑"
+type: "tech"
+topics: ["Auth0", "Token Vault"]
+published: true
+targetCategories: ["security"] # カテゴリーは複数指定可能
+---
+
+# Content`;
+
+    const result = extractFrontmatter(markdown);
+
+    expect(result.frontmatter.title).toBe('Auth0のToken Vault');
+    expect(result.frontmatter.targetCategories).toEqual(['security']);
+    expect(result.frontmatter.topics).toEqual(['Auth0', 'Token Vault']);
+    expect(result.frontmatter.published).toBe(true);
+  });
+
   it('should throw error for invalid frontmatter format', () => {
     const markdown = `# No frontmatter`;
 
