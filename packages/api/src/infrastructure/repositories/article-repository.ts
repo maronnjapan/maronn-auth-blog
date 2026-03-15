@@ -156,12 +156,15 @@ export class ArticleRepository {
       .bind(articleId)
       .run();
 
-    // Insert new topics (normalize to lowercase for consistent searching)
-    for (const topic of topics) {
+    // Deduplicate after normalizing to lowercase
+    const uniqueTopics = [...new Set(topics.map((t) => t.toLowerCase()))];
+
+    // Insert new topics
+    for (const topic of uniqueTopics) {
       const topicId = crypto.randomUUID();
       await this.db
         .prepare('INSERT INTO article_topics (id, article_id, topic) VALUES (?, ?, ?)')
-        .bind(topicId, articleId, topic.toLowerCase())
+        .bind(topicId, articleId, topic)
         .run();
     }
   }
