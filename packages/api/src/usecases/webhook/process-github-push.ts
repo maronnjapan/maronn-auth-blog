@@ -175,7 +175,12 @@ export class ProcessGitHubPushUsecase {
     const title = (frontmatter.title as string) || '';
     const category = (frontmatter.category as string) || undefined;
     const targetCategories = frontmatter.targetCategories as TargetCategories;
-    const topics = frontmatter.topics as string[];
+    const rawTopics = frontmatter.topics;
+    const topics: string[] = Array.isArray(rawTopics)
+      ? rawTopics
+      : typeof rawTopics === 'string' && rawTopics.length > 0
+        ? [rawTopics]
+        : [];
 
     if (!title) {
       throw new Error(
