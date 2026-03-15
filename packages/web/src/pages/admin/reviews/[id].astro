@@ -1,6 +1,5 @@
 ---
 import DashboardLayout from '../../../layouts/DashboardLayout.astro';
-import AdminReviewDetail from '../../../islands/AdminReviewDetail';
 
 const { id } = Astro.params;
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
@@ -37,6 +36,15 @@ try {
 if (!article && !error) {
   error = '記事が見つかりません';
 }
+
+const TARGET_CATEGORY_LABELS: Record<string, string> = {
+  authentication: '認証',
+  authorization: '認可',
+  security: 'セキュリティ',
+};
+
+const targetCategories: string[] = article?.targetCategories ?? [];
+const categoryLabels = targetCategories.map((cat: string) => TARGET_CATEGORY_LABELS[cat] || cat).join('、');
 ---
 
 <DashboardLayout title="記事審査">
@@ -60,17 +68,250 @@ if (!article && !error) {
         <pre class="preview-content"><code>{markdown}</code></pre>
       </div>
 
-      <AdminReviewDetail
-        articleId={article.id}
-        articleTitle={article.title}
-        apiUrl={API_URL}
-        targetCategories={article.targetCategories}
-        markdown={markdown}
-        client:load
-      />
+      <div class="review-actions-container">
+        {targetCategories.length > 0 && (
+          <div class="ai-check-section">
+            <h4>AIチェック</h4>
+            <p class="category-info">
+              対象カテゴリ: <strong>{categoryLabels}</strong>
+            </p>
+            <button id="btnCopyAiPrompt" class="btn-copy-prompt">
+              AIチェック用プロンプトをコピー
+            </button>
+          </div>
+        )}
+
+        {markdown && (
+          <div class="ai-check-section keyword-extraction">
+            <h4>検索キーワード抽出</h4>
+            <p class="category-info">
+              記事内容から検索に使うキーワードを抽出するプロンプトをコピーできます。
+            </p>
+            <button id="btnCopyKeywordPrompt" class="btn-copy-prompt">
+              検索キーワード抽出プロンプトをコピー
+            </button>
+          </div>
+        )}
+
+        <div class="review-actions">
+          <div class="approve-section">
+            <label for="searchKeywords">検索用キーワード</label>
+            <textarea
+              id="searchKeywords"
+              placeholder="例: OAuth 2.0, Auth0, PKCE, セッション管理, Cloudflare Workers"
+              rows="3"
+              maxlength="500"
+            ></textarea>
+            <button id="btnApprove" class="btn-approve">承認する</button>
+          </div>
+
+          <div class="reject-section">
+            <label for="rejectionReason">却下理由</label>
+            <textarea
+              id="rejectionReason"
+              placeholder="却下する理由を入力してください"
+              rows="4"
+            ></textarea>
+            <button id="btnReject" class="btn-reject">却下する</button>
+          </div>
+        </div>
+      </div>
     </div>
   )}
 </DashboardLayout>
+
+<script define:vars={{ articleId: article?.id, apiUrl: API_URL, targetCategories, markdown, articleTitle: article?.title }}>
+  const TARGET_CATEGORY_LABELS = {
+    authentication: '認証',
+    authorization: '認可',
+    security: 'セキュリティ',
+  };
+
+  function generateCombinedPrompt(categories, articleContent) {
+    const categoryDescriptions = categories.map(cat => {
+      switch (cat) {
+        case 'authentication':
+          return `### 認証（Authentication）
+適切な内容の例：
+- ユーザー認証の仕組み（パスワード認証、多要素認証、生体認証など）
+- OAuth、OpenID Connect、SAML などの認証プロトコル
+- JWT、セッション管理、トークンベース認証
+- Auth0、Firebase Auth、Cognito などの認証サービス
+- パスワードレス認証、SSO（シングルサインオン）
+- 認証に関するセキュリティベストプラクティス`;
+        case 'authorization':
+          return `### 認可（Authorization）
+適切な内容の例：
+- アクセス制御（RBAC、ABAC、ACL など）
+- 権限管理、ロールベースアクセス制御
+- OAuth 2.0 のスコープとパーミッション
+- API のアクセス制御
+- リソースベースのポリシー
+- 認可に関するセキュリティベストプラクティス`;
+        case 'security':
+          return `### セキュリティ
+適切な内容の例：
+- Webセキュリティ（XSS、CSRF、SQLインジェクション対策など）
+- 暗号化、ハッシュ化、デジタル署名
+- セキュリティヘッダー、CORS、CSP
+- 脆弱性診断、ペネトレーションテスト
+- セキュアコーディングプラクティス
+- インシデント対応、セキュリティ監視`;
+        default:
+          return '';
+      }
+    }).join('\n\n');
+
+    const categoryLabels = categories.map(cat => TARGET_CATEGORY_LABELS[cat]).join('、');
+
+    return `あなたはブログ記事の審査担当者です。以下の記事が指定されたカテゴリー（${categoryLabels}）に関する内容として適切かどうかを判定してください。
+
+## 判定対象カテゴリー
+
+${categoryDescriptions}
+
+## 不適切な内容の共通例
+- 指定されたカテゴリーと無関係な一般的なプログラミング話題
+- カテゴリーを装った広告や宣伝記事
+- 攻撃手法の詳細な説明（悪用目的と判断されるもの）
+
+## 審査対象の記事
+
+\`\`\`markdown
+${articleContent}
+\`\`\`
+
+## 回答フォーマット
+以下の形式で回答してください：
+
+**判定結果**: 適切 / 不適切 / 要修正
+
+**カテゴリー別評価**:
+${categories.map(cat => `- ${TARGET_CATEGORY_LABELS[cat]}: （適切/不適切/部分的に関連）`).join('\n')}
+
+**理由**:
+（判定理由を3-5文で説明）
+
+**記事内容との関連性**:
+（記事内容が各カテゴリーとどのように関連しているか）
+
+**改善提案**:（不適切または要修正の場合のみ）
+（どのような修正が必要か）`;
+  }
+
+  function generateSearchKeywordsPrompt(articleContent, title) {
+    const titleSection = title ? `## 記事タイトル\n${title}\n\n` : '';
+
+    return `あなたはブログ記事の検索改善担当者です。以下の記事本文から検索でヒットさせたい重要なキーワードを抽出してください。
+
+${titleSection}## 抽出ルール
+- 重要語・固有名詞・技術用語を中心に抽出
+- 10〜20語程度
+- 単語は短く、検索に使いやすい表現にする
+- 記事の内容と無関係な単語は含めない
+- 日本語と英語が混在していてもよい
+
+## 出力フォーマット
+- キーワードはカンマ区切り1行で出力
+
+## 記事本文
+\`\`\`markdown
+${articleContent}
+\`\`\``;
+  }
+
+  async function copyToClipboard(text, button, originalLabel) {
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = 'コピーしました!';
+      setTimeout(() => { button.textContent = originalLabel; }, 2000);
+    } catch {
+      alert('クリップボードへのコピーに失敗しました');
+    }
+  }
+
+  // AI check prompt copy
+  const btnCopyAiPrompt = document.getElementById('btnCopyAiPrompt');
+  if (btnCopyAiPrompt && targetCategories && targetCategories.length > 0 && markdown) {
+    btnCopyAiPrompt.addEventListener('click', () => {
+      const prompt = generateCombinedPrompt(targetCategories, markdown);
+      copyToClipboard(prompt, btnCopyAiPrompt, 'AIチェック用プロンプトをコピー');
+    });
+  }
+
+  // Keyword extraction prompt copy
+  const btnCopyKeywordPrompt = document.getElementById('btnCopyKeywordPrompt');
+  if (btnCopyKeywordPrompt && markdown) {
+    btnCopyKeywordPrompt.addEventListener('click', () => {
+      const prompt = generateSearchKeywordsPrompt(markdown, articleTitle);
+      copyToClipboard(prompt, btnCopyKeywordPrompt, '検索キーワード抽出プロンプトをコピー');
+    });
+  }
+
+  // Approve
+  const btnApprove = document.getElementById('btnApprove');
+  if (btnApprove) {
+    btnApprove.addEventListener('click', async () => {
+      const searchKeywords = document.getElementById('searchKeywords').value;
+      if (!searchKeywords.trim()) {
+        alert('検索用キーワードを入力してください');
+        return;
+      }
+      if (!confirm('この記事を承認しますか？')) return;
+
+      btnApprove.disabled = true;
+      btnApprove.textContent = '処理中...';
+      try {
+        const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ summary: searchKeywords.trim() }),
+        });
+        if (!response.ok) throw new Error('承認に失敗しました');
+        alert('記事を承認しました');
+        window.location.href = '/admin/reviews';
+      } catch (err) {
+        alert(err instanceof Error ? err.message : '承認に失敗しました');
+      } finally {
+        btnApprove.disabled = false;
+        btnApprove.textContent = '承認する';
+      }
+    });
+  }
+
+  // Reject
+  const btnReject = document.getElementById('btnReject');
+  if (btnReject) {
+    btnReject.addEventListener('click', async () => {
+      const rejectionReason = document.getElementById('rejectionReason').value;
+      if (!rejectionReason.trim()) {
+        alert('却下理由を入力してください');
+        return;
+      }
+      if (!confirm('この記事を却下しますか？')) return;
+
+      btnReject.disabled = true;
+      btnReject.textContent = '処理中...';
+      try {
+        const response = await fetch(`${apiUrl}/admin/reviews/${articleId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reason: rejectionReason }),
+        });
+        if (!response.ok) throw new Error('却下に失敗しました');
+        alert('記事を却下しました');
+        window.location.href = '/admin/reviews';
+      } catch (err) {
+        alert(err instanceof Error ? err.message : '却下に失敗しました');
+      } finally {
+        btnReject.disabled = false;
+        btnReject.textContent = '却下する';
+      }
+    });
+  }
+</script>
 
 <style is:global>
   .error {
@@ -209,16 +450,17 @@ if (!article && !error) {
     margin-top: 0.75rem;
   }
 
-  textarea {
+  .review-actions-container textarea {
     width: 100%;
     border-radius: 8px;
     border: 1px solid #d1d5db;
     padding: 0.75rem;
     font-size: 1rem;
     resize: vertical;
+    box-sizing: border-box;
   }
 
-  label {
+  .review-actions-container label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
