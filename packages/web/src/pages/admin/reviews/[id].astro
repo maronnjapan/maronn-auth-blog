@@ -43,7 +43,12 @@ const TARGET_CATEGORY_LABELS: Record<string, string> = {
   security: 'セキュリティ',
 };
 
-const targetCategories: string[] = article?.targetCategories ?? [];
+const rawTargetCategories = article?.targetCategories;
+const targetCategories: string[] = Array.isArray(rawTargetCategories)
+  ? rawTargetCategories
+  : typeof rawTargetCategories === 'string' && rawTargetCategories.length > 0
+    ? [rawTargetCategories]
+    : [];
 const categoryLabels = targetCategories.map((cat: string) => TARGET_CATEGORY_LABELS[cat] || cat).join('、');
 ---
 
