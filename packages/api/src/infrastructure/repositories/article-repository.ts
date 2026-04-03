@@ -24,13 +24,24 @@ export class ArticleRepository {
   constructor(private db: D1Database) {}
 
   private rowToEntity(row: ArticleRow): Article {
+    // Handle null or invalid target_categories gracefully
+    let targetCategories: TargetCategories;
+    try {
+      targetCategories = row.target_categories
+        ? (JSON.parse(row.target_categories) as TargetCategories)
+        : ['authentication']; // default value
+    } catch (error) {
+      console.error(`Failed to parse target_categories for article ${row.id}:`, error);
+      targetCategories = ['authentication']; // fallback to default
+    }
+
     const props: ArticleProps = {
       id: row.id,
       userId: row.user_id,
       slug: Slug.create(row.slug),
       title: row.title,
       category: row.category ?? undefined,
-      targetCategories: JSON.parse(row.target_categories) as TargetCategories,
+      targetCategories,
       status: ArticleStatus.fromString(row.status),
       githubPath: row.github_path,
       githubSha: row.github_sha ?? undefined,
