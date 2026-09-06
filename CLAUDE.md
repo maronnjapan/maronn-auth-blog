@@ -11,8 +11,9 @@
 | 項目 | 技術 |
 |------|------|
 | サイト生成 | Astro（`output: 'static'` による全ページ静的生成） |
-| UI 部品 | React（Astro Islands。動きが必要な箇所のみ hydrate） |
+| UI 部品 | Astro コンポーネント（React はビルド時のテンプレートとしてのみ使用） |
 | Markdown パーサー | zenn-markdown-html + zenn-content-css |
+| 画像変換 | sharp（ビルド時に WebP へ変換） |
 | frontmatter パーサー | js-yaml |
 | 埋め込み（tweet/gist 等） | Hono on Cloudflare Workers（`packages/embed`） |
 | 配信 | Cloudflare Workers Static Assets |
@@ -21,6 +22,9 @@
 
 サーバーサイドの API・データベース・オブジェクトストレージは使用しない。
 記事も画像もリポジトリ内のファイルが唯一の情報源。
+
+**ブラウザに JavaScript フレームワークを配信しない。** 目次の開閉と検索の絞り込みは
+数十行の素の DOM 操作で足りるため、hydrate するコンポーネントは 1 つも無い。
 
 ## ディレクトリ構成
 
@@ -37,12 +41,15 @@
 ├── packages/
 │   ├── web/                    # Astro 静的サイト
 │   │   ├── scripts/
-│   │   │   ├── prepare-content.mjs       # 記事のパース・HTML 生成・画像同期
+│   │   │   ├── prepare-content.mjs       # 記事のパース・HTML 生成・画像最適化
+│   │   │   ├── optimize-images.mjs       # WebP 変換と img タグの書き換え
+│   │   │   ├── load-env.mjs              # .env の読み込み
 │   │   │   └── prepare-content.test.mjs
 │   │   ├── src/
+│   │   │   ├── components/               # Astro コンポーネント（目次・検索フォーム）
 │   │   │   ├── content/legal/            # プライバシーポリシー等の Markdown
 │   │   │   ├── generated/                # prepare-content.mjs の出力（gitignore）
-│   │   │   ├── islands/                  # React コンポーネント
+│   │   │   ├── islands/                  # ビルド時に HTML 化する React コンポーネント
 │   │   │   ├── layouts/                  # Astro レイアウト
 │   │   │   ├── lib/                      # 記事の読み出し・ページング・TOC
 │   │   │   └── pages/                    # ルーティング
@@ -139,7 +146,7 @@ pnpm --filter @maronn-auth-blog/web dev
 articles/*.md ──┐
                 ├─ prepare-content.mjs ──┬─ src/generated/articles/index.json  (一覧のメタデータ)
 images/**  ─────┘                        ├─ src/generated/articles/html/*.html (本文 HTML)
-                                         └─ public/images/**                   (画像の同期)
+                                         └─ public/images/**.webp              (最適化した画像)
                                                     │
                                                     ▼
                                               astro build  ──▶  dist/  ──▶  Cloudflare Workers
@@ -151,9 +158,40 @@ images/**  ─────┘                        ├─ src/generated/articl
 2. `published: true` の記事だけを対象にする
 3. 本文を zenn-markdown-html で HTML 化する（`embedOrigin` に embed Worker を渡す）
 4. 一覧用のメタデータ（抜粋・トピック・公開日）を作り、公開日の新しい順に並べる
-5. `images/` を `packages/web/public/images/` へ同期する
+5. 記事から参照している画像を WebP に変換して `public/images/` へ出力する
 
 Astro 側は生成物を読むだけで、ビルド時にファイルシステムへ触らない。
+
+## 画像の最適化
+
+`optimize-images.mjs` が、記事から参照されている画像だけを WebP に変換する。
+
+- **可逆と非可逆を両方試して小さいほうを採る**。スクリーンショットのような平坦な画像は
+  可逆でも十分小さくなるので、文字を滲ませずに済む
+  （可逆が非可逆の 1.15 倍以内なら可逆を選ぶ）
+- 幅 1600px を超える画像は縮小する（本文幅 約736px の 2 倍）
+- アニメーション GIF はフレームを保ったままアニメーション WebP に変換する
+- `img` タグに実寸の `width` / `height` と `loading="lazy"` / `decoding="async"` を付ける。
+  寸法を入れることで画像の読み込みによるレイアウトのずれが起きない
+- 変換結果は `src/generated/image-manifest.json` に記録し、元画像が変わっていなければ再利用する
+  （初回は約 30 秒、以降は数秒）
+- **記事から参照されていない画像は配信しない**。`images/` に置いてあっても、
+  公開記事から参照されていなければ `dist/` には入らない
+
+原本の PNG/GIF は `images/` にそのまま残す。配信するのは変換後のファイルだけ。
+
+## キャッシュ
+
+`public/_headers` で配信時のキャッシュを指定している。
+
+| パス | 設定 | 理由 |
+|------|------|------|
+| `/_astro/*` | 1 年 + `immutable` | ファイル名に内容ハッシュが入るため |
+| `/images/*` | 1 日 + 30 日 `stale-while-revalidate` | ファイル名が変わらないので `immutable` にはしない |
+| その他（HTML） | `max-age=0, must-revalidate` | 記事の更新をすぐ反映するため |
+
+画像を差し替えるときは、同じファイル名のまま更新すると最大 1 日は古い版が表示される。
+すぐ反映したいときはファイル名を変える。
 
 ## URL 構造
 
@@ -271,13 +309,17 @@ useEffect(() => { fetch('/api/articles').then(/* ... */); }, []);
 export default function ArticleList({ articles }: { articles: ArticleMeta[] }) { /* ... */ }
 ```
 
-### hydrate は必要なものだけ
+### hydrate しない
 
-`client:*` を付けないコンポーネントはビルド時に HTML へ変換され、JavaScript を送らない。
-記事一覧・ページャ・カテゴリ一覧のようにリンクを並べるだけの部品には `client:*` を付けないこと。
+**現在このサイトには `client:*` を付けたコンポーネントが 1 つも無い。**
+`src/islands/` の React コンポーネントはビルド時に HTML へ変換されるだけで、
+ブラウザに React は配信されない。
 
-`client:only="react"` を使う場合はブラウザでしか描画されないため、
-`window.location` をレンダリング中に読んでよい（`/search` がこの形）。
+動きが必要な箇所（目次の開閉、検索の絞り込み）は Astro コンポーネントの `<script>` に
+素の DOM 操作で書く。数十行で足りる処理のために 130KB 超のランタイムを配るのは割に合わない。
+
+新しく操作を足すときも、まず素の DOM 操作で書けないか検討すること。
+`client:*` を足すと、そのページを開いた全員がフレームワークをダウンロードすることになる。
 
 ## Astro レンダリング戦略
 

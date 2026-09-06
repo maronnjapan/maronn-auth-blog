@@ -1,0 +1,53 @@
+---
+import type { NestedTocItem } from '../lib/toc';
+
+export interface Props {
+  items: NestedTocItem[];
+  /** クラス名の接頭辞。デスクトップ用は toc、モバイル用は mobile-toc */
+  prefix: 'toc' | 'mobile-toc';
+  depth?: number;
+  /** 子を持たない項目にも空のトグルを置いて字下げを揃えるか（デスクトップ用） */
+  placeholderToggle?: boolean;
+}
+
+const { items, prefix, depth = 0, placeholderToggle = false } = Astro.props;
+const listClass = depth === 0 ? `${prefix}-list` : `${prefix}-sublist`;
+---
+
+<ul class={listClass}>
+  {items.map((item) => {
+    const hasChildren = item.children.length > 0;
+    const showToggle = hasChildren || placeholderToggle;
+    return (
+      <li class={`${prefix}-item ${prefix}-depth-${depth}`}>
+        <div class={`${prefix}-item-container`}>
+          {showToggle && (
+            <button
+              type="button"
+              class={`${prefix}-toggle open${hasChildren ? '' : ' hidden'}`}
+              aria-label="折りたたむ"
+              aria-expanded={hasChildren ? 'true' : undefined}
+              aria-hidden={hasChildren ? undefined : 'true'}
+              tabindex={hasChildren ? 0 : -1}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 5L6 7L8 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          )}
+          <a class={`${prefix}-link${hasChildren ? ' has-children' : ''}`} href={`#${item.id}`}>
+            {item.text}
+          </a>
+        </div>
+        {hasChildren && (
+          <Astro.self
+            items={item.children}
+            prefix={prefix}
+            depth={depth + 1}
+            placeholderToggle={placeholderToggle}
+          />
+        )}
+      </li>
+    );
+  })}
+</ul>

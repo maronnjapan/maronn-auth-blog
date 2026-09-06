@@ -1,0 +1,38 @@
+---
+import TocList from './TocList.astro';
+import type { NestedTocItem } from '../lib/toc';
+import './TableOfContents.css';
+
+export interface Props {
+  items: NestedTocItem[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <nav class="toc" aria-label="目次" data-toc>
+    <p class="toc-title">目次</p>
+    <TocList items={items} prefix="toc" placeholderToggle />
+  </nav>
+)}
+
+<script>
+  // 見出しの折りたたみ。開閉するだけなのでフレームワークは使わない。
+  document.querySelectorAll<HTMLElement>('[data-toc]').forEach((toc) => {
+    toc.addEventListener('click', (event) => {
+      const toggle = (event.target as HTMLElement).closest<HTMLButtonElement>('.toc-toggle');
+      if (!toggle || toggle.classList.contains('hidden') || !toc.contains(toggle)) return;
+
+      const sublist = toggle.closest('.toc-item')?.querySelector<HTMLElement>(':scope > .toc-sublist');
+      if (!sublist) return;
+
+      const willOpen = toggle.classList.contains('closed');
+      toggle.classList.toggle('open', willOpen);
+      toggle.classList.toggle('closed', !willOpen);
+      toggle.setAttribute('aria-expanded', String(willOpen));
+      toggle.setAttribute('aria-label', willOpen ? '折りたたむ' : '展開する');
+      sublist.hidden = !willOpen;
+    });
+  });
+</script>

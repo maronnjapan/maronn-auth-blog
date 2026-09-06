@@ -1,0 +1,65 @@
+---
+import TocList from './TocList.astro';
+import type { NestedTocItem } from '../lib/toc';
+import './MobileTableOfContents.css';
+
+export interface Props {
+  items: NestedTocItem[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <div class="mobile-toc-container" data-mobile-toc>
+    <button type="button" class="mobile-toc-header collapsed" aria-expanded="false">
+      <span class="mobile-toc-header-text">目次</span>
+      <svg class="mobile-toc-header-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <nav class="mobile-toc-content" aria-label="目次" hidden>
+      <TocList items={items} prefix="mobile-toc" />
+    </nav>
+  </div>
+)}
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-mobile-toc]').forEach((container) => {
+    const header = container.querySelector<HTMLButtonElement>('.mobile-toc-header');
+    const content = container.querySelector<HTMLElement>('.mobile-toc-content');
+    if (!header || !content) return;
+
+    const setExpanded = (expanded: boolean) => {
+      header.classList.toggle('expanded', expanded);
+      header.classList.toggle('collapsed', !expanded);
+      header.setAttribute('aria-expanded', String(expanded));
+      content.hidden = !expanded;
+    };
+
+    header.addEventListener('click', () => setExpanded(header.classList.contains('collapsed')));
+
+    content.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+
+      // 見出しへ移動したら目次は閉じる
+      if (target.closest('.mobile-toc-link')) {
+        setExpanded(false);
+        return;
+      }
+
+      const toggle = target.closest<HTMLButtonElement>('.mobile-toc-toggle');
+      if (!toggle) return;
+
+      const sublist = toggle.closest('.mobile-toc-item')?.querySelector<HTMLElement>(':scope > .mobile-toc-sublist');
+      if (!sublist) return;
+
+      const willOpen = toggle.classList.contains('closed');
+      toggle.classList.toggle('open', willOpen);
+      toggle.classList.toggle('closed', !willOpen);
+      toggle.setAttribute('aria-expanded', String(willOpen));
+      toggle.setAttribute('aria-label', willOpen ? '折りたたむ' : '展開する');
+      sublist.hidden = !willOpen;
+    });
+  });
+</script>

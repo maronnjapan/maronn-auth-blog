@@ -32,14 +32,6 @@ export function extractTocItems(html: string): TocItem[] {
   return items;
 }
 
-/**
- * Get the base heading level (minimum level present).
- * If h1 exists, h1 is the base. Otherwise, the smallest heading level is the base.
- */
-export function getBaseLevel(items: TocItem[]): number {
-  if (items.length === 0) return 2;
-  return Math.min(...items.map((item) => item.level));
-}
 
 /**
  * Convert flat TOC items to nested structure.

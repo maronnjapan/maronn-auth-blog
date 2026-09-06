@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import TableOfContents from '../../islands/TableOfContents';
-import MobileTableOfContents from '../../islands/MobileTableOfContents';
+import TableOfContents from '../../components/TableOfContents.astro';
+import MobileTableOfContents from '../../components/MobileTableOfContents.astro';
 import ShareButtons from '../../islands/ShareButtons';
 import { getTargetCategoryMeta } from '../../lib/target-categories';
-import { buildNestedToc, extractTocItems, getBaseLevel } from '../../lib/toc';
+import { buildNestedToc, extractTocItems } from '../../lib/toc';
 import { articles, findArticle, formatDate, loadArticleHtml } from '../../lib/content';
 import type { TargetCategory } from '../../lib/content';
 import 'zenn-content-css';
@@ -24,7 +24,6 @@ const publishedDate = formatDate(article.publishedAt);
 const articleUrl = new URL(`/articles/${slug}`, Astro.site).href;
 
 const tocItems = extractTocItems(html);
-const baseLevel = getBaseLevel(tocItems);
 const nestedTocItems = buildNestedToc(tocItems);
 const hasToc = tocItems.length > 0;
 ---
@@ -71,7 +70,7 @@ const hasToc = tocItems.length > 0;
 
       {hasToc && (
         <div class="mobile-toc-wrapper">
-          <MobileTableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
+          <MobileTableOfContents items={nestedTocItems} />
         </div>
       )}
 
@@ -80,7 +79,7 @@ const hasToc = tocItems.length > 0;
 
     {hasToc && (
       <aside class="toc-sidebar">
-        <TableOfContents items={nestedTocItems} baseLevel={baseLevel} client:load />
+        <TableOfContents items={nestedTocItems} />
       </aside>
     )}
   </div>

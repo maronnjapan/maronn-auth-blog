@@ -89,6 +89,11 @@ export default function ArticleList({
           display: block;
         }
 
+        /* display: block が hidden 属性を打ち消してしまうため明示的に隠す（検索の絞り込み用） */
+        .article-card-link[hidden] {
+          display: none;
+        }
+
         .article-card {
           display: flex;
           gap: 1rem;

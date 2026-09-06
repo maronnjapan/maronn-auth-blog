@@ -1,7 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import ArticleList from '../islands/ArticleList';
-import SearchBar from '../islands/SearchBar';
+import SearchForm from '../components/SearchForm.astro';
 import CategoryFilter from '../islands/CategoryFilter';
 import TopicCloud from '../islands/TopicCloud';
 import Pagination from '../islands/Pagination';
@@ -45,7 +45,7 @@ const topics = topicFacets().slice(0, 30);
     <div class="header-section">
       <h1>{heading}</h1>
       <div class="search-wrapper">
-        <SearchBar client:load />
+        <SearchForm />
       </div>
     </div>
 

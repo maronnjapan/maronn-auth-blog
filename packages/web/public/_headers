@@ -1,0 +1,20 @@
+# Astro が内容ハッシュ付きの名前で出力するため、恒久的にキャッシュしてよい
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 画像はファイル名が変わらないので immutable にはしない。
+# 1 日は再検証なしで使い、その後 30 日は再検証しつつ古い版を表示する。
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=2592000
+
+/favicon.svg
+  Cache-Control: public, max-age=604800
+
+/styles/*
+  Cache-Control: public, max-age=604800
+
+# HTML は毎回再検証する（記事の更新をすぐ反映するため）
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
