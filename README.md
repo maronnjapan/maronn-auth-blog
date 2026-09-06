@@ -106,6 +106,9 @@ GitHub Actions が `main` への push を検知して実行する。
 - Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 - Variables: `PUBLIC_SITE_URL`, `PUBLIC_EMBED_ORIGIN`, `PUBLIC_CF_WEB_ANALYTICS_TOKEN`
 
+`PUBLIC_SITE_URL` は未設定の場合 `PUBLIC_APP_URL`、それも無ければ `https://web.maronn-room.com`
+（`packages/web/wrangler.toml` の本番ルート）にフォールバックする。
+
 手元からデプロイする場合:
 
 ```bash

@@ -1,2 +1,10 @@
 packages:
   - 'packages/*'
+
+# ビルドスクリプトを実行しないパッケージ。いずれも配布物にプリビルド済みバイナリが
+# 含まれており、スクリプトを走らせなくてもビルド・デプロイできる。
+# 明示しておかないと pnpm 12 以降が ERR_PNPM_IGNORED_BUILDS で install を失敗させる。
+ignoredBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd

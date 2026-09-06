@@ -24,7 +24,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      # PUBLIC_SITE_URL 未設定でも本番ドメインで生成できるようにする
+      # (wrangler.toml の production ルートと合わせている)
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL || vars.PUBLIC_APP_URL || 'https://web.maronn-room.com' }}
       PUBLIC_EMBED_ORIGIN: ${{ vars.PUBLIC_EMBED_ORIGIN }}
       PUBLIC_CF_WEB_ANALYTICS_TOKEN: ${{ vars.PUBLIC_CF_WEB_ANALYTICS_TOKEN }}
     steps:

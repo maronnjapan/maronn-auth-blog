@@ -11,6 +11,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } f
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import yaml from 'js-yaml';
+import { loadWebEnv } from './load-env.mjs';
 import markdownToHtmlImport from 'zenn-markdown-html';
 
 const markdownToHtml =
@@ -29,6 +30,8 @@ const articlesOutDir = join(generatedDir, 'articles');
 const htmlOutDir = join(articlesOutDir, 'html');
 const legalOutDir = join(generatedDir, 'legal');
 const publicImagesDir = join(webDir, 'public', 'images');
+
+loadWebEnv();
 
 const EMBED_ORIGIN = process.env.PUBLIC_EMBED_ORIGIN || 'http://localhost:8788';
 const TARGET_CATEGORIES = ['authentication', 'authorization', 'security'];
