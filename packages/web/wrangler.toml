@@ -1,19 +1,20 @@
 name = "maronn-auth-blog-web-production"
-main = "dist/_worker.js"
 compatibility_date = "2025-11-17"
-compatibility_flags = ["nodejs_compat"]
 
-# Enable logging
+# 静的アセットのみを配信する Worker（Astro の output: 'static' でビルドした dist/）
 [observability]
 enabled = true
 
-# Static assets directory
 [assets]
 directory = "dist"
+not_found_handling = "404-page"
 
-# Production environment (added by deploy.sh)
 [env.production]
 name = "maronn-auth-blog-web-production"
+
+[env.production.assets]
+directory = "dist"
+not_found_handling = "404-page"
 
 [[env.production.routes]]
 pattern = "web.maronn-room.com"

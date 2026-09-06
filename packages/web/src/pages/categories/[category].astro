@@ -1,0 +1,23 @@
+---
+import ArticleIndexLayout from '../../layouts/ArticleIndexLayout.astro';
+import { articlesByCategory, categoryFacets } from '../../lib/content';
+import { getTargetCategoryMeta } from '../../lib/target-categories';
+import type { TargetCategory } from '../../lib/content';
+
+export function getStaticPaths() {
+  return categoryFacets().map(({ value }) => ({ params: { category: value } }));
+}
+
+const category = Astro.params.category as TargetCategory;
+const { label } = getTargetCategoryMeta(category);
+const items = articlesByCategory(category);
+---
+
+<ArticleIndexLayout
+  heading={`カテゴリ: ${label}`}
+  pageTitle={`カテゴリ: ${label} - Auth Vault`}
+  description={`${label}に関する記事の一覧です。`}
+  articles={items}
+  selectedCategory={category}
+  filterNotice={`カテゴリ「${label}」で絞り込み中`}
+/>

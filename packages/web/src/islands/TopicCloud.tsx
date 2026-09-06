@@ -1,10 +1,7 @@
-interface Topic {
-  topic: string;
-  count: number;
-}
+import type { Facet } from '../lib/content';
 
 interface TopicCloudProps {
-  topics: Topic[];
+  topics: Facet[];
   selectedTopic?: string;
 }
 
@@ -13,8 +10,8 @@ export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
     return null;
   }
 
-  const maxCount = Math.max(...topics.map(t => t.count));
-  const minCount = Math.min(...topics.map(t => t.count));
+  const maxCount = Math.max(...topics.map((t) => t.count));
+  const minCount = Math.min(...topics.map((t) => t.count));
 
   const getSize = (count: number) => {
     if (maxCount === minCount) return 1;
@@ -26,14 +23,14 @@ export default function TopicCloud({ topics, selectedTopic }: TopicCloudProps) {
     <div className="topic-cloud">
       <h3>トピック</h3>
       <div className="topics">
-        {topics.map(({ topic, count }) => (
+        {topics.map(({ value, count }) => (
           <a
-            key={topic}
-            href={`/?topic=${encodeURIComponent(topic)}`}
-            className={`topic ${selectedTopic === topic ? 'active' : ''}`}
+            key={value}
+            href={`/topics/${encodeURIComponent(value)}`}
+            className={`topic ${selectedTopic === value ? 'active' : ''}`}
             style={{ fontSize: `${getSize(count)}rem` }}
           >
-            {topic}
+            {value}
           </a>
         ))}
       </div>

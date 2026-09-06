@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SearchResults from '../islands/SearchResults';
+import { articles } from '../lib/content';
+---
+
+<BaseLayout title="検索 - Auth Vault" description="記事をキーワードで検索します。">
+  <div class="container">
+    <h1>検索</h1>
+    <SearchResults articles={articles} client:only="react" />
+  </div>
+</BaseLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 1.25rem;
+    }
+  }
+</style>

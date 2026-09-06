@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
-# Production environment (added by deploy.sh)
+# Production environment
 [env.production]
 name = "maronn-auth-blog-embed-production"
 

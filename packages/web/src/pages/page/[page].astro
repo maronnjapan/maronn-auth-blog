@@ -1,0 +1,26 @@
+---
+import ArticleIndexLayout from '../../layouts/ArticleIndexLayout.astro';
+import { articles } from '../../lib/content';
+import { pageHref, slicePage, totalPageCount } from '../../lib/paginate';
+
+// 1 ページ目は / が担当するので、2 ページ目以降だけを生成する。
+export function getStaticPaths() {
+  const total = totalPageCount(articles.length);
+  return Array.from({ length: Math.max(0, total - 1) }, (_, i) => ({
+    params: { page: String(i + 2) },
+  }));
+}
+
+const currentPage = Number(Astro.params.page);
+const page = slicePage(articles, currentPage);
+const pageUrls = Array.from({ length: page.totalPages }, (_, i) => pageHref(i + 1));
+---
+
+<ArticleIndexLayout
+  heading="最新の記事"
+  pageTitle={`最新の記事 (${currentPage}ページ目) - Auth Vault`}
+  articles={page.items}
+  currentPage={page.currentPage}
+  totalPages={page.totalPages}
+  pageUrls={pageUrls}
+/>

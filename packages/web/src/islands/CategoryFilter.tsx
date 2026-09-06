@@ -1,11 +1,9 @@
-interface Category {
-  category: string;
-  count: number;
-}
+import type { Facet, TargetCategory } from '../lib/content';
+import { getTargetCategoryMeta } from '../lib/target-categories';
 
 interface CategoryFilterProps {
-  categories: Category[];
-  selectedCategory?: string;
+  categories: Facet<TargetCategory>[];
+  selectedCategory?: TargetCategory;
 }
 
 export default function CategoryFilter({ categories, selectedCategory }: CategoryFilterProps) {
@@ -25,13 +23,13 @@ export default function CategoryFilter({ categories, selectedCategory }: Categor
             すべて
           </a>
         </li>
-        {categories.map(({ category, count }) => (
-          <li key={category}>
+        {categories.map(({ value, count }) => (
+          <li key={value}>
             <a
-              href={`/?category=${encodeURIComponent(category)}`}
-              className={selectedCategory === category ? 'active' : ''}
+              href={`/categories/${value}`}
+              className={selectedCategory === value ? 'active' : ''}
             >
-              {category}
+              {getTargetCategoryMeta(value).label}
               <span className="count">({count})</span>
             </a>
           </li>

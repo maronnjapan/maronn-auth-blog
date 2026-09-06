@@ -1,10 +1,11 @@
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  baseUrl: string;
+  /** ページ番号 -> パス の対応表。1 ページ目は基準パスそのもの */
+  pageUrls: string[];
 }
 
-export default function Pagination({ currentPage, totalPages, baseUrl }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages, pageUrls }: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
@@ -41,11 +42,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
     pages.push(totalPages);
   }
 
-  const getPageUrl = (page: number) => {
-    const url = new URL(baseUrl, 'http://localhost');
-    url.searchParams.set('page', page.toString());
-    return url.pathname + url.search;
-  };
+  const getPageUrl = (page: number) => pageUrls[page - 1];
 
   return (
     <nav className="pagination" aria-label="ページナビゲーション">

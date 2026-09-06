@@ -5,8 +5,10 @@ on:
     branches:
       - main
     paths:
+      # 記事と画像はリポジトリ内のコンテンツなので、更新時に再ビルドが必要
+      - articles/**
+      - images/**
       - packages/web/**
-      - packages/shared/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,10 +24,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
-      PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
-      PUBLIC_GITHUB_APP_INSTALL_URL: ${{ vars.PUBLIC_GITHUB_APP_INSTALL_URL }}
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
       PUBLIC_EMBED_ORIGIN: ${{ vars.PUBLIC_EMBED_ORIGIN }}
+      PUBLIC_CF_WEB_ANALYTICS_TOKEN: ${{ vars.PUBLIC_CF_WEB_ANALYTICS_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,11 +46,13 @@ jobs:
       - name: Create web environment file
         run: |
           cat <<'ENVEOF' > packages/web/.env
-          PUBLIC_API_URL=${PUBLIC_API_URL}
-          PUBLIC_APP_URL=${PUBLIC_APP_URL}
-          PUBLIC_GITHUB_APP_INSTALL_URL=${PUBLIC_GITHUB_APP_INSTALL_URL}
+          PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
           PUBLIC_EMBED_ORIGIN=${PUBLIC_EMBED_ORIGIN}
+          PUBLIC_CF_WEB_ANALYTICS_TOKEN=${PUBLIC_CF_WEB_ANALYTICS_TOKEN}
           ENVEOF
 
+      - name: Run tests
+        run: pnpm --filter @maronn-auth-blog/web test
+
       - name: Deploy web worker
-        run: pnpm --filter @maronn-auth-blog/web  deploy:production
+        run: pnpm --filter @maronn-auth-blog/web deploy:production

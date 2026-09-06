@@ -1,16 +1,13 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import cloudflare from '@astrojs/cloudflare';
 
-// Using server mode for SSR on Cloudflare Workers
-// All pages are server-rendered for dynamic content
-// Add `export const prerender = true;` to specific pages for SSG if needed
+// 記事はリポジトリ内の Markdown なので、全ページを静的生成して
+// Cloudflare Workers の静的アセットとして配信する。
 export default defineConfig({
+  site: process.env.PUBLIC_SITE_URL || 'http://localhost:4321',
   integrations: [react()],
-  output: 'server',
-  adapter: cloudflare({
-    platformProxy: {
-      enabled: true,
-    },
-  }),
+  output: 'static',
+  build: {
+    format: 'directory',
+  },
 });

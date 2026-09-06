@@ -1,4 +1,4 @@
-import type { TargetCategory } from '@maronn-auth-blog/shared';
+import type { TargetCategory } from './content';
 
 export type TargetCategoryMeta = {
   key: TargetCategory;

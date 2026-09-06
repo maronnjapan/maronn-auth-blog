@@ -1,40 +1,19 @@
 ---
-import Header from '../islands/Header';
-
 export interface Props {
   title: string;
   description?: string;
-  feedUrl?: string;
+  /** OGP の og:type。記事詳細では article を指定する */
+  ogType?: 'website' | 'article';
 }
 
-const { title, description = 'Auth Vault', feedUrl } = Astro.props;
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787';
-const cookie = Astro.request.headers.get('Cookie') || '';
+const SITE_NAME = 'Auth Vault';
+const { title, description = '認証・認可・セキュリティについて書いているブログです。', ogType = 'website' } =
+  Astro.props;
 
-// Check authentication status and fetch unread count on server-side
-let user = null;
-let unreadCount = 0;
-try {
-  const response = await fetch(`${API_URL}/auth/me`, {
-    credentials: 'include',
-    headers: { Cookie: cookie },
-  });
-
-  if (response.ok) {
-    user = await response.json();
-
-    // Fetch unread notification count if logged in
-    const countResponse = await fetch(`${API_URL}/dashboard/notifications/unread-count`, {
-      headers: { Cookie: cookie },
-    });
-    if (countResponse.ok) {
-      const data = await countResponse.json();
-      unreadCount = data.count || 0;
-    }
-  }
-} catch (err) {
-  // User is not logged in
-}
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const feedUrl = new URL('/feed.xml', Astro.site);
+const cfAnalyticsToken = import.meta.env.PUBLIC_CF_WEB_ANALYTICS_TOKEN;
+const currentYear = new Date().getFullYear();
 ---
 
 <!DOCTYPE html>
@@ -44,13 +23,38 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <title>{title}</title>
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/styles/global.css" />
-    <link rel="alternate" type="application/atom+xml" title="Auth Vault Feed" href={`${API_URL}/feed.xml`} />
-    {feedUrl && <link rel="alternate" type="application/atom+xml" title={`${title}`} href={feedUrl} />}
+    <link rel="alternate" type="application/atom+xml" title={`${SITE_NAME} のフィード`} href={feedUrl} />
+
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta name="twitter:card" content="summary" />
+
+    {cfAnalyticsToken && (
+      <script
+        is:inline
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={`{"token": "${cfAnalyticsToken}"}`}
+      />
+    )}
   </head>
   <body>
-    <Header user={user} apiUrl={API_URL} unreadCount={unreadCount} client:load />
+    <header class="site-header">
+      <div class="container nav">
+        <a href="/" class="logo">{SITE_NAME}</a>
+        <nav class="nav-links">
+          <a href="/">記事一覧</a>
+          <a href="/search">検索</a>
+          <a href="/feed.xml">RSS</a>
+        </nav>
+      </div>
+    </header>
 
     <main class="main">
       <slot />
@@ -59,11 +63,9 @@ try {
     <footer class="footer">
       <div class="container">
         <div class="footer-links">
-          <a href="/terms">利用規約</a>
-          <span class="separator">|</span>
           <a href="/privacy">プライバシーポリシー</a>
         </div>
-        <p class="copyright">&copy; 2026 Auth Vault</p>
+        <p class="copyright">&copy; {currentYear} {SITE_NAME}</p>
       </div>
     </footer>
   </body>
@@ -85,7 +87,7 @@ try {
     background: #f5f5f5;
   }
 
-  .header {
+  .site-header {
     background: white;
     border-bottom: 1px solid #e0e0e0;
     padding: 1rem 0;
@@ -101,6 +103,8 @@ try {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .logo {
@@ -124,18 +128,6 @@ try {
 
   .nav-links a:hover {
     color: #333;
-  }
-
-  .btn-primary {
-    background: #0066cc;
-    color: white !important;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    font-weight: 500;
-  }
-
-  .btn-primary:hover {
-    background: #0052a3;
   }
 
   .main {
@@ -166,12 +158,18 @@ try {
     text-decoration: underline;
   }
 
-  .footer-links .separator {
-    margin: 0 0.75rem;
-    color: #ccc;
-  }
-
   .copyright {
     font-size: 0.875rem;
+  }
+
+  @media (max-width: 480px) {
+    .nav-links {
+      gap: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+    }
   }
 </style>

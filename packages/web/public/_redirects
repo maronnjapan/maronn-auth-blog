@@ -1,0 +1,2 @@
+# 旧マルチユーザー構成の記事 URL を単一著者の URL に転送する
+/:username/articles/:slug /articles/:slug 301

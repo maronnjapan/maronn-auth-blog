@@ -1,321 +1,136 @@
 # Auth Vault
 
-GitHub リポジトリを CMS として利用するブログプラットフォーム。ユーザーは自身の GitHub リポジトリに Markdown と画像を置き、管理者の審査を経て記事を公開する。
+認証・認可・セキュリティについて書いている個人ブログ。
 
-## 技術スタック
+記事はこのリポジトリの `articles/` に Markdown で置き、`main` へ push すると
+GitHub Actions が静的サイトをビルドして Cloudflare へデプロイする。
+サイトにログイン機能や投稿フォームはなく、**投稿できるのはこのリポジトリへ push できる人だけ**。
 
-| 項目 | 技術 |
-|------|------|
-| フロントエンド | Astro + React (Islands) |
-| API | Hono on Cloudflare Workers |
-| 認証 | Auth0（GitHub ソーシャルログイン）+ arctic |
-| DB | Cloudflare D1 |
-| キャッシュ | Cloudflare KV |
-| 画像ストレージ | Cloudflare R2 |
+詳しい仕様と実装規約は [CLAUDE.md](./CLAUDE.md) を参照。
 
-詳細な仕様は [CLAUDE.md](./CLAUDE.md) を参照してください。
+## 構成
 
-## 🚀 クイックスタート
+| パッケージ | 役割 |
+|------------|------|
+| `packages/web` | Astro による静的サイト。全ページをビルド時に生成する |
+| `packages/embed` | X・Gist・リンクカードなどの埋め込み iframe を配信する Cloudflare Worker |
 
-### 前提条件
+記事と画像はリポジトリ直下の `articles/` と `images/` に置く。
+DB もオブジェクトストレージも使わず、リポジトリ内のファイルが唯一の情報源。
 
-- Node.js 20+
-- pnpm 8+
-- Cloudflare アカウント
-- Auth0 アカウント
-- GitHub App（作成済み）
+## 記事を書く
 
-### 1. Auth0 アプリケーションの作成
+### 1. Markdown を追加する
 
-1. [Auth0 Dashboard](https://manage.auth0.com/) にログイン
-2. Applications > Create Application
-3. "Regular Web Application" を選択
-4. Settings で以下を確認：
-   - Domain
-   - Client ID
-   - Client Secret
-5. Connections で GitHub を有効化
+`articles/<slug>.md` を作る。ファイル名がそのまま URL（`/articles/<slug>`）になる。
 
-### 2. GitHub App の作成
+```markdown
+---
+title: "記事タイトル"
+emoji: "🔐"
+topics: ["OAuth", "Auth0"]
+published: true
+published_at: 2025-08-16 22:00
+targetCategories: ["authorization"]
+---
 
-1. GitHub Settings > Developer settings > GitHub Apps > New GitHub App
-2. 以下の権限を設定：
-   - Repository contents: Read
-   - Webhooks: Active
-3. 以下の情報を確認：
-   - App ID
-   - Private Key（ダウンロード）
-4. アプリをインストール
+## はじめに
 
-### 3. 開発環境のセットアップ
+本文...
+```
+
+| 項目 | 必須 | 説明 |
+|------|------|------|
+| `title` | ✅ | 記事タイトル |
+| `published` | ✅ | `true` で公開。`false` の記事はビルド対象から外れる |
+| `emoji` | | 一覧に出すアイコン。未設定なら 📝 |
+| `topics` | | トピック。`/topics/<topic>` の一覧ページが自動で作られる |
+| `published_at` | | 公開日。**設定した記事だけ日付が表示され、新しい順に並ぶ** |
+| `targetCategories` | | `authentication` / `authorization` / `security` から選ぶ |
+
+### 2. 画像を追加する
+
+`images/<slug>/` に置き、記事からは絶対パスで参照する。
+
+```markdown
+![](/images/mcp-authorization/flow.png)
+```
+
+### 3. ローカルで確認する
 
 ```bash
-# リポジトリをクローン
-git clone <repository-url>
-cd maronn-auth-blog
-
-# 依存関係をインストール
 pnpm install
-
-# 開発環境をセットアップ（対話式）
-./setup-dev.sh
+pnpm --filter @maronn-auth-blog/web dev   # http://localhost:4321
 ```
 
-このスクリプトは以下を実行します：
-- Auth0/GitHub App の情報を対話的に収集
-- `packages/api/.dev.vars` を作成
-- `packages/web/.env` を作成
-- ローカル D1 データベースを初期化
+記事や画像を足したときは開発サーバーを再起動する（生成物はサーバー起動時に作られる）。
 
-### 4. 開発サーバーの起動
+### 4. push する
+
+`main` へ push すると自動でデプロイされる。
+
+## 開発
 
 ```bash
-# すべてのパッケージを起動
-pnpm dev
-
-# または個別に起動
-pnpm --filter web dev    # http://localhost:4321
-pnpm --filter api dev    # http://localhost:8787
-pnpm --filter embed dev  # http://localhost:8788
+pnpm install                                  # 依存関係のインストール
+pnpm dev                                      # web と embed を並列起動
+pnpm build                                    # ビルド
+pnpm test                                     # テスト
+pnpm typecheck                                # 型チェック
+pnpm --filter @maronn-auth-blog/web content   # 記事の再生成だけ実行する
 ```
 
-### 5. Auth0 コールバック URL の設定
+### 環境変数
 
-Auth0 Dashboard で以下を追加：
-- Allowed Callback URLs: `http://localhost:8787/auth/callback`
-- Allowed Logout URLs: `http://localhost:4321`
-- Allowed Web Origins: `http://localhost:4321`
-
-## 📦 本番デプロイ
-
-### 前提条件
-
-- Cloudflare アカウントでログイン済み
-  ```bash
-  wrangler login
-  ```
-
-### デプロイの実行
-
-```bash
-# デプロイスクリプトを実行（対話式）
-./deploy.sh
-```
-
-このスクリプトは以下を自動実行します：
-
-1. **環境変数の収集**
-   - Auth0 設定（Domain, Client ID, Client Secret）
-   - GitHub App 設定（App ID, Private Key）
-   - セッションシークレット（自動生成）
-
-2. **Cloudflare リソースの作成**
-   - D1 データベース
-   - KV ネームスペース（セッション・キャッシュ用）
-   - R2 バケット（画像保存用）
-
-3. **データベースの初期化**
-   - スキーマの適用
-
-4. **wrangler.toml の更新**
-   - Production 環境用のリソース ID を追加
-
-5. **シークレットの設定**
-   - Production 環境用の環境変数を設定
-
-6. **ビルドとデプロイ**
-   - API（Cloudflare Workers）
-   - Embed（Cloudflare Workers）
-   - Web（Cloudflare Workers）
-
-### デプロイ後の設定
-
-デプロイ完了後、以下を手動で設定してください：
-
-1. **Auth0 Application Settings**
-   - [Auth0 Dashboard](https://manage.auth0.com/) にアクセス
-   - Allowed Callback URLs: `https://<project>-api-production.workers.dev/auth/callback`
-   - Allowed Logout URLs: `https://<project>-web-production.workers.dev`
-   - Allowed Web Origins: `https://<project>-web-production.workers.dev`
-
-2. **GitHub App Webhook URL**
-   - [GitHub Apps Settings](https://github.com/settings/apps) にアクセス
-   - Webhook URL: `https://<project>-api-production.workers.dev/webhook/github`
-
-スクリプト実行後に表示される実際のURLを使用してください。
-
-## プロジェクト構造
-
-```
-/
-├── packages/
-│   ├── shared/         # 共通コード (型、スキーマ、エラー)
-│   ├── api/            # Hono API
-│   ├── web/            # Astro フロントエンド
-│   └── embed/          # 埋め込みコンテンツサービス
-├── pnpm-workspace.yaml
-└── CLAUDE.md           # プロジェクト仕様書
-```
-
-## 🛠️ 開発ガイド
-
-### コマンド
-
-```bash
-# 開発
-pnpm dev              # すべてのパッケージ
-pnpm --filter api dev # API のみ
-pnpm --filter web dev # Web のみ
-
-# ビルド
-pnpm build
-
-# テスト
-pnpm test
-
-# 型チェック
-pnpm typecheck
-
-# Lint
-pnpm lint
-```
-
-### テスト駆動開発 (TDD)
-
-本プロジェクトは TDD で開発しています。新機能の実装前に、まずテストを書いてください。
-
-```bash
-# テストの実行
-pnpm --filter api test
-
-# テストの監視
-pnpm --filter api test:watch
-```
-
-## 🧪 環境変数
-
-### 開発環境（ローカル）
-
-#### packages/api/.dev.vars
+`packages/web/.env`（すべて任意。未設定でもビルドは通る）
 
 ```env
-AUTH0_DOMAIN=your-tenant.auth0.com
-AUTH0_CLIENT_ID=xxx
-AUTH0_CLIENT_SECRET=xxx
-AUTH0_CALLBACK_URL=http://localhost:8787/auth/callback
-
-GITHUB_APP_ID=123456
-GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
-
-SESSION_SECRET=random-32-char-string
-
-API_URL=http://localhost:8787
-WEB_URL=http://localhost:4321
-EMBED_ORIGIN=http://localhost:8788
-IMAGE_URL=http://localhost:8787
+PUBLIC_SITE_URL=http://localhost:4321
+PUBLIC_EMBED_ORIGIN=http://localhost:8788
+PUBLIC_CF_WEB_ANALYTICS_TOKEN=
 ```
 
-#### packages/web/.env
+`packages/embed/.dev.vars` は embed Worker 側の設定に従う。
 
-```env
-PUBLIC_API_URL=http://localhost:8787
-PUBLIC_APP_URL=http://localhost:4321
-PUBLIC_GITHUB_APP_INSTALL_URL=https://github.com/apps/integrate-auth-blog-app/installations/new
-```
+## デプロイ
 
-### 本番環境
+GitHub Actions が `main` への push を検知して実行する。
 
-本番環境の環境変数は `deploy.sh` スクリプトが自動的に設定します。
+| ワークフロー | 対象の変更 |
+|--------------|------------|
+| `.github/workflows/deploy-web.yml` | `articles/`, `images/`, `packages/web/` |
+| `.github/workflows/deploy-embed.yml` | `packages/embed/` |
 
-## 🔗 GitHub App インストールフロー
+必要な GitHub の設定:
 
-1. `packages/web/.env` の `PUBLIC_GITHUB_APP_INSTALL_URL` を `https://github.com/apps/integrate-auth-blog-app/installations/new`（アプリの install ページ）に設定します。別の環境へデプロイする際は、GitHub App の公開 URL を `https://github.com/apps/<app-slug>` 形式で確認し、末尾に `/installations/new` を付ければインストール URL になります。
-2. GitHub App 設定画面の **Post installation redirect URL** を `PUBLIC_APP_URL/dashboard/settings` に設定します。
-3. ログイン済みユーザーがダッシュボードの「設定」ページにアクセスし、「GitHub App をインストール」ボタンから GitHub に遷移します。
-4. インストール完了後、GitHub から `dashboard/settings?installation_id=<id>` へリダイレクトされ、API が自動的に `installation_id` を保存します。
-5. 同じ設定ページの「リポジトリ連携」セクションにインストール済みリポジトリ一覧が表示されるので、対象を選び「リポジトリを保存」を押します（一覧に無い場合は `username/repo` を手入力できます）。
-6. リポジトリを登録すると Installation Token を使って Markdown と画像へアクセスでき、記事の申請フローが有効になります。
+- Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- Variables: `PUBLIC_SITE_URL`, `PUBLIC_EMBED_ORIGIN`, `PUBLIC_CF_WEB_ANALYTICS_TOKEN`
 
-### アーキテクチャ
-
-DDD ライクなレイヤー構造を採用:
-
-- **Controllers**: HTTP リクエスト/レスポンス処理
-- **Usecases**: ビジネスロジック
-- **Domain**: エンティティ、値オブジェクト、ドメインルール
-- **Infrastructure**: 外部サービス連携 (DB, GitHub, Auth0)
-
-詳細は [CLAUDE.md](./CLAUDE.md) を参照してください。
-
-## 🔧 トラブルシューティング
-
-### wrangler がインストールされていない
+手元からデプロイする場合:
 
 ```bash
-pnpm add -g wrangler
+pnpm --filter @maronn-auth-blog/web deploy:production
 ```
 
-### Cloudflare にログインできない
+web は静的アセットのみを配信する Worker としてデプロイされる（`packages/web/wrangler.toml`）。
 
-```bash
-wrangler login
-```
+## トラブルシューティング
 
-### ローカル D1 データベースがリセットされた場合
+### ビルドが記事のエラーで止まる
 
-```bash
-cd packages/api
-wrangler d1 execute blog-db --file=../../scripts/schema.sql --local
-```
+`prepare-content.mjs` は frontmatter が不正な記事を見つけるとファイル名付きで失敗する。
+壊れた記事をそのまま公開しないための仕様なので、メッセージのファイルを直してから再実行する。
 
-または、`setup-dev.sh` を再実行してください。
+### 追加した画像が表示されない
 
-### デプロイ時にリソースが既に存在するエラー
+`images/<slug>/` に置いたか、記事の参照が `/images/` から始まる絶対パスかを確認する。
+開発サーバーは起動時に画像を同期するため、追加後は再起動が必要。
 
-デプロイスクリプトは既存のリソースを検出して再利用します。
-リソース ID を確認するには：
+### 記事の順番が想定と違う
 
-```bash
-wrangler d1 list
-wrangler kv:namespace list
-wrangler r2 bucket list
-```
+`published_at` が無い記事は日付つきの記事のあとに slug 順で並ぶ。
+順番を決めたい記事には `published_at` を書く。
 
-### デプロイ後に 500 エラーが発生する
-
-1. Cloudflare Workers のログを確認：
-   ```bash
-   wrangler tail <project>-api
-   ```
-
-2. シークレットが正しく設定されているか確認：
-   ```bash
-   cd packages/api
-   wrangler secret list
-   ```
-
-3. 設定が不足している場合は再設定：
-   ```bash
-   wrangler secret put AUTH0_DOMAIN
-   ```
-
-## 📋 Phase 1 (MVP) 実装状況
-
-- [x] プロジェクトセットアップ (モノレポ、pnpm)
-- [x] 認証 (Auth0 + GitHub ログイン)
-- [x] ユーザー登録・プロフィール
-- [x] GitHub App 連携
-- [x] 記事取得・パース・表示
-- [x] 審査フロー (承認・却下)
-- [x] 画像処理・R2 保存
-- [x] KV キャッシュ
-- [x] フィード表示
-- [x] 自動デプロイスクリプト
-
-## 📄 ライセンス
+## ライセンス
 
 MIT
-
-## 🤝 コントリビューション
-
-詳細は [CLAUDE.md](./CLAUDE.md) の実装規約を参照してください。

@@ -3,29 +3,31 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "prebuild": "node scripts/build-guides.mjs",
-    "build": "astro build",
-    "preview": "astro preview",
-    "typecheck": "astro check",
-    "deploy": "node scripts/build-guides.mjs && astro build && wrangler deploy",
-    "deploy:production": "node scripts/build-guides.mjs && astro build && wrangler deploy --env production"
+    "content": "node scripts/prepare-content.mjs",
+    "dev": "pnpm content && astro dev",
+    "build": "pnpm content && astro build",
+    "preview": "pnpm content && astro preview",
+    "typecheck": "pnpm content && astro check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:production": "pnpm build && wrangler deploy --env production"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^9.0.0",
     "@astrojs/react": "^3.0.9",
-    "@maronn-auth-blog/shared": "workspace:*",
     "astro": "^4.2.1",
-    "hono": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zenn-content-css": "^0.3.1",
     "zenn-markdown-html": "^0.1.162"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.4",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.3.3",
+    "vitest": "^1.2.1",
     "wrangler": "^4.59.2"
   }
 }

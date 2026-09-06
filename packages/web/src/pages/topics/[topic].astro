@@ -1,0 +1,20 @@
+---
+import ArticleIndexLayout from '../../layouts/ArticleIndexLayout.astro';
+import { articlesByTopic, topicFacets } from '../../lib/content';
+
+export function getStaticPaths() {
+  return topicFacets().map(({ value }) => ({ params: { topic: value } }));
+}
+
+const topic = Astro.params.topic!;
+const items = articlesByTopic(topic);
+---
+
+<ArticleIndexLayout
+  heading={`トピック: ${topic}`}
+  pageTitle={`トピック: ${topic} - Auth Vault`}
+  description={`${topic} に関する記事の一覧です。`}
+  articles={items}
+  selectedTopic={topic}
+  filterNotice={`トピック「${topic}」で絞り込み中`}
+/>

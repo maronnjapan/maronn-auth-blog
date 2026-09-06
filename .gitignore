@@ -7,9 +7,9 @@ dist/
 .astro/
 .output/
 
-# Generated files
-packages/web/src/generated/guide/
-packages/web/src/generated/legal/
+# Generated files (prepare-content.mjs による生成物)
+packages/web/src/generated/
+packages/web/public/images/
 
 # Environment variables
 .env
